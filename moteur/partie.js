@@ -6,18 +6,40 @@
  * dernier indice du chemin = centre (pion arrivé).
  */
 import { normaliserRegles, valeursPossibles, valeurDesLongs, COULEURS } from './regles.js';
-import { chemin, cotesPourJoueurs, refuges, cle } from './plateau.js';
+import { chemin, cotesPourJoueurs, refuges, cle, cheminCroix, casesCroix, refugesCroix, CROIX } from './plateau.js';
 
 const MAX_JOURNAL = 30;
 
 /** Données calculées à partir des règles (pas stockées dans l'état). */
 const cache = new Map();
 export function geometrie(regles, nbJoueurs) {
-  const k = JSON.stringify([regles.taille, regles.sens, regles.sensInterieurs, regles.refuges, nbJoueurs]);
+  const k = JSON.stringify([regles.forme, regles.taille, regles.sens, regles.sensInterieurs, regles.refuges, nbJoueurs]);
+  if (!cache.has(k) && regles.forme === 'croix') {
+    const cotes = cotesPourJoueurs(nbJoueurs);
+    const chemins = cotes.map((c) => cheminCroix(c, regles.sens));
+    cache.set(k, {
+      forme: 'croix',
+      n: CROIX.n,
+      cotes,
+      chemins: chemins.map((ch) => ch.cases),
+      longueurExterieur: chemins[0].longueurExterieur,
+      arrivee: chemins[0].cases.length - 1,
+      refuges: refugesCroix(),
+      cases: casesCroix(),
+      centre: { r: 6, c: 6, taille: 3 }, // grand carré central (pazham)
+    });
+  }
   if (!cache.has(k)) {
     const cotes = cotesPourJoueurs(nbJoueurs);
     const chemins = cotes.map((c) => chemin(regles.taille, c, regles.sens, regles.sensInterieurs));
+    const m = (regles.taille - 1) / 2;
+    const cases = new Set();
+    for (let r = 0; r < regles.taille; r++) for (let c = 0; c < regles.taille; c++) cases.add(`${r},${c}`);
     cache.set(k, {
+      forme: 'carre',
+      n: regles.taille,
+      cases,
+      centre: { r: m, c: m, taille: 1 },
       cotes,
       chemins: chemins.map((ch) => ch.cases),
       longueurExterieur: chemins[0].longueurExterieur,
@@ -203,6 +225,21 @@ export function jouer(etat0, pion) {
     joueurSuivant(etat);
   }
   return etat;
+}
+
+/**
+ * Pour l'affichage : zone d'une case « r,c » sur un dessin où chaque case
+ * mesure S. Le centre du plateau en croix est un grand carré de 3 × 3 cases.
+ */
+export function zoneCase(g, S) {
+  const cleCentre = cle(g.chemins[0][g.arrivee]);
+  return (k) => {
+    if (k === cleCentre && g.centre.taille > 1) {
+      return { x: g.centre.c * S, y: g.centre.r * S, w: g.centre.taille * S };
+    }
+    const [r, c] = k.split(',').map(Number);
+    return { x: c * S, y: r * S, w: S };
+  };
 }
 
 /** Pour l'affichage : pions groupés par case « r,c ». */

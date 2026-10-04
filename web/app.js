@@ -2,7 +2,7 @@ import {
   REGLES_PAR_DEFAUT, PRESETS_DES, TAILLES, COULEURS,
   copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles,
 } from './moteur/regles.js';
-import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase } from './moteur/partie.js';
+import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, zoneCase } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
 import { creerEnLigne } from './moteur/en-ligne.js';
@@ -94,7 +94,7 @@ let ordiLocal = [false, true, true, true]; // joueurs joués par l'ordinateur
 function ouvrirReglages(mode) {
   modeReglages = mode;
   try {
-    edition = normaliserRegles(JSON.parse(memoire.lire('thaayam:regles:v2')) || REGLES_PAR_DEFAUT).regles;
+    edition = normaliserRegles(JSON.parse(memoire.lire('thaayam:regles:v3')) || REGLES_PAR_DEFAUT).regles;
   } catch {
     edition = copieRegles();
   }
@@ -163,8 +163,15 @@ function construireFormulaire() {
       noms));
   }
 
+  // Options propres au plateau carré (cachées pour la croix)
+  const seulementCarre = [];
+  const montrerForme = () => seulementCarre.forEach((e) => { e.hidden = r.forme !== 'carre'; });
+  const tailles = el('div', {}, choix(TAILLES.map((t) => [t, `${t} × ${t}`]), r.taille, (v) => { r.taille = v; verifierReglages(); }));
+  seulementCarre.push(tailles);
+
   f.append(el('fieldset', {}, el('legend', {}, 'Plateau'),
-    choix(TAILLES.map((t) => [t, `${t} × ${t}`]), r.taille, (v) => { r.taille = v; verifierReglages(); }),
+    choix([['croix', 'En croix (thaayam kattai)'], ['carre', 'Carré']], r.forme, (v) => { r.forme = v; montrerForme(); verifierReglages(); }),
+    tailles,
     el('label', {}, 'Pions par joueur',
       (() => {
         const s = el('select', { onchange: (e) => { r.nbPions = Number(e.target.value); verifierReglages(); } });
@@ -222,29 +229,36 @@ function construireFormulaire() {
 
   f.append(el('fieldset', {}, el('legend', {}, 'Déplacements'),
     caseACocher("Il faut avoir capturé un pion pour entrer à l'intérieur", r.captureAvantInterieur,
-      (v) => { r.captureAvantInterieur = v; }, "Sinon, les pions continuent de tourner sur l'anneau extérieur."),
+      (v) => { r.captureAvantInterieur = v; }, 'Sinon, les pions refont le tour du plateau.'),
     caseACocher('Il faut tomber pile sur le centre', r.arriveeExacte, (v) => { r.arriveeExacte = v; }),
     caseACocher('Un seul pion par case (sauf sur les croix)', r.unPionParCase, (v) => { r.unPionParCase = v; },
       'Deux pions du même joueur ne peuvent pas partager une case ordinaire.'),
-    el('label', {}, "Sens de l'anneau extérieur",
+    el('label', {}, 'Sens du tour',
       (() => {
         const s = el('select', { onchange: (e) => { r.sens = e.target.value; } });
         s.append(el('option', { value: 'anti-horaire', selected: r.sens === 'anti-horaire' }, 'Inverse des aiguilles d’une montre'));
         s.append(el('option', { value: 'horaire', selected: r.sens === 'horaire' }, 'Sens des aiguilles d’une montre'));
         return s;
       })()),
-    el('label', {}, 'Sens des anneaux intérieurs',
-      (() => {
-        const s = el('select', { onchange: (e) => { r.sensInterieurs = e.target.value; } });
-        [['inverse', "Tous dans l'autre sens (classique)"], ['meme', 'Même sens que l’extérieur'], ['alterne', 'Un sens sur deux']]
-          .forEach(([v, t]) => s.append(el('option', { value: v, selected: r.sensInterieurs === v }, t)));
-        return s;
-      })())));
+    (() => {
+      const l = el('label', {}, 'Sens des anneaux intérieurs (plateau carré)',
+        (() => {
+          const s = el('select', { onchange: (e) => { r.sensInterieurs = e.target.value; } });
+          [['inverse', "Tous dans l'autre sens (classique)"], ['meme', 'Même sens que l’extérieur'], ['alterne', 'Un sens sur deux']]
+            .forEach(([v, t]) => s.append(el('option', { value: v, selected: r.sensInterieurs === v }, t)));
+          return s;
+        })());
+      seulementCarre.push(l);
+      return l;
+    })()));
 
-  f.append(el('fieldset', {}, el('legend', {}, 'Cases refuges (croix)'),
+  const refugesCarre = el('fieldset', {}, el('legend', {}, 'Cases refuges (croix)'),
     el('div', { class: 'aide' }, 'Les cases de départ et le centre sont toujours des refuges.'),
     caseACocher('Coins du 2e anneau (classique)', r.refuges.coinsDeuxiemeAnneau, (v) => { r.refuges.coinsDeuxiemeAnneau = v; }),
-    caseACocher('Milieux des anneaux intérieurs', r.refuges.milieuxInterieurs, (v) => { r.refuges.milieuxInterieurs = v; })));
+    caseACocher('Milieux des anneaux intérieurs', r.refuges.milieuxInterieurs, (v) => { r.refuges.milieuxInterieurs = v; }));
+  seulementCarre.push(refugesCarre);
+  f.append(refugesCarre);
+  montrerForme();
 
   verifierReglages();
 }
@@ -262,7 +276,7 @@ $('form-regles').addEventListener('submit', (e) => e.preventDefault());
 $('btn-valider-regles').addEventListener('click', async () => {
   if (!verifierReglages()) return;
   const { regles } = normaliserRegles(edition);
-  memoire.ecrire('thaayam:regles:v2', JSON.stringify(regles));
+  memoire.ecrire('thaayam:regles:v3', JSON.stringify(regles));
   if (modeReglages === 'local') {
     const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: $(`nom-${i}`).value.trim() || COULEURS[i].nom, ordi: ordiLocal[i] }));
     session = { mode: 'local', etat: nouvellePartie(regles, joueurs) };
@@ -554,60 +568,70 @@ function svg(tag, attrs, parent) {
 }
 
 function dessinerPlateau(etat, g, coups) {
-  const n = etat.regles.taille;
+  const n = g.n;
   const S = 100;
   const plateau = $('plateau');
   plateau.innerHTML = '';
   plateau.setAttribute('viewBox', `0 0 ${n * S} ${n * S}`);
-  const m = (n - 1) / 2;
+  const zone = zoneCase(g, S);
 
-  // Cases de départ colorées
-  const departs = new Map();
-  etat.joueurs.forEach((j, i) => departs.set(cle(g.chemins[i][0]), j.couleur));
+  // Couleur de chaque joueur : sa case de départ, sa colonne d'arrivée (croix) et ses croix
+  const teintes = new Map();
+  etat.joueurs.forEach((j, i) => {
+    const ch = g.chemins[i];
+    teintes.set(cle(ch[0]), j.couleur);
+    if (g.forme === 'croix') ch.slice(g.longueurExterieur + 1, g.arrivee).forEach((p) => teintes.set(cle(p), j.couleur));
+  });
 
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
-      const k = `${r},${c}`;
-      const x = c * S, y = r * S;
-      const centre = r === m && c === m;
-      svg('rect', { x: x + 2, y: y + 2, width: S - 4, height: S - 4, rx: 6,
-        fill: centre ? '#c98b3c' : departs.has(k) ? departs.get(k) : '#f8e9c8',
-        'fill-opacity': departs.has(k) && !centre ? 0.35 : 1, stroke: '#6b3a14', 'stroke-width': 2 }, plateau);
-      if (g.refuges.has(k) && !centre) {
-        svg('path', { d: `M${x + 18} ${y + 18}L${x + S - 18} ${y + S - 18}M${x + S - 18} ${y + 18}L${x + 18} ${y + S - 18}`,
-          stroke: '#6b3a14', 'stroke-width': 4, 'stroke-linecap': 'round', opacity: 0.55 }, plateau);
-      }
-      if (centre) {
-        svg('path', { d: `M${x + 50} ${y + 14}L${x + 86} ${y + 50}L${x + 50} ${y + 86}L${x + 14} ${y + 50}Z`,
-          fill: 'none', stroke: '#fff3da', 'stroke-width': 4 }, plateau);
-      }
-    }
+  if (g.forme === 'croix') {
+    svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: '#b8653a' }, plateau);
   }
+  g.cases.forEach((k) => {
+    const [r, c] = k.split(',').map(Number);
+    if (g.forme === 'carre' && r === g.centre.r && c === g.centre.c) return;
+    const x = c * S, y = r * S;
+    const teinte = teintes.get(k);
+    svg('rect', { x: x + 2, y: y + 2, width: S - 4, height: S - 4, rx: 6, fill: '#f8e9c8', stroke: '#4a2a12', 'stroke-width': 3 }, plateau);
+    if (teinte) svg('rect', { x: x + 2, y: y + 2, width: S - 4, height: S - 4, rx: 6, fill: teinte, 'fill-opacity': 0.3 }, plateau);
+    if (g.refuges.has(k)) {
+      svg('path', { d: `M${x + 14} ${y + 14}L${x + S - 14} ${y + S - 14}M${x + S - 14} ${y + 14}L${x + 14} ${y + S - 14}`,
+        stroke: teinte || '#6b3a14', 'stroke-width': 7, 'stroke-linecap': 'round', opacity: teinte ? 0.95 : 0.6 }, plateau);
+    }
+  });
+
+  // Centre (pazham)
+  const ct = zone(cle([g.chemins[0][g.arrivee][0], g.chemins[0][g.arrivee][1]]));
+  svg('rect', { x: ct.x + 2, y: ct.y + 2, width: ct.w - 4, height: ct.w - 4, rx: 8, fill: g.forme === 'croix' ? '#fbf3e2' : '#c98b3c',
+    stroke: '#4a2a12', 'stroke-width': 3 }, plateau);
+  svg('path', { d: g.forme === 'croix'
+    ? `M${ct.x + 6} ${ct.y + 6}L${ct.x + ct.w - 6} ${ct.y + ct.w - 6}M${ct.x + ct.w - 6} ${ct.y + 6}L${ct.x + 6} ${ct.y + ct.w - 6}`
+    : `M${ct.x + 50} ${ct.y + 14}L${ct.x + 86} ${ct.y + 50}L${ct.x + 50} ${ct.y + 86}L${ct.x + 14} ${ct.y + 50}Z`,
+  fill: 'none', stroke: g.forme === 'croix' ? '#4a2a12' : '#fff3da', 'stroke-width': g.forme === 'croix' ? 3 : 4, opacity: 0.8 }, plateau);
 
   // Dernier coup joué
   if (etat.dernierCoup) {
-    const [r, c] = g.chemins[etat.dernierCoup.joueur][etat.dernierCoup.vers];
-    svg('rect', { x: c * S + 6, y: r * S + 6, width: S - 12, height: S - 12, rx: 8, fill: 'none',
+    const z = zone(cle(g.chemins[etat.dernierCoup.joueur][etat.dernierCoup.vers]));
+    svg('rect', { x: z.x + 6, y: z.y + 6, width: z.w - 12, height: z.w - 12, rx: 8, fill: 'none',
       stroke: etat.joueurs[etat.dernierCoup.joueur].couleur, 'stroke-width': 5, opacity: 0.8 }, plateau);
   }
 
   // Destinations possibles
   coups.forEach((cp) => {
-    const [r, c] = g.chemins[etat.tour][cp.vers];
-    svg('circle', { cx: c * S + 50, cy: r * S + 50, r: 40, fill: 'none', stroke: etat.joueurs[etat.tour].couleur,
+    const z = zone(cle(g.chemins[etat.tour][cp.vers]));
+    svg('circle', { cx: z.x + z.w / 2, cy: z.y + z.w / 2, r: z.w / 2 - 10, fill: 'none', stroke: etat.joueurs[etat.tour].couleur,
       'stroke-width': 5, 'stroke-dasharray': '10 8' }, plateau);
   });
 
   // Pions
   const jouables = new Set(coups.filter((c) => c.depuis >= 0).map((c) => `${etat.tour}:${c.pion}`));
   pionsParCase(etat).forEach((liste, k) => {
-    const [r, c] = k.split(',').map(Number);
+    const z = zone(k);
     const cote = Math.ceil(Math.sqrt(liste.length));
-    const pas = (S - 16) / cote;
-    const rayon = Math.min(30, pas * 0.42);
+    const pas = (z.w - 16) / cote;
+    const rayon = Math.min(38, pas * 0.45);
     liste.forEach((p, i) => {
-      const cx = c * S + 8 + pas * (i % cote) + pas / 2;
-      const cy = r * S + 8 + pas * Math.floor(i / cote) + pas / 2;
+      const cx = z.x + 8 + pas * (i % cote) + pas / 2;
+      const cy = z.y + 8 + pas * Math.floor(i / cote) + pas / 2;
       const j = etat.joueurs[p.joueur];
       const jouable = jouables.has(`${p.joueur}:${p.pion}`);
       const grp = svg('g', { class: jouable ? 'pion-jouable' : '' }, plateau);
@@ -615,8 +639,8 @@ function dessinerPlateau(etat, g, coups) {
       svg('circle', { cx: cx - rayon * 0.3, cy: cy - rayon * 0.3, r: rayon * 0.3, fill: '#fff', opacity: 0.35 }, grp);
       if (jouable) {
         // zone de toucher plus large que le pion
-        const zone = svg('circle', { cx, cy, r: Math.max(rayon, 34), fill: 'transparent' }, grp);
-        zone.style.cursor = 'pointer';
+        const cible = svg('circle', { cx, cy, r: Math.max(rayon, 60), fill: 'transparent' }, grp);
+        cible.style.cursor = 'pointer';
         grp.addEventListener('click', () => {
           if (jePeuxJouer()) appliquer(jouer(session.etat, p.pion));
         });

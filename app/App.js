@@ -36,7 +36,7 @@ function Racine() {
 
   useEffect(() => {
     stockage.lire('thaayam:pseudo').then((p) => p && setPseudo(p)).catch(() => {});
-    stockage.lire('thaayam:regles:v2').then((r) => r && setRegles(normaliserRegles(JSON.parse(r)).regles)).catch(() => {});
+    stockage.lire('thaayam:regles:v3').then((r) => r && setRegles(normaliserRegles(JSON.parse(r)).regles)).catch(() => {});
     return () => arretRef.current && arretRef.current();
   }, []);
 
@@ -94,7 +94,7 @@ function Racine() {
 
   async function valider(reglesChoisies, joueursLocaux) {
     setRegles(reglesChoisies);
-    stockage.ecrire('thaayam:regles:v2', JSON.stringify(reglesChoisies)).catch(() => {});
+    stockage.ecrire('thaayam:regles:v3', JSON.stringify(reglesChoisies)).catch(() => {});
     if (mode === 'local') {
       setSession({ mode: 'local', etat: nouvellePartie(reglesChoisies, joueursLocaux) });
       setEcran('jeu');

@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chemin, refuges, cle } from './plateau.js';
+import { chemin, refuges, cle, cheminCroix, casesCroix, refugesCroix } from './plateau.js';
 import { normaliserRegles, valeursPossibles, copieRegles, REGLES_PAR_DEFAUT } from './regles.js';
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, tirerDes } from './partie.js';
 
 const t = (valeur) => ({ valeur, detail: [] });
-const CAURIS5 = normaliserRegles({ taille: 5, nbPions: 4, des: { type: 'cauris', nbCauris: 4, valeurZero: 8 }, valeursEntree: [1], valeursRejouer: [1, 4, 8], sensInterieurs: 'alterne' }).regles;
+const CAURIS5 = normaliserRegles({ forme: 'carre', taille: 5, nbPions: 4, des: { type: 'cauris', nbCauris: 4, valeurZero: 8 }, valeursEntree: [1], valeursRejouer: [1, 4, 8], sensInterieurs: 'alterne' }).regles;
 const voisins = ([a, b], [c, d]) => Math.max(Math.abs(a - c), Math.abs(b - d)) === 1;
 
 test('chaque chemin passe une fois par chaque case et finit au centre', () => {
@@ -38,8 +38,34 @@ test('refuges', () => {
   assert.equal(refuges(7, { milieuxInterieurs: true, coinsDeuxiemeAnneau: true }).size, 5 + 8 + 4);
 });
 
+test('plateau en croix : chemin, cases et croix', () => {
+  const cases = casesCroix();
+  assert.equal(cases.size, 4 * 18 + 4);
+  assert.equal(refugesCroix().size, 13);
+  for (let cote = 0; cote < 4; cote++) {
+    for (const sens of ['anti-horaire', 'horaire']) {
+      const { cases: ch, longueurExterieur } = cheminCroix(cote, sens);
+      assert.equal(longueurExterieur, 56);
+      assert.equal(ch.length, 63);
+      assert.equal(new Set(ch.slice(0, 56).map(cle)).size, 56);
+      assert.deepEqual(ch[56], ch[0]); // retour sur la case de départ
+      ch.slice(0, 62).forEach((p) => assert.ok(cases.has(cle(p)), cle(p)));
+      for (let i = 1; i < 62; i++) {
+        const [a, b] = ch[i - 1], [c, d] = ch[i];
+        assert.equal(Math.abs(a - c) + Math.abs(b - d), 1, `saut ${i}`);
+      }
+      assert.deepEqual(ch[62], [7, 7]);
+    }
+  }
+  const bas = cheminCroix(0).cases;
+  assert.deepEqual(bas.slice(0, 3), [[14, 7], [14, 8], [13, 8]]);
+  assert.deepEqual(bas.slice(7, 9), [[9, 9], [8, 9]]); // la case de coin fait tourner
+  assert.deepEqual(bas.slice(56, 63), [[14, 7], [13, 7], [12, 7], [11, 7], [10, 7], [9, 7], [7, 7]]);
+});
+
 test('7 × 7 classique : extérieur anti-horaire, puis intérieur horaire par le coin en croix', () => {
   const { cases } = chemin(7, 0, 'anti-horaire', 'inverse');
+  assert.equal(REGLES_PAR_DEFAUT.forme, 'croix');
   assert.deepEqual(cases.slice(0, 2), [[6, 3], [6, 4]]);
   assert.deepEqual(cases.slice(23, 26), [[6, 2], [5, 2], [5, 1]]);
   assert.deepEqual(cases.slice(39, 41), [[5, 3], [4, 3]]);
@@ -145,6 +171,7 @@ test('parties aléatoires complètes sans erreur', () => {
     for (const nb of [2, 3, 4]) {
       const r = copieRegles(nb === 2 ? REGLES_PAR_DEFAUT : CAURIS5);
       r.taille = taille;
+      if (nb === 4) r.forme = 'croix';
       r.rejouerApresCapture = false;
       let e = nouvellePartie(r, Array.from({ length: nb }, (_, i) => ({ nom: `J${i}` })));
       let n = 0;

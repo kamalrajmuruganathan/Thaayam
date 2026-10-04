@@ -39,7 +39,10 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
       ) : null}
 
       <Carte titre="Plateau">
-        <Choix options={TAILLES.map((t) => [t, `${t} × ${t}`])} valeur={r.taille} onChange={(v) => maj((x) => { x.taille = v; })} />
+        <Choix options={[['croix', 'En croix'], ['carre', 'Carré']]} valeur={r.forme} onChange={(v) => maj((x) => { x.forme = v; })} />
+        {r.forme === 'carre' ? (
+          <Choix options={TAILLES.map((t) => [t, `${t} × ${t}`])} valeur={r.taille} onChange={(v) => maj((x) => { x.taille = v; })} />
+        ) : null}
         <Texte style={{ fontWeight: '600' }}>Pions par joueur</Texte>
         <Choix options={[1, 2, 3, 4, 5, 6, 8, 10, 12].map((v) => [v, String(v)])} valeur={r.nbPions} onChange={(v) => maj((x) => { x.nbPions = v; })} />
       </Carte>
@@ -88,28 +91,34 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
 
       <Carte titre="Déplacements">
         <Interrupteur libelle="Il faut avoir capturé un pion pour entrer à l'intérieur"
-          aide="Sinon, les pions continuent de tourner sur l'anneau extérieur."
+          aide="Sinon, les pions refont le tour du plateau."
           valeur={r.captureAvantInterieur} onChange={(v) => maj((x) => { x.captureAvantInterieur = v; })} />
         <Interrupteur libelle="Il faut tomber pile sur le centre" valeur={r.arriveeExacte}
           onChange={(v) => maj((x) => { x.arriveeExacte = v; })} />
         <Interrupteur libelle="Un seul pion par case (sauf sur les croix)" valeur={r.unPionParCase}
           aide="Deux pions du même joueur ne peuvent pas partager une case ordinaire."
           onChange={(v) => maj((x) => { x.unPionParCase = v; })} />
-        <Texte style={{ fontWeight: '600' }}>Sens de l'anneau extérieur</Texte>
+        <Texte style={{ fontWeight: '600' }}>Sens du tour</Texte>
         <Choix options={[['anti-horaire', '↺ Anti-horaire'], ['horaire', '↻ Horaire']]} valeur={r.sens}
           onChange={(v) => maj((x) => { x.sens = v; })} />
-        <Texte style={{ fontWeight: '600' }}>Sens des anneaux intérieurs</Texte>
-        <Choix options={[['inverse', 'Inverse (classique)'], ['meme', 'Même sens'], ['alterne', 'Alterné']]} valeur={r.sensInterieurs}
-          onChange={(v) => maj((x) => { x.sensInterieurs = v; })} />
+        {r.forme === 'carre' ? (
+          <>
+            <Texte style={{ fontWeight: '600' }}>Sens des anneaux intérieurs</Texte>
+            <Choix options={[['inverse', 'Inverse (classique)'], ['meme', 'Même sens'], ['alterne', 'Alterné']]} valeur={r.sensInterieurs}
+              onChange={(v) => maj((x) => { x.sensInterieurs = v; })} />
+          </>
+        ) : null}
       </Carte>
 
-      <Carte titre="Cases refuges (croix)">
-        <Texte attenue style={{ fontSize: 12 }}>Les cases de départ et le centre sont toujours des refuges.</Texte>
-        <Interrupteur libelle="Coins du 2e anneau (classique)" valeur={r.refuges.coinsDeuxiemeAnneau}
-          onChange={(v) => maj((x) => { x.refuges.coinsDeuxiemeAnneau = v; })} />
-        <Interrupteur libelle="Milieux des anneaux intérieurs" valeur={r.refuges.milieuxInterieurs}
-          onChange={(v) => maj((x) => { x.refuges.milieuxInterieurs = v; })} />
-      </Carte>
+      {r.forme === 'carre' ? (
+        <Carte titre="Cases refuges (croix)">
+          <Texte attenue style={{ fontSize: 12 }}>Les cases de départ et le centre sont toujours des refuges.</Texte>
+          <Interrupteur libelle="Coins du 2e anneau (classique)" valeur={r.refuges.coinsDeuxiemeAnneau}
+            onChange={(v) => maj((x) => { x.refuges.coinsDeuxiemeAnneau = v; })} />
+          <Interrupteur libelle="Milieux des anneaux intérieurs" valeur={r.refuges.milieuxInterieurs}
+            onChange={(v) => maj((x) => { x.refuges.milieuxInterieurs = v; })} />
+        </Carte>
+      ) : null}
 
       {erreurs.length ? <Texte erreur>{erreurs.join(' ')}</Texte> : null}
       {erreurServeur ? <Texte erreur>{erreurServeur}</Texte> : null}

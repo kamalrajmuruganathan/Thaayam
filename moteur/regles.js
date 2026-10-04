@@ -15,11 +15,12 @@ export const TAILLES = [5, 7, 9];
 
 /**
  * Règles par défaut : Thaayam / Dayakattai classique du Tamil Nadu.
- * Plateau 7 × 7, deux dés longs à faces 0, 1, 2, 3 (0 + 0 = 12),
+ * Plateau en croix (bras de 3 × 6 cases), deux dés longs à faces 0, 1, 2, 3 (0 + 0 = 12),
  * entrée avec un « thaayam » (1), on rejoue avec 1, 5, 6 et 12.
  */
 export const REGLES_PAR_DEFAUT = {
-  taille: 7,
+  forme: 'croix', // 'croix' (Thaayam kattai) ou 'carre'
+  taille: 7, // côté du plateau carré
   nbPions: 6,
   des: {
     type: 'desLongs', // 'desLongs' ou 'cauris'
@@ -104,6 +105,7 @@ export function normaliserRegles(source) {
   const erreurs = [];
 
   const r = {
+    forme: s.forme === 'carre' ? 'carre' : 'croix',
     taille: TAILLES.includes(s.taille) ? s.taille : d0.taille,
     nbPions: borne(s.nbPions, 1, 12, d0.nbPions),
     des: {
@@ -157,7 +159,8 @@ export function normaliserRegles(source) {
 /** Résumé lisible des règles (une ligne par règle). */
 export function resumeRegles(r) {
   const lignes = [];
-  lignes.push(`Plateau ${r.taille} × ${r.taille}, ${r.nbPions} pion${r.nbPions > 1 ? 's' : ''} par joueur`);
+  const plateau = r.forme === 'croix' ? 'Plateau en croix' : `Plateau carré ${r.taille} × ${r.taille}`;
+  lignes.push(`${plateau}, ${r.nbPions} pion${r.nbPions > 1 ? 's' : ''} par joueur`);
   if (r.des.type === 'cauris') {
     lignes.push(`${r.des.nbCauris} cauris ; aucun cauri ouvert = ${r.des.valeurZero}`);
   } else {

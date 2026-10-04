@@ -1,74 +1,83 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Rect, Path, Circle, G, Ellipse } from 'react-native-svg';
-import { geometrie, pionsParCase } from '../../moteur/partie.js';
+import { geometrie, pionsParCase, zoneCase } from '../../moteur/partie.js';
 import { cle } from '../../moteur/plateau.js';
 
 const S = 100;
 
-/** Plateau carré ; `coups` = coups jouables, `surPion(pion)` quand on touche un pion jouable. */
+/** Plateau (croix ou carré) ; `coups` = coups jouables, `surPion(pion)` quand on touche un pion jouable. */
 export function Plateau({ etat, coups, surPion, largeur }) {
-  const n = etat.regles.taille;
   const g = geometrie(etat.regles, etat.joueurs.length);
-  const m = (n - 1) / 2;
-  const departs = new Map();
-  etat.joueurs.forEach((j, i) => departs.set(cle(g.chemins[i][0]), j.couleur));
+  const n = g.n;
+  const zone = zoneCase(g, S);
+  const croix = g.forme === 'croix';
   const jouables = new Set(coups.filter((c) => c.depuis >= 0).map((c) => c.pion));
 
+  // Couleur de chaque joueur : sa case de départ, sa colonne d'arrivée (croix) et ses croix
+  const teintes = new Map();
+  etat.joueurs.forEach((j, i) => {
+    const ch = g.chemins[i];
+    teintes.set(cle(ch[0]), j.couleur);
+    if (croix) ch.slice(g.longueurExterieur + 1, g.arrivee).forEach((p) => teintes.set(cle(p), j.couleur));
+  });
+
   const cases = [];
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
-      const k = `${r},${c}`;
-      const x = c * S;
-      const y = r * S;
-      const centre = r === m && c === m;
+  g.cases.forEach((k) => {
+    const [r, c] = k.split(',').map(Number);
+    if (!croix && r === g.centre.r && c === g.centre.c) return;
+    const x = c * S;
+    const y = r * S;
+    const teinte = teintes.get(k);
+    cases.push(<Rect key={`c${k}`} x={x + 2} y={y + 2} width={S - 4} height={S - 4} rx={6} fill="#f8e9c8" stroke="#4a2a12" strokeWidth={3} />);
+    if (teinte) cases.push(<Rect key={`t${k}`} x={x + 2} y={y + 2} width={S - 4} height={S - 4} rx={6} fill={teinte} fillOpacity={0.3} />);
+    if (g.refuges.has(k)) {
       cases.push(
-        <Rect key={`c${k}`} x={x + 2} y={y + 2} width={S - 4} height={S - 4} rx={6}
-          fill={centre ? '#c98b3c' : departs.get(k) || '#f8e9c8'}
-          fillOpacity={departs.has(k) && !centre ? 0.35 : 1} stroke="#6b3a14" strokeWidth={2} />
+        <Path key={`x${k}`} d={`M${x + 14} ${y + 14}L${x + S - 14} ${y + S - 14}M${x + S - 14} ${y + 14}L${x + 14} ${y + S - 14}`}
+          stroke={teinte || '#6b3a14'} strokeWidth={7} strokeLinecap="round" opacity={teinte ? 0.95 : 0.6} />
       );
-      if (g.refuges.has(k) && !centre) {
-        cases.push(
-          <Path key={`x${k}`} d={`M${x + 18} ${y + 18}L${x + S - 18} ${y + S - 18}M${x + S - 18} ${y + 18}L${x + 18} ${y + S - 18}`}
-            stroke="#6b3a14" strokeWidth={4} strokeLinecap="round" opacity={0.55} />
-        );
-      }
-      if (centre) {
-        cases.push(
-          <Path key="centre" d={`M${x + 50} ${y + 14}L${x + 86} ${y + 50}L${x + 50} ${y + 86}L${x + 14} ${y + 50}Z`}
-            fill="none" stroke="#fff3da" strokeWidth={4} />
-        );
-      }
     }
-  }
+  });
+
+  const ct = zone(cle(g.chemins[0][g.arrivee]));
+  const centre = (
+    <G>
+      <Rect x={ct.x + 2} y={ct.y + 2} width={ct.w - 4} height={ct.w - 4} rx={8} fill={croix ? '#fbf3e2' : '#c98b3c'} stroke="#4a2a12" strokeWidth={3} />
+      <Path
+        d={croix
+          ? `M${ct.x + 6} ${ct.y + 6}L${ct.x + ct.w - 6} ${ct.y + ct.w - 6}M${ct.x + ct.w - 6} ${ct.y + 6}L${ct.x + 6} ${ct.y + ct.w - 6}`
+          : `M${ct.x + 50} ${ct.y + 14}L${ct.x + 86} ${ct.y + 50}L${ct.x + 50} ${ct.y + 86}L${ct.x + 14} ${ct.y + 50}Z`}
+        fill="none" stroke={croix ? '#4a2a12' : '#fff3da'} strokeWidth={croix ? 3 : 4} opacity={0.8} />
+    </G>
+  );
 
   const dernier = etat.dernierCoup ? (() => {
-    const [r, c] = g.chemins[etat.dernierCoup.joueur][etat.dernierCoup.vers];
-    return <Rect x={c * S + 6} y={r * S + 6} width={S - 12} height={S - 12} rx={8} fill="none"
+    const z = zone(cle(g.chemins[etat.dernierCoup.joueur][etat.dernierCoup.vers]));
+    return <Rect x={z.x + 6} y={z.y + 6} width={z.w - 12} height={z.w - 12} rx={8} fill="none"
       stroke={etat.joueurs[etat.dernierCoup.joueur].couleur} strokeWidth={5} opacity={0.8} />;
   })() : null;
 
   const cibles = coups.map((cp) => {
-    const [r, c] = g.chemins[etat.tour][cp.vers];
+    const z = zone(cle(g.chemins[etat.tour][cp.vers]));
     return (
-      <Circle key={`d${cp.pion}`} cx={c * S + 50} cy={r * S + 50} r={40} fill="none"
+      <Circle key={`d${cp.pion}`} cx={z.x + z.w / 2} cy={z.y + z.w / 2} r={z.w / 2 - 10} fill="none"
         stroke={etat.joueurs[etat.tour].couleur} strokeWidth={5} strokeDasharray="10 8" />
     );
   });
 
   const pions = [];
   pionsParCase(etat).forEach((liste, k) => {
-    const [r, c] = k.split(',').map(Number);
+    const z = zone(k);
     const cote = Math.ceil(Math.sqrt(liste.length));
-    const pas = (S - 16) / cote;
-    const rayon = Math.min(30, pas * 0.42);
+    const pas = (z.w - 16) / cote;
+    const rayon = Math.min(38, pas * 0.45);
     liste.forEach((p, i) => {
-      const cx = c * S + 8 + pas * (i % cote) + pas / 2;
-      const cy = r * S + 8 + pas * Math.floor(i / cote) + pas / 2;
+      const cx = z.x + 8 + pas * (i % cote) + pas / 2;
+      const cy = z.y + 8 + pas * Math.floor(i / cote) + pas / 2;
       const jouable = p.joueur === etat.tour && jouables.has(p.pion);
       pions.push(
         <G key={`p${p.joueur}-${p.pion}`} onPress={jouable ? () => surPion(p.pion) : undefined}>
-          {jouable ? <Circle cx={cx} cy={cy} r={Math.max(rayon + 8, 36)} fill="#ffffff" fillOpacity={0.55} /> : null}
+          {jouable ? <Circle cx={cx} cy={cy} r={Math.max(rayon + 10, 60)} fill="#ffffff" fillOpacity={0.45} /> : null}
           <Circle cx={cx} cy={cy} r={rayon} fill={etat.joueurs[p.joueur].couleur}
             stroke={jouable ? '#ffffff' : '#2b1d10'} strokeWidth={jouable ? 6 : 3} />
           <Circle cx={cx - rayon * 0.3} cy={cy - rayon * 0.3} r={rayon * 0.3} fill="#ffffff" opacity={0.35} />
@@ -80,7 +89,9 @@ export function Plateau({ etat, coups, surPion, largeur }) {
   return (
     <View style={{ backgroundColor: '#6b3a14', padding: 8, borderRadius: 14 }}>
       <Svg width={largeur - 16} height={largeur - 16} viewBox={`0 0 ${n * S} ${n * S}`}>
+        {croix ? <Rect x={0} y={0} width={n * S} height={n * S} rx={24} fill="#b8653a" /> : null}
         {cases}
+        {centre}
         {dernier}
         {cibles}
         {pions}
