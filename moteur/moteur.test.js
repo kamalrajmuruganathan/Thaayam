@@ -4,12 +4,14 @@ import { chemin, refuges, cle } from './plateau.js';
 import { normaliserRegles, valeursPossibles, copieRegles, REGLES_PAR_DEFAUT } from './regles.js';
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, tirerDes } from './partie.js';
 
+const t = (valeur) => ({ valeur, detail: [] });
+const CAURIS5 = normaliserRegles({ taille: 5, nbPions: 4, des: { type: 'cauris', nbCauris: 4, valeurZero: 8 }, valeursEntree: [1], valeursRejouer: [1, 4, 8], sensInterieurs: 'alterne' }).regles;
 const voisins = ([a, b], [c, d]) => Math.max(Math.abs(a - c), Math.abs(b - d)) === 1;
 
 test('chaque chemin passe une fois par chaque case et finit au centre', () => {
   for (const n of [5, 7, 9])
     for (const sens of ['anti-horaire', 'horaire'])
-      for (const alt of [true, false])
+      for (const alt of ['inverse', 'meme', 'alterne'])
         for (let cote = 0; cote < 4; cote++) {
           const { cases, longueurExterieur } = chemin(n, cote, sens, alt);
           assert.equal(cases.length, n * n);
@@ -31,30 +33,57 @@ test('le départ est au milieu du côté, sens anti-horaire', () => {
 
 test('refuges', () => {
   assert.equal(refuges(5).size, 5);
-  assert.equal(refuges(7, { milieuxInterieurs: true, coinsInterieurs: true }).size, 5 + 2 * 8);
+  assert.equal(refuges(7, { coinsDeuxiemeAnneau: true }).size, 9);
+  assert.ok(refuges(7, { coinsDeuxiemeAnneau: true }).has('5,1'));
+  assert.equal(refuges(7, { milieuxInterieurs: true, coinsDeuxiemeAnneau: true }).size, 5 + 8 + 4);
+});
+
+test('7 × 7 classique : extérieur anti-horaire, puis intérieur horaire par le coin en croix', () => {
+  const { cases } = chemin(7, 0, 'anti-horaire', 'inverse');
+  assert.deepEqual(cases.slice(0, 2), [[6, 3], [6, 4]]);
+  assert.deepEqual(cases.slice(23, 26), [[6, 2], [5, 2], [5, 1]]);
+  assert.deepEqual(cases.slice(39, 41), [[5, 3], [4, 3]]);
+  assert.deepEqual(cases.at(-1), [3, 3]);
 });
 
 test('valeurs possibles', () => {
-  assert.deepEqual(valeursPossibles(REGLES_PAR_DEFAUT), [1, 2, 3, 4, 8]);
+  assert.deepEqual(valeursPossibles(REGLES_PAR_DEFAUT), [1, 2, 3, 4, 5, 6, 12]);
+  assert.deepEqual(valeursPossibles(CAURIS5), [1, 2, 3, 4, 8]);
   const r = copieRegles();
-  r.des = { ...r.des, type: 'desLongs', nbDes: 2, faces: [1, 2, 3, 4] };
+  r.des = { ...r.des, nbDes: 2, faces: [1, 2, 3, 4] };
   assert.deepEqual(valeursPossibles(r), [2, 3, 4, 5, 6, 7, 8]);
 });
 
+test('dés longs : 0 + 0 = 12', () => {
+  const zero = () => 0; // face d'indice 0 = 0
+  assert.equal(tirerDes(REGLES_PAR_DEFAUT, zero).valeur, 12);
+  const vals = new Set();
+  for (let i = 0; i < 3000; i++) vals.add(tirerDes(REGLES_PAR_DEFAUT).valeur);
+  assert.deepEqual([...vals].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 12]);
+});
+
+test('un seul pion par case sauf refuge', () => {
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  e.joueurs[0].pions[0] = 2;
+  e.joueurs[0].pions[1] = 4;
+  e = lancer(e, undefined, t(2));
+  assert.ok(!coupsPossibles(e).some((c) => c.pion === 0)); // 4 est déjà pris
+  assert.ok(coupsPossibles(e).some((c) => c.pion === 1));
+});
+
 test('règles incohérentes refusées', () => {
-  const r = copieRegles();
+  const r = copieRegles(CAURIS5);
   r.valeursEntree = [5];
   assert.ok(normaliserRegles(r).erreurs.length > 0);
   r.valeursEntree = [1];
   r.valeursRejouer = [1, 2, 3, 4, 8];
   assert.ok(normaliserRegles(r).erreurs.length > 0);
-  assert.equal(normaliserRegles(REGLES_PAR_DEFAUT).erreurs.length, 0);
+  assert.equal(normaliserRegles(CAURIS5).erreurs.length, 0);
 });
 
-const t = (valeur) => ({ valeur, detail: [] });
 
 test('entrée, rejouer, capture', () => {
-  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  let e = nouvellePartie(CAURIS5, [{ nom: 'A' }, { nom: 'B' }]);
   e = lancer(e, undefined, t(2)); // aucun pion dehors, 2 ne fait pas entrer
   assert.equal(e.tour, 1);
   e = lancer(e, undefined, t(1));
@@ -81,7 +110,7 @@ test('entrée, rejouer, capture', () => {
 });
 
 test("sans capture, le pion reste sur l'anneau extérieur", () => {
-  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  let e = nouvellePartie(CAURIS5, [{ nom: 'A' }, { nom: 'B' }]);
   e.joueurs[0].pions[0] = 14;
   e = lancer(e, undefined, t(3));
   e = jouer(e, 0);
@@ -95,7 +124,7 @@ test("sans capture, le pion reste sur l'anneau extérieur", () => {
 });
 
 test('arrivée exacte et victoire', () => {
-  const r = copieRegles();
+  const r = copieRegles(CAURIS5);
   r.nbPions = 1;
   let e = nouvellePartie(r, [{ nom: 'A' }, { nom: 'B' }]);
   e.joueurs[0].captures = 1;
@@ -114,7 +143,7 @@ test('parties aléatoires complètes sans erreur', () => {
   const rng = () => ((graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648);
   for (const taille of [5, 7]) {
     for (const nb of [2, 3, 4]) {
-      const r = copieRegles();
+      const r = copieRegles(nb === 2 ? REGLES_PAR_DEFAUT : CAURIS5);
       r.taille = taille;
       r.rejouerApresCapture = false;
       let e = nouvellePartie(r, Array.from({ length: nb }, (_, i) => ({ nom: `J${i}` })));
@@ -133,6 +162,6 @@ test('parties aléatoires complètes sans erreur', () => {
 
 test('tirage des cauris', () => {
   const vals = new Set();
-  for (let i = 0; i < 2000; i++) vals.add(tirerDes(REGLES_PAR_DEFAUT).valeur);
+  for (let i = 0; i < 2000; i++) vals.add(tirerDes(CAURIS5).valeur);
   assert.deepEqual([...vals].sort((a, b) => a - b), [1, 2, 3, 4, 8]);
 });

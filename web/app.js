@@ -91,7 +91,7 @@ let nbLocal = 2;
 function ouvrirReglages(mode) {
   modeReglages = mode;
   try {
-    edition = normaliserRegles(JSON.parse(memoire.lire('thaayam:regles')) || REGLES_PAR_DEFAUT).regles;
+    edition = normaliserRegles(JSON.parse(memoire.lire('thaayam:regles:v2')) || REGLES_PAR_DEFAUT).regles;
   } catch {
     edition = copieRegles();
   }
@@ -159,7 +159,7 @@ function construireFormulaire() {
     el('label', {}, 'Pions par joueur',
       (() => {
         const s = el('select', { onchange: (e) => { r.nbPions = Number(e.target.value); verifierReglages(); } });
-        for (let i = 1; i <= 6; i++) s.append(el('option', { value: i, selected: i === r.nbPions }, String(i)));
+        for (let i = 1; i <= 12; i++) s.append(el('option', { value: i, selected: i === r.nbPions }, String(i)));
         return s;
       })())));
 
@@ -183,7 +183,11 @@ function construireFormulaire() {
       })()),
     el('label', {}, 'Valeurs des faces de chaque dé',
       el('input', { value: r.des.faces.join(', '), oninput: (e) => { r.des.faces = lireListe(e.target.value); verifierReglages(); } }),
-      el('span', { class: 'aide' }, 'Séparées par des virgules, par exemple 1, 2, 3, 4.')));
+      el('span', { class: 'aide' }, 'Séparées par des virgules. Dayakattai classique : 0, 1, 2, 3.')),
+    el('label', {}, 'Valeur quand tous les dés montrent 0',
+      el('input', { type: 'number', min: 0, max: 24, value: r.des.valeurToutZero, inputmode: 'numeric',
+        oninput: (e) => { r.des.valeurToutZero = Number(e.target.value); verifierReglages(); } }),
+      el('span', { class: 'aide' }, 'Classique : 0 + 0 = 12.')));
   const entree = el('input', { id: 'champ-entree', value: r.valeursEntree.join(', '),
     oninput: (e) => { r.valeursEntree = lireListe(e.target.value); verifierReglages(); } });
   const rejouer = el('input', { id: 'champ-rejouer', value: r.valeursRejouer.join(', '),
@@ -192,7 +196,7 @@ function construireFormulaire() {
   montrerDes();
 
   f.append(el('fieldset', {}, el('legend', {}, 'Lancer'),
-    choix([['cauris', 'Cauris'], ['desLongs', 'Dés longs']], r.des.type, (v) => {
+    choix([['desLongs', 'Dés longs'], ['cauris', 'Cauris']], r.des.type, (v) => {
       r.des.type = v;
       r.valeursEntree = [...PRESETS_DES[v].valeursEntree];
       r.valeursRejouer = [...PRESETS_DES[v].valeursRejouer];
@@ -211,6 +215,8 @@ function construireFormulaire() {
     caseACocher("Il faut avoir capturé un pion pour entrer à l'intérieur", r.captureAvantInterieur,
       (v) => { r.captureAvantInterieur = v; }, "Sinon, les pions continuent de tourner sur l'anneau extérieur."),
     caseACocher('Il faut tomber pile sur le centre', r.arriveeExacte, (v) => { r.arriveeExacte = v; }),
+    caseACocher('Un seul pion par case (sauf sur les croix)', r.unPionParCase, (v) => { r.unPionParCase = v; },
+      'Deux pions du même joueur ne peuvent pas partager une case ordinaire.'),
     el('label', {}, "Sens de l'anneau extérieur",
       (() => {
         const s = el('select', { onchange: (e) => { r.sens = e.target.value; } });
@@ -218,12 +224,18 @@ function construireFormulaire() {
         s.append(el('option', { value: 'horaire', selected: r.sens === 'horaire' }, 'Sens des aiguilles d’une montre'));
         return s;
       })()),
-    caseACocher('Les anneaux intérieurs se parcourent dans l’autre sens', r.sensAlterne, (v) => { r.sensAlterne = v; })));
+    el('label', {}, 'Sens des anneaux intérieurs',
+      (() => {
+        const s = el('select', { onchange: (e) => { r.sensInterieurs = e.target.value; } });
+        [['inverse', "Tous dans l'autre sens (classique)"], ['meme', 'Même sens que l’extérieur'], ['alterne', 'Un sens sur deux']]
+          .forEach(([v, t]) => s.append(el('option', { value: v, selected: r.sensInterieurs === v }, t)));
+        return s;
+      })())));
 
   f.append(el('fieldset', {}, el('legend', {}, 'Cases refuges (croix)'),
     el('div', { class: 'aide' }, 'Les cases de départ et le centre sont toujours des refuges.'),
-    caseACocher('Milieux des anneaux intérieurs', r.refuges.milieuxInterieurs, (v) => { r.refuges.milieuxInterieurs = v; }),
-    caseACocher('Coins des anneaux intérieurs', r.refuges.coinsInterieurs, (v) => { r.refuges.coinsInterieurs = v; })));
+    caseACocher('Coins du 2e anneau (classique)', r.refuges.coinsDeuxiemeAnneau, (v) => { r.refuges.coinsDeuxiemeAnneau = v; }),
+    caseACocher('Milieux des anneaux intérieurs', r.refuges.milieuxInterieurs, (v) => { r.refuges.milieuxInterieurs = v; })));
 
   verifierReglages();
 }
@@ -241,7 +253,7 @@ $('form-regles').addEventListener('submit', (e) => e.preventDefault());
 $('btn-valider-regles').addEventListener('click', async () => {
   if (!verifierReglages()) return;
   const { regles } = normaliserRegles(edition);
-  memoire.ecrire('thaayam:regles', JSON.stringify(regles));
+  memoire.ecrire('thaayam:regles:v2', JSON.stringify(regles));
   if (modeReglages === 'local') {
     const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: $(`nom-${i}`).value.trim() || COULEURS[i].nom }));
     session = { mode: 'local', etat: nouvellePartie(regles, joueurs) };
@@ -426,9 +438,17 @@ function dessinerDes(etat) {
   if (etat.regles.des.type === 'cauris') {
     l.detail.forEach((ouvert) => zone.append(cauri(ouvert)));
   } else {
-    l.detail.forEach((f) => zone.append(el('div', { class: 'de-long' }, String(f))));
+    l.detail.forEach((f) => zone.append(deLong(f)));
   }
   zone.append(el('span', { class: 'valeur' }, String(l.valeur)));
+}
+
+/** Dé long (dayakattai) vu de dessus : une face avec 0 à 3 points. */
+function deLong(points) {
+  const d = el('div', { class: 'de-long', 'aria-label': `dé long : ${points}` });
+  if (points > 3) d.append(String(points));
+  else for (let i = 0; i < points; i++) d.append(el('span', { class: 'point' }));
+  return d;
 }
 
 function cauri(ouvert) {

@@ -63,8 +63,9 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter 
               {etat.regles.des.type === 'cauris'
                 ? l.detail.map((o, i) => <Cauri key={i} ouvert={o} />)
                 : l.detail.map((f, i) => (
-                  <View key={i} style={{ minWidth: 44, height: 30, borderRadius: 6, backgroundColor: '#f1dcae', borderWidth: 2, borderColor: '#8a5a2b', alignItems: 'center', justifyContent: 'center' }}>
-                    <Texte style={{ color: '#3b2410', fontWeight: '800' }}>{f}</Texte>
+                  <View key={i} accessibilityLabel={`dé long : ${f}`} style={{ width: 92, height: 30, borderRadius: 6, backgroundColor: '#d9a845', borderWidth: 2, borderColor: '#7a5418', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12 }}>
+                    {f > 3 ? <Texte style={{ color: '#3b2410', fontWeight: '800' }}>{f}</Texte>
+                      : Array.from({ length: f }, (_, k) => <View key={k} style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: '#3b2410' }} />)}
                   </View>
                 ))}
               <Texte style={{ fontSize: 30, fontWeight: '800', color: c.accent, marginLeft: 6 }}>{l.valeur}</Texte>

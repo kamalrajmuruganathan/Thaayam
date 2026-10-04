@@ -15,6 +15,7 @@ export default function Reglages({ mode, reglesInitiales, pseudo, surValider, oc
   const [txtRejouer, setTxtRejouer] = useState(r.valeursRejouer.join(', '));
   const [txtFaces, setTxtFaces] = useState(r.des.faces.join(', '));
   const [txtZero, setTxtZero] = useState(String(r.des.valeurZero));
+  const [txtToutZero, setTxtToutZero] = useState(String(r.des.valeurToutZero));
 
   const maj = (f) => setR((ancien) => { const copie = JSON.parse(JSON.stringify(ancien)); f(copie); return copie; });
   const { erreurs } = normaliserRegles(r);
@@ -34,12 +35,12 @@ export default function Reglages({ mode, reglesInitiales, pseudo, surValider, oc
       <Carte titre="Plateau">
         <Choix options={TAILLES.map((t) => [t, `${t} × ${t}`])} valeur={r.taille} onChange={(v) => maj((x) => { x.taille = v; })} />
         <Texte style={{ fontWeight: '600' }}>Pions par joueur</Texte>
-        <Choix options={[1, 2, 3, 4, 5, 6].map((v) => [v, String(v)])} valeur={r.nbPions} onChange={(v) => maj((x) => { x.nbPions = v; })} />
+        <Choix options={[1, 2, 3, 4, 5, 6, 8, 10, 12].map((v) => [v, String(v)])} valeur={r.nbPions} onChange={(v) => maj((x) => { x.nbPions = v; })} />
       </Carte>
 
       <Carte titre="Lancer">
         <Choix
-          options={[['cauris', 'Cauris'], ['desLongs', 'Dés longs']]}
+          options={[['desLongs', 'Dés longs'], ['cauris', 'Cauris']]}
           valeur={r.des.type}
           onChange={(v) => {
             maj((x) => {
@@ -64,8 +65,10 @@ export default function Reglages({ mode, reglesInitiales, pseudo, surValider, oc
           <>
             <Texte style={{ fontWeight: '600' }}>Nombre de dés longs</Texte>
             <Choix options={[[1, '1'], [2, '2'], [3, '3']]} valeur={r.des.nbDes} onChange={(v) => maj((x) => { x.des.nbDes = v; })} />
-            <Champ libelle="Valeurs des faces de chaque dé" value={txtFaces} aide="Séparées par des virgules, par exemple 1, 2, 3, 4."
+            <Champ libelle="Valeurs des faces de chaque dé" value={txtFaces} aide="Séparées par des virgules. Dayakattai classique : 0, 1, 2, 3."
               onChangeText={(t) => { setTxtFaces(t); maj((x) => { x.des.faces = lireListe(t); }); }} />
+            <Champ libelle="Valeur quand tous les dés montrent 0" keyboardType="number-pad" value={txtToutZero} aide="Classique : 0 + 0 = 12."
+              onChangeText={(t) => { setTxtToutZero(t); maj((x) => { x.des.valeurToutZero = Number(t); }); }} />
           </>
         )}
         <Texte attenue style={{ fontSize: 12 }}>Valeurs possibles avec ces dés : {valeursPossibles(r).join(', ')}</Texte>
@@ -83,19 +86,23 @@ export default function Reglages({ mode, reglesInitiales, pseudo, surValider, oc
           valeur={r.captureAvantInterieur} onChange={(v) => maj((x) => { x.captureAvantInterieur = v; })} />
         <Interrupteur libelle="Il faut tomber pile sur le centre" valeur={r.arriveeExacte}
           onChange={(v) => maj((x) => { x.arriveeExacte = v; })} />
+        <Interrupteur libelle="Un seul pion par case (sauf sur les croix)" valeur={r.unPionParCase}
+          aide="Deux pions du même joueur ne peuvent pas partager une case ordinaire."
+          onChange={(v) => maj((x) => { x.unPionParCase = v; })} />
         <Texte style={{ fontWeight: '600' }}>Sens de l'anneau extérieur</Texte>
         <Choix options={[['anti-horaire', '↺ Anti-horaire'], ['horaire', '↻ Horaire']]} valeur={r.sens}
           onChange={(v) => maj((x) => { x.sens = v; })} />
-        <Interrupteur libelle="Les anneaux intérieurs se parcourent dans l'autre sens" valeur={r.sensAlterne}
-          onChange={(v) => maj((x) => { x.sensAlterne = v; })} />
+        <Texte style={{ fontWeight: '600' }}>Sens des anneaux intérieurs</Texte>
+        <Choix options={[['inverse', 'Inverse (classique)'], ['meme', 'Même sens'], ['alterne', 'Alterné']]} valeur={r.sensInterieurs}
+          onChange={(v) => maj((x) => { x.sensInterieurs = v; })} />
       </Carte>
 
       <Carte titre="Cases refuges (croix)">
         <Texte attenue style={{ fontSize: 12 }}>Les cases de départ et le centre sont toujours des refuges.</Texte>
+        <Interrupteur libelle="Coins du 2e anneau (classique)" valeur={r.refuges.coinsDeuxiemeAnneau}
+          onChange={(v) => maj((x) => { x.refuges.coinsDeuxiemeAnneau = v; })} />
         <Interrupteur libelle="Milieux des anneaux intérieurs" valeur={r.refuges.milieuxInterieurs}
           onChange={(v) => maj((x) => { x.refuges.milieuxInterieurs = v; })} />
-        <Interrupteur libelle="Coins des anneaux intérieurs" valeur={r.refuges.coinsInterieurs}
-          onChange={(v) => maj((x) => { x.refuges.coinsInterieurs = v; })} />
       </Carte>
 
       {erreurs.length ? <Texte erreur>{erreurs.join(' ')}</Texte> : null}

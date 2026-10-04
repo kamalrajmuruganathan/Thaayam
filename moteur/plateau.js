@@ -49,10 +49,11 @@ function tourner(n, [r, c]) {
  * Chemin complet d'un joueur partant du côté `cote` (0 à 3).
  * Renvoie { cases: [[r, c], ...], longueurExterieur }.
  */
-export function chemin(n, cote = 0, sens = 'anti-horaire', sensAlterne = true) {
+export function chemin(n, cote = 0, sens = 'anti-horaire', sensInterieurs = 'inverse') {
   const m = (n - 1) / 2;
   let depart = [n - 1, m];
-  let antiHoraire = sens !== 'horaire';
+  const exterieur = sens !== 'horaire';
+  let antiHoraire = exterieur;
   const cases = [];
   for (let k = 0; k <= m; k++) {
     let anneau = anneauAntiHoraire(n, k);
@@ -62,7 +63,8 @@ export function chemin(n, cote = 0, sens = 'anti-horaire', sensAlterne = true) {
     const tour = [...anneau.slice(i), ...anneau.slice(0, i)];
     cases.push(...tour);
     if (k < m) depart = versInterieur(n, k, tour[tour.length - 1]);
-    if (sensAlterne) antiHoraire = !antiHoraire;
+    if (sensInterieurs === 'alterne') antiHoraire = !antiHoraire;
+    else antiHoraire = sensInterieurs === 'meme' ? exterieur : !exterieur;
   }
   let tournees = cases;
   for (let q = 0; q < cote; q++) tournees = tournees.map((p) => tourner(n, p));
@@ -88,7 +90,7 @@ export function refuges(n, options = {}) {
   milieux(0).forEach((p) => ens.add(cle(p)));
   for (let k = 1; k < m; k++) {
     if (options.milieuxInterieurs) milieux(k).forEach((p) => ens.add(cle(p)));
-    if (options.coinsInterieurs) coins(k).forEach((p) => ens.add(cle(p)));
   }
+  if (options.coinsDeuxiemeAnneau && m > 1) coins(1).forEach((p) => ens.add(cle(p)));
   return ens;
 }

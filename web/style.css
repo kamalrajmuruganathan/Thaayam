@@ -98,7 +98,8 @@ input, select {
 .des .valeur { font-size: 2rem; font-weight: 800; color: var(--accent); margin-left: 8px; }
 .des.secoue { animation: secoue 0.35s; }
 @keyframes secoue { 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
-.de-long { min-width: 44px; height: 30px; border-radius: 6px; background: #f1dcae; border: 2px solid #8a5a2b; color: #3b2410; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+.de-long { width: 92px; height: 30px; border-radius: 6px; background: linear-gradient(#e9c46a, #b8862b); border: 2px solid #7a5418; color: #3b2410; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: 800; box-shadow: inset 0 2px 0 rgba(255,255,255,0.35); }
+.de-long .point { width: 9px; height: 9px; border-radius: 50%; background: #3b2410; box-shadow: inset 0 1px 1px rgba(0,0,0,0.5); }
 .consigne { text-align: center; font-weight: 600; }
 
 .journal { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column-reverse; gap: 4px; font-size: 0.9rem; max-height: 220px; overflow-y: auto; }

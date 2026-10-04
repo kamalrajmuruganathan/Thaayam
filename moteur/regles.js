@@ -13,33 +13,40 @@ export const COULEURS = [
 
 export const TAILLES = [5, 7, 9];
 
+/**
+ * Règles par défaut : Thaayam / Dayakattai classique du Tamil Nadu.
+ * Plateau 7 × 7, deux dés longs à faces 0, 1, 2, 3 (0 + 0 = 12),
+ * entrée avec un « thaayam » (1), on rejoue avec 1, 5, 6 et 12.
+ */
 export const REGLES_PAR_DEFAUT = {
-  taille: 5,
-  nbPions: 4,
+  taille: 7,
+  nbPions: 6,
   des: {
-    type: 'cauris', // 'cauris' ou 'desLongs'
+    type: 'desLongs', // 'desLongs' ou 'cauris'
+    nbDes: 2,
+    faces: [0, 1, 2, 3],
+    valeurToutZero: 12, // valeur quand tous les dés longs montrent 0
     nbCauris: 4,
     valeurZero: 8, // valeur quand aucun cauri ne tombe ouvert
-    nbDes: 2,
-    faces: [1, 2, 3, 4],
   },
   valeursEntree: [1], // « thaayam » : lancer qui fait entrer un pion
-  valeursRejouer: [1, 4, 8],
+  valeursRejouer: [1, 5, 6, 12],
   rejouerApresCapture: true,
-  captureAvantInterieur: true,
+  captureAvantInterieur: true, // il faut avoir « coupé » un pion pour entrer à l'intérieur
   arriveeExacte: true,
+  unPionParCase: true, // deux pions d'un même joueur ne partagent pas une case (sauf refuge)
   sens: 'anti-horaire', // sens de l'anneau extérieur
-  sensAlterne: true, // chaque anneau intérieur se parcourt dans l'autre sens
+  sensInterieurs: 'inverse', // 'inverse' | 'meme' | 'alterne' (par rapport à l'anneau extérieur)
   refuges: {
+    coinsDeuxiemeAnneau: true,
     milieuxInterieurs: false,
-    coinsInterieurs: false,
   },
 };
 
 /** Valeurs par défaut proposées quand on change de type de dés. */
 export const PRESETS_DES = {
+  desLongs: { valeursEntree: [1], valeursRejouer: [1, 5, 6, 12] },
   cauris: { valeursEntree: [1], valeursRejouer: [1, 4, 8] },
-  desLongs: { valeursEntree: [2], valeursRejouer: [2, 8] },
 };
 
 export function copieRegles(r = REGLES_PAR_DEFAUT) {
@@ -54,15 +61,20 @@ export function valeursPossibles(regles) {
     for (let k = 1; k <= d.nbCauris; k++) ens.add(k);
     ens.add(d.valeurZero);
   } else {
-    let sommes = [0];
+    let tirages = [[]];
     for (let i = 0; i < d.nbDes; i++) {
-      const suivantes = [];
-      for (const s of sommes) for (const f of d.faces) suivantes.push(s + f);
-      sommes = suivantes;
+      const suivants = [];
+      for (const t of tirages) for (const f of d.faces) suivants.push([...t, f]);
+      tirages = suivants;
     }
-    sommes.forEach((s) => ens.add(s));
+    tirages.forEach((t) => ens.add(valeurDesLongs(d, t)));
   }
   return [...ens].sort((a, b) => a - b);
+}
+
+/** Valeur d'un tirage de dés longs : la somme, sauf si tous montrent 0. */
+export function valeurDesLongs(d, faces) {
+  return faces.every((f) => f === 0) ? d.valeurToutZero : faces.reduce((a, b) => a + b, 0);
 }
 
 /** Lit « 1, 4, 8 » → [1, 4, 8] (entiers, sans doublon). */
@@ -93,12 +105,13 @@ export function normaliserRegles(source) {
 
   const r = {
     taille: TAILLES.includes(s.taille) ? s.taille : d0.taille,
-    nbPions: borne(s.nbPions, 1, 6, d0.nbPions),
+    nbPions: borne(s.nbPions, 1, 12, d0.nbPions),
     des: {
-      type: sd.type === 'desLongs' ? 'desLongs' : 'cauris',
+      type: sd.type === 'cauris' ? 'cauris' : 'desLongs',
       nbCauris: borne(sd.nbCauris, 2, 7, d0.des.nbCauris),
       valeurZero: borne(sd.valeurZero, 1, 24, d0.des.valeurZero),
       nbDes: borne(sd.nbDes, 1, 3, d0.des.nbDes),
+      valeurToutZero: borne(sd.valeurToutZero, 0, 24, d0.des.valeurToutZero),
       faces: Array.isArray(sd.faces)
         ? [...new Set(sd.faces.filter((f) => Number.isInteger(f) && f >= 0 && f <= 12))]
         : [...d0.des.faces],
@@ -113,10 +126,11 @@ export function normaliserRegles(source) {
     captureAvantInterieur: s.captureAvantInterieur !== false,
     arriveeExacte: s.arriveeExacte !== false,
     sens: s.sens === 'horaire' ? 'horaire' : 'anti-horaire',
-    sensAlterne: s.sensAlterne !== false,
+    unPionParCase: s.unPionParCase !== false,
+    sensInterieurs: ['inverse', 'meme', 'alterne'].includes(s.sensInterieurs) ? s.sensInterieurs : d0.sensInterieurs,
     refuges: {
+      coinsDeuxiemeAnneau: !(s.refuges && s.refuges.coinsDeuxiemeAnneau === false),
       milieuxInterieurs: !!(s.refuges && s.refuges.milieuxInterieurs),
-      coinsInterieurs: !!(s.refuges && s.refuges.coinsInterieurs),
     },
   };
 
@@ -148,7 +162,8 @@ export function resumeRegles(r) {
     lignes.push(`${r.des.nbCauris} cauris ; aucun cauri ouvert = ${r.des.valeurZero}`);
   } else {
     lignes.push(
-      `${r.des.nbDes} dé${r.des.nbDes > 1 ? 's' : ''} long${r.des.nbDes > 1 ? 's' : ''} (faces ${r.des.faces.join(', ')})`
+      `${r.des.nbDes} dé${r.des.nbDes > 1 ? 's' : ''} long${r.des.nbDes > 1 ? 's' : ''} (faces ${r.des.faces.join(', ')})` +
+        (r.des.faces.includes(0) ? ` ; tout à 0 = ${r.des.valeurToutZero}` : '')
     );
   }
   lignes.push(`Entrée d'un pion avec : ${r.valeursEntree.join(', ')}`);
@@ -156,6 +171,7 @@ export function resumeRegles(r) {
     `On rejoue avec : ${r.valeursRejouer.length ? r.valeursRejouer.join(', ') : 'aucune valeur'}` +
       (r.rejouerApresCapture ? ', et après une capture' : '')
   );
+  if (r.unPionParCase) lignes.push('Un seul pion par case, sauf sur les refuges');
   if (r.captureAvantInterieur) lignes.push("Il faut avoir capturé un pion pour entrer à l'intérieur");
   lignes.push(r.arriveeExacte ? 'Il faut tomber pile sur le centre' : 'Pas besoin de tomber pile sur le centre');
   return lignes;

@@ -5,7 +5,7 @@
  * Position d'un pion : -1 = à la maison, 0 = case de départ,
  * dernier indice du chemin = centre (pion arrivé).
  */
-import { normaliserRegles, valeursPossibles, COULEURS } from './regles.js';
+import { normaliserRegles, valeursPossibles, valeurDesLongs, COULEURS } from './regles.js';
 import { chemin, cotesPourJoueurs, refuges, cle } from './plateau.js';
 
 const MAX_JOURNAL = 30;
@@ -13,10 +13,10 @@ const MAX_JOURNAL = 30;
 /** Données calculées à partir des règles (pas stockées dans l'état). */
 const cache = new Map();
 export function geometrie(regles, nbJoueurs) {
-  const k = JSON.stringify([regles.taille, regles.sens, regles.sensAlterne, regles.refuges, nbJoueurs]);
+  const k = JSON.stringify([regles.taille, regles.sens, regles.sensInterieurs, regles.refuges, nbJoueurs]);
   if (!cache.has(k)) {
     const cotes = cotesPourJoueurs(nbJoueurs);
-    const chemins = cotes.map((c) => chemin(regles.taille, c, regles.sens, regles.sensAlterne));
+    const chemins = cotes.map((c) => chemin(regles.taille, c, regles.sens, regles.sensInterieurs));
     cache.set(k, {
       cotes,
       chemins: chemins.map((ch) => ch.cases),
@@ -68,7 +68,7 @@ export function tirerDes(regles, rng = Math.random) {
     return { valeur: nb === 0 ? d.valeurZero : nb, detail: ouverts };
   }
   const faces = Array.from({ length: d.nbDes }, () => d.faces[Math.floor(rng() * d.faces.length)]);
-  return { valeur: faces.reduce((a, b) => a + b, 0), detail: faces };
+  return { valeur: valeurDesLongs(d, faces), detail: faces };
 }
 
 /** Destination d'un pion pour une valeur donnée, ou null si le coup est interdit. */
@@ -87,6 +87,11 @@ export function destination(etat, joueur, pion, valeur) {
     if (etat.regles.arriveeExacte) return null;
     t = g.arrivee;
   }
+  if (
+    etat.regles.unPionParCase && t !== g.arrivee &&
+    !g.refuges.has(cle(g.chemins[joueur][t])) &&
+    j.pions.some((q, i) => i !== pion && q === t)
+  ) return null;
   return t;
 }
 

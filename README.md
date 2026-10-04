@@ -16,14 +16,19 @@ Deux versions qui partagent le même moteur de jeu :
 | `app/` | L'appli Expo (`App.js`, `src/`) |
 | `supabase/thaayam.sql` | Tables et fonctions du jeu en ligne, à exécuter une fois dans Supabase |
 
-## Règles réglables
+## Règles
 
-- Plateau 5 × 5, 7 × 7 ou 9 × 9 ; de 1 à 6 pions par joueur ; 2 à 4 joueurs.
-- Cauris (2 à 7, valeur quand aucun n'est ouvert : 8, 12…) ou dés longs (nombre et valeurs des faces).
-- Valeurs qui font entrer un pion (« thaayam ») et valeurs qui font rejouer ; rejouer après une capture.
-- Capture obligatoire avant d'entrer à l'intérieur (sinon on retourne sur l'anneau extérieur).
-- Arrivée exacte au centre ou non ; sens de rotation ; sens alterné entre les anneaux.
-- Cases refuges : départs et centre, plus (au choix) milieux et coins des anneaux intérieurs.
+Par défaut : le **Thaayam / Dayakattai classique** du Tamil Nadu.
+- Plateau carré 7 × 7, 2 à 4 joueurs, 6 pions chacun, départ au milieu de son côté.
+- 2 dés longs à faces 0, 1, 2, 3 : on additionne, et 0 + 0 = 12.
+- Un pion entre avec un « thaayam » (total de 1) ; on rejoue avec 1, 5, 6, 12 et après une capture.
+- Anneau extérieur dans le sens inverse des aiguilles d'une montre, puis anneaux intérieurs dans l'autre sens
+  jusqu'au centre (arrivée exacte).
+- Croix (refuges) : milieux des côtés extérieurs, coins du 2e anneau et centre.
+- Il faut avoir capturé un pion adverse pour entrer à l'intérieur ; un seul pion par case hors refuges.
+
+Tout est réglable avant la partie : taille 5/7/9, 1 à 12 pions, dés longs ou cauris, valeurs d'entrée et de
+relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pion par case.
 
 ## Mise en route
 
