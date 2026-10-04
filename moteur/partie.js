@@ -28,7 +28,7 @@ export function geometrie(regles, nbJoueurs) {
   return cache.get(k);
 }
 
-/** joueurs : [{ nom }] (2 à 4). */
+/** joueurs : [{ nom, ordi? }] (2 à 4). ordi = joué par l'ordinateur. */
 export function nouvellePartie(reglesSource, joueurs) {
   const { regles, erreurs } = normaliserRegles(reglesSource);
   if (erreurs.length) throw new Error(erreurs[0]);
@@ -40,11 +40,13 @@ export function nouvellePartie(reglesSource, joueurs) {
       couleur: COULEURS[i].code,
       pions: Array(regles.nbPions).fill(-1),
       captures: 0,
+      ...(j.ordi ? { ordi: true } : {}),
     })),
     tour: 0,
     phase: 'lancer', // 'lancer' | 'deplacer' | 'fini'
     lancer: null, // { valeur, detail }
     dernierLancer: null, // { valeur, detail, joueur }
+    dernierCoup: null, // { joueur, pion, depuis, vers }
     gagnant: null,
     numero: 0,
     journal: [`La partie commence. ${joueurs[0].nom || 'Joueur 1'} lance en premier.`],
@@ -169,6 +171,7 @@ export function jouer(etat0, pion) {
   const j = etat.joueurs[etat.tour];
   const valeur = etat.lancer.valeur;
   j.pions[coup.pion] = coup.vers;
+  etat.dernierCoup = { joueur: etat.tour, pion: coup.pion, depuis: coup.depuis, vers: coup.vers };
   coup.captures.forEach((v) => {
     etat.joueurs[v.joueur].pions[v.pion] = -1;
   });

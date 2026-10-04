@@ -165,3 +165,27 @@ test('tirage des cauris', () => {
   for (let i = 0; i < 2000; i++) vals.add(tirerDes(CAURIS5).valeur);
   assert.deepEqual([...vals].sort((a, b) => a - b), [1, 2, 3, 4, 8]);
 });
+
+test("l'ordinateur termine ses parties et bat un joueur au hasard", async () => {
+  const { choisirCoup } = await import('./ia.js');
+  let graine = 7;
+  const rng = () => ((graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648);
+  let victoires = 0;
+  const N = 20;
+  for (let k = 0; k < N; k++) {
+    let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'Ordi', ordi: true }, { nom: 'Hasard' }]);
+    let n = 0;
+    while (e.phase !== 'fini' && n++ < 200000) {
+      if (e.phase === 'lancer') e = lancer(e, rng);
+      else if (e.tour === 0) e = jouer(e, choisirCoup(e, rng).pion);
+      else {
+        const c = coupsPossibles(e);
+        e = jouer(e, c[Math.floor(rng() * c.length)].pion);
+      }
+    }
+    assert.equal(e.phase, 'fini');
+    assert.equal(e.joueurs[0].ordi, true);
+    if (e.gagnant === 0) victoires++;
+  }
+  assert.ok(victoires >= N * 0.6, `seulement ${victoires}/${N} victoires`);
+});

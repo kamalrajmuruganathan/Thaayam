@@ -17,13 +17,14 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter 
   const largeur = Math.min(width - 32, 560);
   const g = geometrie(etat.regles, etat.joueurs.length);
   const actif = etat.joueurs[etat.tour];
-  const peut = etat.phase !== 'fini' && !occupe && (moi === null || etat.tour === moi);
+  const peut = etat.phase !== 'fini' && !occupe && (moi === null ? !actif.ordi : etat.tour === moi);
   const coups = peut ? coupsPossibles(etat) : [];
   const entree = coups.find((x) => x.depuis === -1);
 
   let consigne;
   if (etat.phase === 'fini') consigne = `🏆 ${etat.joueurs[etat.gagnant].nom} a gagné !`;
   else if (moi !== null && etat.tour !== moi) consigne = `C'est au tour de ${actif.nom}…`;
+  else if (actif.ordi) consigne = `${actif.nom} réfléchit…`;
   else if (etat.phase === 'lancer') consigne = moi === null ? `${actif.nom}, à toi : lance les dés.` : 'À toi : lance les dés.';
   else consigne = 'Touche un pion entouré de blanc pour le déplacer.';
 

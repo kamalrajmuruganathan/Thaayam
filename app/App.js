@@ -7,7 +7,8 @@ import Reglages from './src/ecrans/Reglages';
 import Jeu from './src/ecrans/Jeu';
 import { enLigne, stockage } from './src/enLigne';
 import { COULEURS, copieRegles, normaliserRegles, resumeRegles } from '../moteur/regles.js';
-import { nouvellePartie } from '../moteur/partie.js';
+import { nouvellePartie, lancer, jouer } from '../moteur/partie.js';
+import { choisirCoup } from '../moteur/ia.js';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ function Racine() {
   const [code, setCode] = useState('');
   const [message, setMessage] = useState('');
   const [mode, setMode] = useState('ligne');
+  const [ordiInitial, setOrdiInitial] = useState([false, true, true, true]);
   const [regles, setRegles] = useState(copieRegles());
   const [occupe, setOccupe] = useState(false);
   // Partie en cours : { mode, etat } en local ; { mode, partie, etat, place, jeton } en ligne
@@ -37,6 +39,20 @@ function Racine() {
     stockage.lire('thaayam:regles:v2').then((r) => r && setRegles(normaliserRegles(JSON.parse(r)).regles)).catch(() => {});
     return () => arretRef.current && arretRef.current();
   }, []);
+
+  // L'ordinateur joue tout seul en partie locale, avec une petite pause.
+  useEffect(() => {
+    const e = session && session.mode === 'local' ? session.etat : null;
+    if (!e || e.phase === 'fini' || !e.joueurs[e.tour].ordi) return undefined;
+    const m = setTimeout(() => {
+      if (e.phase === 'lancer') setSession((s) => (s && s.etat === e ? { ...s, etat: lancer(e) } : s));
+      else {
+        const coup = choisirCoup(e);
+        if (coup) setSession((s) => (s && s.etat === e ? { ...s, etat: jouer(e, coup.pion) } : s));
+      }
+    }, e.phase === 'lancer' ? 650 : 850);
+    return () => clearTimeout(m);
+  }, [session]);
 
   const memoriserPseudo = (p) => { setPseudo(p); stockage.ecrire('thaayam:pseudo', p.trim()).catch(() => {}); };
 
@@ -148,7 +164,7 @@ function Racine() {
       <>
         <Bouton titre="← Retour" onPress={() => { setMessage(''); setEcran('accueil'); }} />
         <Texte style={{ fontSize: 22, fontWeight: '800' }}>{mode === 'local' ? 'Partie sur cet appareil' : 'Nouvelle partie en ligne'}</Texte>
-        <Reglages mode={mode} reglesInitiales={regles} pseudo={pseudo.trim()} occupe={occupe} erreurServeur={message} surValider={valider} />
+        <Reglages mode={mode} reglesInitiales={regles} ordiInitial={ordiInitial} pseudo={pseudo.trim()} occupe={occupe} erreurServeur={message} surValider={valider} />
       </>
     );
   } else if (ecran === 'salon' && session) {
@@ -207,7 +223,10 @@ function Racine() {
           </View>
         </Carte>
         <Carte titre="Jouer sur cet appareil">
-          <Bouton titre="Partie à plusieurs, chacun son tour" onPress={() => { setMessage(''); setMode('local'); setEcran('reglages'); }} />
+          <Bouton principal titre="Contre l'ordinateur"
+            onPress={() => { setMessage(''); setOrdiInitial([false, true, true, true]); setMode('local'); setEcran('reglages'); }} />
+          <Bouton titre="À plusieurs, chacun son tour"
+            onPress={() => { setMessage(''); setOrdiInitial([false, false, false, false]); setMode('local'); setEcran('reglages'); }} />
         </Carte>
         {message ? <Texte erreur>{message}</Texte> : null}
       </>

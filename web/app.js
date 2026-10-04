@@ -4,6 +4,7 @@ import {
 } from './moteur/regles.js';
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
+import { choisirCoup } from './moteur/ia.js';
 import { creerEnLigne } from './moteur/en-ligne.js';
 import { SUPABASE_URL, SUPABASE_CLE_PUBLIQUE } from './config.js';
 
@@ -67,7 +68,8 @@ $('btn-creer').addEventListener('click', () => {
   if (!pseudo()) return message('message-accueil', "Écris d'abord ton pseudo.", true);
   ouvrirReglages('ligne');
 });
-$('btn-local').addEventListener('click', () => ouvrirReglages('local'));
+$('btn-local').addEventListener('click', () => { ordiLocal = [false, false, false, false]; ouvrirReglages('local'); });
+$('btn-ordi').addEventListener('click', () => { nbLocal = 2; ordiLocal = [false, true, true, true]; ouvrirReglages('local'); });
 $('btn-rejoindre').addEventListener('click', async () => {
   const code = $('code-rejoindre').value.trim().toUpperCase();
   if (!pseudo()) return message('message-accueil', "Écris d'abord ton pseudo.", true);
@@ -87,6 +89,7 @@ $('btn-rejoindre').addEventListener('click', async () => {
 let modeReglages = 'ligne';
 let edition = null;
 let nbLocal = 2;
+let ordiLocal = [false, true, true, true]; // joueurs joués par l'ordinateur
 
 function ouvrirReglages(mode) {
   modeReglages = mode;
@@ -143,9 +146,15 @@ function construireFormulaire() {
     const dessinerNoms = () => {
       noms.innerHTML = '';
       for (let i = 0; i < nbLocal; i++) {
-        noms.append(el('label', {},
-          el('span', {}, el('span', { class: 'pastille', style: `display:inline-block;background:${COULEURS[i].code};vertical-align:middle;margin-right:6px` }), `Joueur ${i + 1}`),
-          el('input', { id: `nom-${i}`, maxlength: 20, value: i === 0 ? ($('pseudo').value.trim() || COULEURS[i].nom) : COULEURS[i].nom })));
+        const nomParDefaut = ordiLocal[i] ? `Ordi ${COULEURS[i].nom.toLowerCase()}` : i === 0 ? ($('pseudo').value.trim() || COULEURS[i].nom) : COULEURS[i].nom;
+        noms.append(el('div', { class: 'ligne-joueur' },
+          el('label', {},
+            el('span', {}, el('span', { class: 'pastille', style: `display:inline-block;background:${COULEURS[i].code};vertical-align:middle;margin-right:6px` }), `Joueur ${i + 1}`),
+            el('input', { id: `nom-${i}`, maxlength: 20, value: nomParDefaut })),
+          el('label', { class: 'case' },
+            el('input', { type: 'checkbox', id: `ordi-${i}`, checked: ordiLocal[i],
+              onchange: (e) => { ordiLocal[i] = e.target.checked; dessinerNoms(); } }),
+            el('span', {}, 'Ordinateur'))));
       }
     };
     dessinerNoms();
@@ -255,7 +264,7 @@ $('btn-valider-regles').addEventListener('click', async () => {
   const { regles } = normaliserRegles(edition);
   memoire.ecrire('thaayam:regles:v2', JSON.stringify(regles));
   if (modeReglages === 'local') {
-    const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: $(`nom-${i}`).value.trim() || COULEURS[i].nom }));
+    const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: $(`nom-${i}`).value.trim() || COULEURS[i].nom, ordi: ordiLocal[i] }));
     session = { mode: 'local', etat: nouvellePartie(regles, joueurs) };
     aller('jeu');
     dessinerJeu();
@@ -366,7 +375,33 @@ let occupe = false;
 function jePeuxJouer() {
   const e = session && session.etat;
   if (!e || e.phase === 'fini' || occupe) return false;
-  return session.mode === 'local' || e.tour === session.place;
+  if (session.mode === 'local') return !e.joueurs[e.tour].ordi;
+  return e.tour === session.place;
+}
+
+// L'ordinateur joue tout seul, avec une petite pause pour qu'on suive.
+let minuteurOrdi = null;
+function faireJouerOrdi() {
+  clearTimeout(minuteurOrdi);
+  const e = session && session.etat;
+  if (!e || session.mode !== 'local' || e.phase === 'fini' || !e.joueurs[e.tour].ordi) return;
+  minuteurOrdi = setTimeout(() => {
+    const s = session && session.etat;
+    if (s !== e) return; // la partie a changé entre-temps
+    if (e.phase === 'lancer') {
+      secouerDes();
+      appliquer(lancer(e, tirageAleatoire()));
+    } else {
+      const coup = choisirCoup(e);
+      if (coup) appliquer(jouer(e, coup.pion));
+    }
+  }, e.phase === 'lancer' ? 650 : 850);
+}
+
+function secouerDes() {
+  $('des').classList.remove('secoue');
+  void $('des').offsetWidth;
+  $('des').classList.add('secoue');
 }
 
 async function appliquer(nouvelEtat) {
@@ -409,9 +444,7 @@ function tirageAleatoire() {
 
 $('btn-lancer').addEventListener('click', () => {
   if (!jePeuxJouer() || session.etat.phase !== 'lancer') return;
-  $('des').classList.remove('secoue');
-  void $('des').offsetWidth;
-  $('des').classList.add('secoue');
+  secouerDes();
   appliquer(lancer(session.etat, tirageAleatoire()));
 });
 $('btn-entrer').addEventListener('click', () => {
@@ -420,6 +453,7 @@ $('btn-entrer').addEventListener('click', () => {
 });
 $('btn-quitter').addEventListener('click', () => {
   arreterSuivi();
+  clearTimeout(minuteurOrdi);
   session = null;
   history.replaceState(null, '', location.pathname);
   aller('accueil');
@@ -493,6 +527,7 @@ function dessinerJeu() {
   let consigne;
   if (etat.phase === 'fini') consigne = `🏆 ${etat.joueurs[etat.gagnant].nom} a gagné !`;
   else if (session.mode === 'ligne' && etat.tour !== moi) consigne = `C'est au tour de ${actif.nom}…`;
+  else if (actif.ordi) consigne = `${actif.nom} réfléchit…`;
   else if (etat.phase === 'lancer') consigne = `${session.mode === 'local' ? actif.nom + ', à toi' : 'À toi'} : lance les dés.`;
   else consigne = 'Touche un pion qui clignote pour le déplacer.';
   $('jeu-consigne').textContent = consigne;
@@ -508,6 +543,7 @@ function dessinerJeu() {
   etat.journal.forEach((l) => journal.append(el('li', {}, l)));
   $('jeu-regles').innerHTML = '';
   resumeRegles(etat.regles).forEach((l) => $('jeu-regles').append(el('li', {}, l)));
+  faireJouerOrdi();
 }
 
 function svg(tag, attrs, parent) {
@@ -546,6 +582,13 @@ function dessinerPlateau(etat, g, coups) {
           fill: 'none', stroke: '#fff3da', 'stroke-width': 4 }, plateau);
       }
     }
+  }
+
+  // Dernier coup joué
+  if (etat.dernierCoup) {
+    const [r, c] = g.chemins[etat.dernierCoup.joueur][etat.dernierCoup.vers];
+    svg('rect', { x: c * S + 6, y: r * S + 6, width: S - 12, height: S - 12, rx: 8, fill: 'none',
+      stroke: etat.joueurs[etat.dernierCoup.joueur].couleur, 'stroke-width': 5, opacity: 0.8 }, plateau);
   }
 
   // Destinations possibles

@@ -42,6 +42,12 @@ export function Plateau({ etat, coups, surPion, largeur }) {
     }
   }
 
+  const dernier = etat.dernierCoup ? (() => {
+    const [r, c] = g.chemins[etat.dernierCoup.joueur][etat.dernierCoup.vers];
+    return <Rect x={c * S + 6} y={r * S + 6} width={S - 12} height={S - 12} rx={8} fill="none"
+      stroke={etat.joueurs[etat.dernierCoup.joueur].couleur} strokeWidth={5} opacity={0.8} />;
+  })() : null;
+
   const cibles = coups.map((cp) => {
     const [r, c] = g.chemins[etat.tour][cp.vers];
     return (
@@ -75,6 +81,7 @@ export function Plateau({ etat, coups, surPion, largeur }) {
     <View style={{ backgroundColor: '#6b3a14', padding: 8, borderRadius: 14 }}>
       <Svg width={largeur - 16} height={largeur - 16} viewBox={`0 0 ${n * S} ${n * S}`}>
         {cases}
+        {dernier}
         {cibles}
         {pions}
       </Svg>

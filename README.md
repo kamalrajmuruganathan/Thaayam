@@ -1,7 +1,7 @@
 # Thaayam (தாயம்)
 
-Jeu de plateau traditionnel tamoul, de la famille du Pachisi et du Ludo, à jouer **en ligne entre amis**
-ou **à plusieurs sur un même appareil**. Toutes les règles sont réglables avant la partie.
+Jeu de plateau traditionnel tamoul, de la famille du Pachisi et du Ludo, à jouer **en ligne entre amis**,
+**contre l'ordinateur** ou **à plusieurs sur un même appareil**. Toutes les règles sont réglables avant la partie.
 
 Deux versions qui partagent le même moteur de jeu :
 - `web/` : page web simple (HTML + JavaScript, sans installation) ;
@@ -11,7 +11,7 @@ Deux versions qui partagent le même moteur de jeu :
 
 | Dossier | Contenu |
 |---|---|
-| `moteur/` | Règles, plateau, déroulement d'une partie, jeu en ligne (partagé web + appli) + tests |
+| `moteur/` | Règles, plateau, déroulement d'une partie, ordinateur (`ia.js`), jeu en ligne (partagé web + appli) + tests |
 | `web/` | La page web (`index.html`, `app.js`, `style.css`, `config.js`) |
 | `app/` | L'appli Expo (`App.js`, `src/`) |
 | `supabase/thaayam.sql` | Tables et fonctions du jeu en ligne, à exécuter une fois dans Supabase |

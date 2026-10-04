@@ -10,6 +10,8 @@
   `thaayam_creer`, `thaayam_rejoindre`, `thaayam_demarrer`, `thaayam_jouer` (`supabase/thaayam.sql`).
   L'état complet du jeu (JSON) est stocké dans `thaayam_parties.etat` ; `version` évite les coups en double.
 
+- Ordinateur : `moteur/ia.js` (`choisirCoup`), utilisé en partie locale (joueur avec `ordi: true`).
+
 ## Règles absolues
 1. Ne jamais afficher ni committer une clé `sb_secret_…` (la clé publishable et l'URL sont publiques).
 2. Ne jamais publier (Netlify, `main`, PR) sans l'accord explicite de Kamal.

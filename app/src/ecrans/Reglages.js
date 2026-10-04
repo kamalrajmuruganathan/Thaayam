@@ -6,10 +6,12 @@ import {
 } from '../../../moteur/regles.js';
 
 /** Formulaire de toutes les règles. mode : 'local' ou 'ligne'. */
-export default function Reglages({ mode, reglesInitiales, pseudo, surValider, occupe, erreurServeur }) {
+export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, surValider, occupe, erreurServeur }) {
   const [r, setR] = useState(reglesInitiales);
   const [nb, setNb] = useState(2);
-  const [noms, setNoms] = useState(COULEURS.map((c, i) => (i === 0 && pseudo ? pseudo : c.nom)));
+  const [ordi, setOrdi] = useState(ordiInitial || [false, false, false, false]);
+  const [noms, setNoms] = useState(COULEURS.map((c, i) =>
+    (ordi[i] ? `Ordi ${c.nom.toLowerCase()}` : i === 0 && pseudo ? pseudo : c.nom)));
   // Textes bruts des listes (pour pouvoir taper « 1, » sans que ça saute)
   const [txtEntree, setTxtEntree] = useState(r.valeursEntree.join(', '));
   const [txtRejouer, setTxtRejouer] = useState(r.valeursRejouer.join(', '));
@@ -26,8 +28,12 @@ export default function Reglages({ mode, reglesInitiales, pseudo, surValider, oc
         <Carte titre="Joueurs">
           <Choix options={[[2, '2'], [3, '3'], [4, '4']]} valeur={nb} onChange={setNb} />
           {Array.from({ length: nb }, (_, i) => (
-            <Champ key={i} libelle={`Joueur ${i + 1} (${COULEURS[i].nom.toLowerCase()})`} value={noms[i]} maxLength={20}
-              onChangeText={(t) => setNoms((l) => l.map((x, k) => (k === i ? t : x)))} />
+            <View key={i} style={{ gap: 6 }}>
+              <Champ libelle={`Joueur ${i + 1} (${COULEURS[i].nom.toLowerCase()})`} value={noms[i]} maxLength={20}
+                onChangeText={(t) => setNoms((l) => l.map((x, k) => (k === i ? t : x)))} />
+              <Interrupteur libelle="Joué par l'ordinateur" valeur={ordi[i]}
+                onChange={(v) => setOrdi((l) => l.map((x, k) => (k === i ? v : x)))} />
+            </View>
           ))}
         </Carte>
       ) : null}
@@ -114,7 +120,7 @@ export default function Reglages({ mode, reglesInitiales, pseudo, surValider, oc
         onPress={() =>
           surValider(
             normaliserRegles(r).regles,
-            noms.slice(0, nb).map((x, i) => ({ nom: x.trim() || COULEURS[i].nom }))
+            noms.slice(0, nb).map((x, i) => ({ nom: x.trim() || COULEURS[i].nom, ordi: ordi[i] }))
           )
         }
       />

@@ -105,3 +105,5 @@ input, select {
 .journal { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column-reverse; gap: 4px; font-size: 0.9rem; max-height: 220px; overflow-y: auto; }
 .journal li { padding: 4px 0; border-bottom: 1px dashed var(--trait); }
 .des > .attenue.petit { flex-basis: 100%; text-align: center; }
+.ligne-joueur { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+.ligne-joueur .case { padding-bottom: 10px; }
