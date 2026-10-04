@@ -1,0 +1,5 @@
+# Site web du Thaayam (page HTML/JS, sans npm install).
+# Le moteur du jeu est copié à côté de la page au moment de la publication.
+[build]
+  publish = "web"
+  command = "rm -rf web/moteur && cp -r moteur web/moteur && rm -f web/moteur/*.test.js"

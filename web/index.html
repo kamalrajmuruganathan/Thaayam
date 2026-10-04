@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Thaayam</title>
+  <meta name="description" content="Thaayam (தாயம்), jeu de plateau traditionnel tamoul, en ligne entre amis." />
+  <meta name="theme-color" content="#7a3e12" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Crect width='10' height='10' rx='2' fill='%237a3e12'/%3E%3Cpath d='M2 2l6 6M8 2l-6 6' stroke='%23f5e6c8' stroke-width='1.2'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="racine">
+    <!-- Accueil -->
+    <section id="ecran-accueil" class="ecran">
+      <header class="titre">
+        <div class="tamoul">தாயம்</div>
+        <h1>Thaayam</h1>
+        <p class="attenue">Le jeu de plateau traditionnel tamoul</p>
+      </header>
+
+      <label class="champ">Ton pseudo
+        <input id="pseudo" maxlength="20" autocomplete="nickname" placeholder="Ex. Kamal" />
+      </label>
+
+      <div class="carte">
+        <h2>Jouer en ligne</h2>
+        <button id="btn-creer" class="principal">Créer une partie</button>
+        <div class="ligne">
+          <input id="code-rejoindre" maxlength="5" placeholder="CODE" autocapitalize="characters" />
+          <button id="btn-rejoindre">Rejoindre</button>
+        </div>
+        <p id="info-en-ligne" class="attenue petit"></p>
+      </div>
+
+      <div class="carte">
+        <h2>Jouer sur ce téléphone</h2>
+        <button id="btn-local">Partie à plusieurs sur cet appareil</button>
+      </div>
+
+      <details class="carte">
+        <summary>Comment jouer ?</summary>
+        <ol class="regles-texte">
+          <li>Chaque joueur part du milieu de son côté du plateau.</li>
+          <li>On lance les cauris : le nombre de cauris tombés ouverts donne la valeur. Aucun ouvert vaut 8 (réglable).</li>
+          <li>Un pion n'entre sur le plateau qu'avec un « thaayam » (1 par défaut).</li>
+          <li>Les pions font le tour de l'anneau extérieur, puis entrent en spirale jusqu'au centre.</li>
+          <li>Tomber sur un pion adverse le renvoie à la maison, sauf sur les cases marquées d'une croix (refuges).</li>
+          <li>Par défaut, il faut avoir capturé au moins un pion pour entrer dans les anneaux intérieurs.</li>
+          <li>Le premier joueur qui amène tous ses pions au centre gagne.</li>
+        </ol>
+        <p class="attenue petit">Les règles varient selon les familles : tout est réglable avant la partie.</p>
+      </details>
+      <p id="message-accueil" class="message"></p>
+    </section>
+
+    <!-- Réglages -->
+    <section id="ecran-reglages" class="ecran" hidden>
+      <button class="retour" data-aller="accueil">← Retour</button>
+      <h2 id="titre-reglages">Règles de la partie</h2>
+      <form id="form-regles" class="formulaire"></form>
+      <p id="erreurs-regles" class="message erreur"></p>
+      <button id="btn-valider-regles" class="principal">Créer la partie</button>
+    </section>
+
+    <!-- Salon d'attente -->
+    <section id="ecran-salon" class="ecran" hidden>
+      <button class="retour" data-aller="accueil">← Accueil</button>
+      <p class="attenue">Code de la partie</p>
+      <div id="salon-code" class="code-geant"></div>
+      <div class="ligne">
+        <button id="btn-partager">Partager le lien</button>
+        <button id="btn-copier">Copier le lien</button>
+      </div>
+      <h3>Joueurs</h3>
+      <ul id="salon-joueurs" class="liste-joueurs"></ul>
+      <h3>Règles</h3>
+      <ul id="salon-regles" class="petit"></ul>
+      <button id="btn-demarrer" class="principal">Commencer la partie</button>
+      <p id="salon-message" class="message"></p>
+    </section>
+
+    <!-- Jeu -->
+    <section id="ecran-jeu" class="ecran large" hidden>
+      <div id="jeu-joueurs" class="bandeau-joueurs"></div>
+      <div class="zone-plateau"><svg id="plateau" role="img" aria-label="Plateau de Thaayam"></svg></div>
+      <div class="zone-des">
+        <div id="des" class="des"></div>
+        <div id="jeu-consigne" class="consigne"></div>
+        <div class="ligne">
+          <button id="btn-lancer" class="principal">Lancer</button>
+          <button id="btn-entrer" hidden>Faire entrer un pion</button>
+        </div>
+      </div>
+      <p id="jeu-message" class="message"></p>
+      <details class="carte" open>
+        <summary>Journal</summary>
+        <ul id="journal" class="journal"></ul>
+      </details>
+      <div class="ligne">
+        <button id="btn-quitter" class="discret">Quitter la partie</button>
+        <button id="btn-regles-jeu" class="discret">Voir les règles</button>
+      </div>
+      <ul id="jeu-regles" class="petit" hidden></ul>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

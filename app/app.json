@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Thaayam",
+    "slug": "thaayam",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#f6efe3",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.kamal.thaayam" },
+    "android": { "package": "com.kamal.thaayam" },
+    "plugins": ["expo-status-bar"]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "thaayam",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test moteur/*.test.js",
+    "web": "rm -rf web/moteur && cp -r moteur web/moteur && rm -f web/moteur/*.test.js && python3 -m http.server 8080 -d web"
+  }
+}

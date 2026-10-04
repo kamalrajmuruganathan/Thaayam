@@ -1,0 +1,4 @@
+node_modules/
+web/moteur/
+.expo/
+dist/
