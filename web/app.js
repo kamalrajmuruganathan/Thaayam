@@ -585,6 +585,13 @@ function dessinerPlateau(etat, g, coups) {
 
   if (g.forme === 'croix') {
     svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: '#b8653a' }, plateau);
+    // Diagonales : des coins du plateau jusqu'au centre, à travers les cases de coin
+    const { r: r0, c: c0, taille: t } = g.centre;
+    const coins = [[0, 0, c0, r0], [n, 0, c0 + t, r0], [0, n, c0, r0 + t], [n, n, c0 + t, r0 + t]];
+    coins.forEach(([x1, y1, x2, y2]) => {
+      svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#5a2e10', 'stroke-width': 10, 'stroke-linecap': 'round' }, plateau);
+      svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#e9b77f', 'stroke-width': 3, opacity: 0.7 }, plateau);
+    });
   }
   g.cases.forEach((k) => {
     const [r, c] = k.split(',').map(Number);

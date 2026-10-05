@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import Svg, { Rect, Path, Circle, G, Ellipse } from 'react-native-svg';
+import Svg, { Rect, Path, Circle, G, Ellipse, Line } from 'react-native-svg';
 import { geometrie, pionsParCase, zoneCase } from '../../moteur/partie.js';
 import { cle } from '../../moteur/plateau.js';
 
@@ -90,6 +90,7 @@ export function Plateau({ etat, coups, surPion, largeur }) {
     <View style={{ backgroundColor: '#6b3a14', padding: 8, borderRadius: 14 }}>
       <Svg width={largeur - 16} height={largeur - 16} viewBox={`0 0 ${n * S} ${n * S}`}>
         {croix ? <Rect x={0} y={0} width={n * S} height={n * S} rx={24} fill="#b8653a" /> : null}
+        {croix ? diagonales(g, n) : null}
         {cases}
         {centre}
         {dernier}
@@ -98,6 +99,18 @@ export function Plateau({ etat, coups, surPion, largeur }) {
       </Svg>
     </View>
   );
+}
+
+/** Diagonales : des coins du plateau jusqu'au centre, à travers les cases de coin. */
+function diagonales(g, n) {
+  const { r: r0, c: c0, taille: t } = g.centre;
+  const coins = [[0, 0, c0, r0], [n, 0, c0 + t, r0], [0, n, c0, r0 + t], [n, n, c0 + t, r0 + t]];
+  return coins.map(([x1, y1, x2, y2], i) => (
+    <G key={`diag${i}`}>
+      <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#5a2e10" strokeWidth={10} strokeLinecap="round" />
+      <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#e9b77f" strokeWidth={3} opacity={0.7} />
+    </G>
+  ));
 }
 
 export function Cauri({ ouvert }) {
