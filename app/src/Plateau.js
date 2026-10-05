@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Rect, Path, Circle, G, Ellipse, Line } from 'react-native-svg';
-import { geometrie, pionsParCase, zoneCase } from '../../moteur/partie.js';
+import { geometrie, pionsParCase, zoneCase, arcsDeCoin } from '../../moteur/partie.js';
 import { cle } from '../../moteur/plateau.js';
 
 const S = 100;
@@ -105,12 +105,21 @@ export function Plateau({ etat, coups, surPion, largeur }) {
 function diagonales(g, n) {
   const { r: r0, c: c0, taille: t } = g.centre;
   const coins = [[0, 0, c0, r0], [n, 0, c0 + t, r0], [0, n, c0, r0 + t], [n, n, c0 + t, r0 + t]];
-  return coins.map(([x1, y1, x2, y2], i) => (
-    <G key={`diag${i}`}>
-      <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#5a2e10" strokeWidth={10} strokeLinecap="round" />
-      <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#e9b77f" strokeWidth={3} opacity={0.7} />
-    </G>
-  ));
+  return [
+    ...coins.map(([x1, y1, x2, y2], i) => (
+      <G key={`diag${i}`}>
+        <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#5a2e10" strokeWidth={10} strokeLinecap="round" />
+        <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#e9b77f" strokeWidth={3} opacity={0.7} />
+      </G>
+    )),
+    // Arcs : dans chaque coin du plateau, deux quarts de cercle qui coupent la diagonale
+    ...arcsDeCoin(n * S, S).map((d, i) => (
+      <G key={`arc${i}`}>
+        <Path d={d} fill="none" stroke="#5a2e10" strokeWidth={10} strokeLinecap="round" />
+        <Path d={d} fill="none" stroke="#e9b77f" strokeWidth={3} opacity={0.7} />
+      </G>
+    )),
+  ];
 }
 
 export function Cauri({ ouvert }) {

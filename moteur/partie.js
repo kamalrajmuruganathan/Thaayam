@@ -242,6 +242,22 @@ export function zoneCase(g, S) {
   };
 }
 
+/**
+ * Pour l'affichage du plateau en croix : quarts de cercle (chemins SVG) centrés
+ * sur les 4 coins d'un dessin de côté W, qui coupent les diagonales.
+ */
+export function arcsDeCoin(W, S, rayons = [2.6, 3.6]) {
+  const arcs = [];
+  rayons.forEach((k) => {
+    const R = k * S;
+    arcs.push(`M${R} 0A${R} ${R} 0 0 1 0 ${R}`);
+    arcs.push(`M${W - R} 0A${R} ${R} 0 0 0 ${W} ${R}`);
+    arcs.push(`M0 ${W - R}A${R} ${R} 0 0 1 ${R} ${W}`);
+    arcs.push(`M${W} ${W - R}A${R} ${R} 0 0 0 ${W - R} ${W}`);
+  });
+  return arcs;
+}
+
 /** Pour l'affichage : pions groupés par case « r,c ». */
 export function pionsParCase(etat) {
   const g = geometrie(etat.regles, etat.joueurs.length);

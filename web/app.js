@@ -2,7 +2,7 @@ import {
   REGLES_PAR_DEFAUT, PRESETS_DES, TAILLES, COULEURS,
   copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles,
 } from './moteur/regles.js';
-import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, zoneCase } from './moteur/partie.js';
+import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, zoneCase, arcsDeCoin } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
 import { creerEnLigne } from './moteur/en-ligne.js';
@@ -591,6 +591,11 @@ function dessinerPlateau(etat, g, coups) {
     coins.forEach(([x1, y1, x2, y2]) => {
       svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#5a2e10', 'stroke-width': 10, 'stroke-linecap': 'round' }, plateau);
       svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#e9b77f', 'stroke-width': 3, opacity: 0.7 }, plateau);
+    });
+    // Arcs : dans chaque coin du plateau, deux quarts de cercle qui coupent la diagonale
+    arcsDeCoin(n * S, S).forEach((d) => {
+      svg('path', { d, fill: 'none', stroke: '#5a2e10', 'stroke-width': 10, 'stroke-linecap': 'round' }, plateau);
+      svg('path', { d, fill: 'none', stroke: '#e9b77f', 'stroke-width': 3, opacity: 0.7 }, plateau);
     });
   }
   g.cases.forEach((k) => {
