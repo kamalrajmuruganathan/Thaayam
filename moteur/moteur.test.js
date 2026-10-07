@@ -211,8 +211,17 @@ test("l'ordinateur termine ses parties et bat un joueur au hasard", async () => 
       }
     }
     assert.equal(e.phase, 'fini');
-    assert.equal(e.joueurs[0].ordi, true);
+    assert.equal(e.joueurs[0].ordi, 'normal');
     if (e.gagnant === 0) victoires++;
   }
   assert.ok(victoires >= N * 0.6, `seulement ${victoires}/${N} victoires`);
+});
+
+test('étapes d’un déplacement (animation)', async () => {
+  const { etapesCoup } = await import('./partie.js');
+  const g = geometrie(REGLES_PAR_DEFAUT, 2);
+  assert.deepEqual(etapesCoup(g, 3, 6), [4, 5, 6]);
+  assert.deepEqual(etapesCoup(g, -1, 0), [0]);
+  assert.deepEqual(etapesCoup(g, 54, 2), [55, 0, 1, 2]); // refait un tour
+  assert.deepEqual(etapesCoup(g, 60, 62), [61, 62]);
 });

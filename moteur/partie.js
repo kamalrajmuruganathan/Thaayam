@@ -62,7 +62,7 @@ export function nouvellePartie(reglesSource, joueurs) {
       couleur: COULEURS[i].code,
       pions: Array(regles.nbPions).fill(-1),
       captures: 0,
-      ...(j.ordi ? { ordi: true } : {}),
+      ...(j.ordi ? { ordi: j.ordi === 'facile' ? 'facile' : 'normal' } : {}),
     })),
     tour: 0,
     phase: 'lancer', // 'lancer' | 'deplacer' | 'fini'
@@ -243,19 +243,21 @@ export function zoneCase(g, S) {
 }
 
 /**
- * Pour l'affichage du plateau en croix : quarts de cercle (chemins SVG) centrés
- * sur les 4 coins d'un dessin de côté W, qui coupent les diagonales.
+ * Pour l'animation : positions successives d'un pion qui va de `depuis` à `vers`
+ * (sans la position de départ). Gère le retour au début de l'anneau extérieur
+ * quand le pion refait un tour faute de capture.
  */
-export function arcsDeCoin(W, S, rayons = [2.6, 3.6]) {
-  const arcs = [];
-  rayons.forEach((k) => {
-    const R = k * S;
-    arcs.push(`M${R} 0A${R} ${R} 0 0 1 0 ${R}`);
-    arcs.push(`M${W - R} 0A${R} ${R} 0 0 0 ${W} ${R}`);
-    arcs.push(`M0 ${W - R}A${R} ${R} 0 0 1 ${R} ${W}`);
-    arcs.push(`M${W} ${W - R}A${R} ${R} 0 0 0 ${W - R} ${W}`);
-  });
-  return arcs;
+export function etapesCoup(g, depuis, vers) {
+  if (depuis < 0 || vers === depuis) return [vers];
+  const res = [];
+  let p = depuis;
+  for (let garde = 0; p !== vers && garde < 200; garde++) {
+    p += 1;
+    if (vers < depuis && p >= g.longueurExterieur) p = 0;
+    if (p > g.arrivee) p = vers;
+    res.push(p);
+  }
+  return res;
 }
 
 /** Pour l'affichage : pions groupés par case « r,c ». */

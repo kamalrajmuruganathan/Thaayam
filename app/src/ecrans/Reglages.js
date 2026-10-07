@@ -10,6 +10,7 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
   const [r, setR] = useState(reglesInitiales);
   const [nb, setNb] = useState(2);
   const [ordi, setOrdi] = useState(ordiInitial || [false, false, false, false]);
+  const [niveau, setNiveau] = useState('normal');
   const [noms, setNoms] = useState(COULEURS.map((c, i) =>
     (ordi[i] ? `Ordi ${c.nom.toLowerCase()}` : i === 0 && pseudo ? pseudo : c.nom)));
   // Textes bruts des listes (pour pouvoir taper « 1, » sans que ça saute)
@@ -35,6 +36,8 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
                 onChange={(v) => setOrdi((l) => l.map((x, k) => (k === i ? v : x)))} />
             </View>
           ))}
+          <Texte style={{ fontWeight: '600' }}>Niveau de l'ordinateur</Texte>
+          <Choix options={[['facile', 'Facile'], ['normal', 'Normal']]} valeur={niveau} onChange={setNiveau} />
         </Carte>
       ) : null}
 
@@ -129,7 +132,7 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
         onPress={() =>
           surValider(
             normaliserRegles(r).regles,
-            noms.slice(0, nb).map((x, i) => ({ nom: x.trim() || COULEURS[i].nom, ordi: ordi[i] }))
+            noms.slice(0, nb).map((x, i) => ({ nom: x.trim() || COULEURS[i].nom, ordi: ordi[i] ? niveau : false }))
           )
         }
       />

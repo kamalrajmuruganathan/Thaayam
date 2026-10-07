@@ -1,13 +1,13 @@
 import React from 'react';
 import { View } from 'react-native';
-import Svg, { Rect, Path, Circle, G, Ellipse, Line } from 'react-native-svg';
-import { geometrie, pionsParCase, zoneCase, arcsDeCoin } from '../../moteur/partie.js';
+import Svg, { Rect, Path, Circle, G, Ellipse, Line, Polyline } from 'react-native-svg';
+import { geometrie, pionsParCase, zoneCase } from '../../moteur/partie.js';
 import { cle } from '../../moteur/plateau.js';
 
 const S = 100;
 
 /** Plateau (croix ou carré) ; `coups` = coups jouables, `surPion(pion)` quand on touche un pion jouable. */
-export function Plateau({ etat, coups, surPion, largeur }) {
+export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
   const g = geometrie(etat.regles, etat.joueurs.length);
   const n = g.n;
   const zone = zoneCase(g, S);
@@ -57,6 +57,13 @@ export function Plateau({ etat, coups, surPion, largeur }) {
       stroke={etat.joueurs[etat.dernierCoup.joueur].couleur} strokeWidth={5} opacity={0.8} />;
   })() : null;
 
+  // Trajet d'un joueur (aide) : ligne pointillée
+  const trajet = trajetDe === null ? null : (
+    <Polyline
+      points={g.chemins[trajetDe].map((p) => { const z = zone(cle(p)); return `${z.x + z.w / 2},${z.y + z.w / 2}`; }).join(' ')}
+      fill="none" stroke={etat.joueurs[trajetDe].couleur} strokeWidth={8} strokeDasharray="4 14" strokeLinecap="round" opacity={0.85} />
+  );
+
   const cibles = coups.map((cp) => {
     const z = zone(cle(g.chemins[etat.tour][cp.vers]));
     return (
@@ -93,6 +100,7 @@ export function Plateau({ etat, coups, surPion, largeur }) {
         {croix ? diagonales(g, n) : null}
         {cases}
         {centre}
+        {trajet}
         {dernier}
         {cibles}
         {pions}
@@ -110,13 +118,6 @@ function diagonales(g, n) {
       <G key={`diag${i}`}>
         <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#5a2e10" strokeWidth={10} strokeLinecap="round" />
         <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#e9b77f" strokeWidth={3} opacity={0.7} />
-      </G>
-    )),
-    // Arcs : dans chaque coin du plateau, deux quarts de cercle qui coupent la diagonale
-    ...arcsDeCoin(n * S, S).map((d, i) => (
-      <G key={`arc${i}`}>
-        <Path d={d} fill="none" stroke="#5a2e10" strokeWidth={10} strokeLinecap="round" />
-        <Path d={d} fill="none" stroke="#e9b77f" strokeWidth={3} opacity={0.7} />
       </G>
     )),
   ];

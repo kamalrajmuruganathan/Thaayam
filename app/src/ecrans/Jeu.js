@@ -14,6 +14,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter 
   const c = useCouleurs();
   const { width } = useWindowDimensions();
   const [voirRegles, setVoirRegles] = useState(false);
+  const [voirTrajet, setVoirTrajet] = useState(false);
   const largeur = Math.min(width - 32, 560);
   const g = geometrie(etat.regles, etat.joueurs.length);
   const actif = etat.joueurs[etat.tour];
@@ -53,7 +54,8 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter 
       </View>
 
       <View style={{ alignItems: 'center' }}>
-        <Plateau etat={etat} coups={coups} largeur={largeur} surPion={(p) => peut && surAction(jouer(etat, p))} />
+        <Plateau etat={etat} coups={coups} largeur={largeur} surPion={(p) => peut && surAction(jouer(etat, p))}
+          trajetDe={voirTrajet ? (moi !== null ? moi : actif.ordi ? Math.max(0, etat.joueurs.findIndex((j) => !j.ordi)) : etat.tour) : null} />
       </View>
 
       <Carte>
@@ -91,6 +93,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter 
         ))}
       </Carte>
 
+      <Bouton titre={voirTrajet ? 'Cacher le trajet' : 'Voir le trajet'} onPress={() => setVoirTrajet(!voirTrajet)} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Bouton style={{ flex: 1 }} titre="Quitter" onPress={surQuitter} />
         <Bouton style={{ flex: 1 }} titre={voirRegles ? 'Masquer les règles' : 'Voir les règles'} onPress={() => setVoirRegles(!voirRegles)} />

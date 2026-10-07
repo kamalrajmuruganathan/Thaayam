@@ -32,6 +32,12 @@ Par défaut : le **Thaayam / Dayakattai classique** du Tamil Nadu.
 Tout est réglable avant la partie : plateau en croix ou carré (5/7/9), 1 à 12 pions, dés longs ou cauris, valeurs d'entrée et de
 relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pion par case.
 
+## Confort de jeu (page web)
+- Les pions avancent case par case ; sons des dés, des captures, de l'arrivée et de la victoire
+  (bouton 🔊 pour couper), vibration du téléphone quand un pion est mangé.
+- Bouton « Voir le trajet » : dessine le chemin complet de son pion.
+- Ordinateur en niveau facile (joue au hasard) ou normal.
+
 ## Mise en route
 
 ### 1. Activer le jeu en ligne (une seule fois)

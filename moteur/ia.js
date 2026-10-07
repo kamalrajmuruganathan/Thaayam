@@ -24,9 +24,14 @@ function casesMenacees(etat, joueur) {
   return menace;
 }
 
-export function choisirCoup(etat, rng = Math.random) {
+/**
+ * niveau : 'facile' (joue au hasard) ou 'normal'. Par défaut, le niveau
+ * enregistré pour le joueur (joueur.ordi = 'facile' | 'normal' | true).
+ */
+export function choisirCoup(etat, rng = Math.random, niveau = etat.joueurs[etat.tour].ordi) {
   const coups = coupsPossibles(etat);
   if (coups.length <= 1) return coups[0] || null;
+  if (niveau === 'facile') return coups[Math.floor(rng() * coups.length)];
   const g = geometrie(etat.regles, etat.joueurs.length);
   const moi = etat.tour;
   const menace = casesMenacees(etat, moi);

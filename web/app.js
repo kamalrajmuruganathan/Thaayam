@@ -2,9 +2,10 @@ import {
   REGLES_PAR_DEFAUT, PRESETS_DES, TAILLES, COULEURS,
   copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles,
 } from './moteur/regles.js';
-import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, zoneCase, arcsDeCoin } from './moteur/partie.js';
+import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, zoneCase, etapesCoup } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
+import { sons, sonActif, basculerSon } from './sons.js';
 import { creerEnLigne } from './moteur/en-ligne.js';
 import { SUPABASE_URL, SUPABASE_CLE_PUBLIQUE } from './config.js';
 
@@ -90,6 +91,7 @@ let modeReglages = 'ligne';
 let edition = null;
 let nbLocal = 2;
 let ordiLocal = [false, true, true, true]; // joueurs joués par l'ordinateur
+let niveauOrdi = (() => { try { return localStorage.getItem('thaayam:niveau') || 'normal'; } catch { return 'normal'; } })();
 
 function ouvrirReglages(mode) {
   modeReglages = mode;
@@ -160,7 +162,12 @@ function construireFormulaire() {
     dessinerNoms();
     f.append(el('fieldset', {}, el('legend', {}, 'Joueurs'),
       choix([[2, '2 joueurs'], [3, '3 joueurs'], [4, '4 joueurs']], nbLocal, (v) => { nbLocal = v; dessinerNoms(); }),
-      noms));
+      noms,
+      el('label', {}, "Niveau de l'ordinateur",
+        choix([['facile', 'Facile'], ['normal', 'Normal']], niveauOrdi, (v) => {
+          niveauOrdi = v;
+          try { localStorage.setItem('thaayam:niveau', v); } catch { /* ignoré */ }
+        }))));
   }
 
   // Options propres au plateau carré (cachées pour la croix)
@@ -278,7 +285,7 @@ $('btn-valider-regles').addEventListener('click', async () => {
   const { regles } = normaliserRegles(edition);
   memoire.ecrire('thaayam:regles:v3', JSON.stringify(regles));
   if (modeReglages === 'local') {
-    const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: $(`nom-${i}`).value.trim() || COULEURS[i].nom, ordi: ordiLocal[i] }));
+    const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: $(`nom-${i}`).value.trim() || COULEURS[i].nom, ordi: ordiLocal[i] ? niveauOrdi : false }));
     session = { mode: 'local', etat: nouvellePartie(regles, joueurs) };
     aller('jeu');
     dessinerJeu();
@@ -318,9 +325,13 @@ async function ouvrirPartieEnLigne(code, place, jeton) {
     const plusRecente = nouvelle.version > session.partie.version ||
       (nouvelle.statut === 'attente' && JSON.stringify(nouvelle.joueurs) !== JSON.stringify(session.partie.joueurs));
     if (!plusRecente && !changementStatut) return;
+    const avant = session.etat;
     session.partie = nouvelle;
-    session.etat = nouvelle.etat;
-    afficherPartieEnLigne();
+    if (nouvelle.statut !== 'attente' && avant && nouvelle.etat) montrer(avant, nouvelle.etat);
+    else {
+      session.etat = nouvelle.etat;
+      afficherPartieEnLigne();
+    }
   });
   history.replaceState(null, '', `?code=${code}`);
   afficherPartieEnLigne();
@@ -385,10 +396,12 @@ $('btn-demarrer').addEventListener('click', async () => {
 
 // ---------------------------------------------------------------- jeu
 let occupe = false;
+let animation = false;
+let voirTrajet = false;
 
 function jePeuxJouer() {
   const e = session && session.etat;
-  if (!e || e.phase === 'fini' || occupe) return false;
+  if (!e || e.phase === 'fini' || occupe || animation) return false;
   if (session.mode === 'local') return !e.joueurs[e.tour].ordi;
   return e.tour === session.place;
 }
@@ -398,7 +411,7 @@ let minuteurOrdi = null;
 function faireJouerOrdi() {
   clearTimeout(minuteurOrdi);
   const e = session && session.etat;
-  if (!e || session.mode !== 'local' || e.phase === 'fini' || !e.joueurs[e.tour].ordi) return;
+  if (!e || animation || session.mode !== 'local' || e.phase === 'fini' || !e.joueurs[e.tour].ordi) return;
   minuteurOrdi = setTimeout(() => {
     const s = session && session.etat;
     if (s !== e) return; // la partie a changé entre-temps
@@ -418,16 +431,64 @@ function secouerDes() {
   $('des').classList.add('secoue');
 }
 
-async function appliquer(nouvelEtat) {
-  if (session.mode === 'local') {
-    session.etat = nouvelEtat;
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Passe de l'état `ancien` à `nouveau` en jouant les sons et en faisant
+ * avancer le pion déplacé case par case.
+ */
+async function montrer(ancien, nouveau) {
+  const nouveauCoup = ancien && nouveau && nouveau.numero > ancien.numero;
+  if (!nouveauCoup) {
+    session.etat = nouveau;
     dessinerJeu();
+    return;
+  }
+  const g = geometrie(nouveau.regles, nouveau.joueurs.length);
+  if (nouveau.dernierLancer && JSON.stringify(nouveau.dernierLancer) !== JSON.stringify(ancien.dernierLancer)
+    && nouveau.numero === ancien.numero + 1 && nouveau.dernierCoup === ancien.dernierCoup) {
+    sons.des();
+  }
+  const dc = nouveau.dernierCoup;
+  const coupJoue = dc && JSON.stringify(dc) !== JSON.stringify(ancien.dernierCoup);
+  if (coupJoue && dc.depuis >= 0) {
+    animation = true;
+    const etapes = etapesCoup(g, dc.depuis, dc.vers);
+    const vue = JSON.parse(JSON.stringify(ancien));
+    vue.lancer = null;
+    for (const pos of etapes.slice(0, -1)) {
+      if (!session || (session.etat !== ancien && session.etat !== vue)) break; // partie quittée ou changée
+      vue.joueurs[dc.joueur].pions[dc.pion] = pos;
+      session.etat = vue;
+      dessinerJeu();
+      sons.pas();
+      await pause(110);
+    }
+    animation = false;
+    if (!session || (session.etat !== vue && session.etat !== ancien)) return;
+  }
+  session.etat = nouveau;
+  if (coupJoue) {
+    const capturesAvant = ancien.joueurs.reduce((s, j) => s + j.captures, 0);
+    const capturesApres = nouveau.joueurs.reduce((s, j) => s + j.captures, 0);
+    if (nouveau.phase === 'fini') sons.victoire();
+    else if (capturesApres > capturesAvant) sons.capture();
+    else if (dc.vers === g.arrivee) sons.arrivee();
+    else if (dc.depuis === -1) sons.entree();
+    else sons.pas();
+  }
+  dessinerJeu();
+}
+
+async function appliquer(nouvelEtat) {
+  const avant = session.etat;
+  if (session.mode === 'local') {
+    await montrer(avant, nouvelEtat);
     return;
   }
   occupe = true;
   const ancien = session.partie;
-  session.etat = nouvelEtat;
-  dessinerJeu();
+  await montrer(avant, nouvelEtat);
   try {
     const api = await obtenirEnLigne();
     const v = await api.envoyer(ancien.code, session.jeton, ancien.version, nouvelEtat);
@@ -473,6 +534,14 @@ $('btn-quitter').addEventListener('click', () => {
   aller('accueil');
 });
 $('btn-regles-jeu').addEventListener('click', () => { $('jeu-regles').hidden = !$('jeu-regles').hidden; });
+$('btn-son').addEventListener('click', () => { basculerSon(); majBoutonSon(); });
+$('btn-trajet').addEventListener('click', () => {
+  voirTrajet = !voirTrajet;
+  $('btn-trajet').textContent = voirTrajet ? 'Cacher le trajet' : 'Voir le trajet';
+  dessinerJeu();
+});
+function majBoutonSon() { $('btn-son').textContent = sonActif() ? '🔊 Son' : '🔇 Muet'; }
+majBoutonSon();
 
 function dessinerDes(etat) {
   const zone = $('des');
@@ -512,6 +581,7 @@ function cauri(ouvert) {
 }
 
 function dessinerJeu() {
+  if (!session) return;
   const etat = session.etat;
   if (!etat) return;
   if ($('ecran-jeu').hidden) aller('jeu');
@@ -592,11 +662,6 @@ function dessinerPlateau(etat, g, coups) {
       svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#5a2e10', 'stroke-width': 10, 'stroke-linecap': 'round' }, plateau);
       svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#e9b77f', 'stroke-width': 3, opacity: 0.7 }, plateau);
     });
-    // Arcs : dans chaque coin du plateau, deux quarts de cercle qui coupent la diagonale
-    arcsDeCoin(n * S, S).forEach((d) => {
-      svg('path', { d, fill: 'none', stroke: '#5a2e10', 'stroke-width': 10, 'stroke-linecap': 'round' }, plateau);
-      svg('path', { d, fill: 'none', stroke: '#e9b77f', 'stroke-width': 3, opacity: 0.7 }, plateau);
-    });
   }
   g.cases.forEach((k) => {
     const [r, c] = k.split(',').map(Number);
@@ -619,6 +684,26 @@ function dessinerPlateau(etat, g, coups) {
     ? `M${ct.x + 6} ${ct.y + 6}L${ct.x + ct.w - 6} ${ct.y + ct.w - 6}M${ct.x + ct.w - 6} ${ct.y + 6}L${ct.x + 6} ${ct.y + ct.w - 6}`
     : `M${ct.x + 50} ${ct.y + 14}L${ct.x + 86} ${ct.y + 50}L${ct.x + 50} ${ct.y + 86}L${ct.x + 14} ${ct.y + 50}Z`,
   fill: 'none', stroke: g.forme === 'croix' ? '#4a2a12' : '#fff3da', 'stroke-width': g.forme === 'croix' ? 3 : 4, opacity: 0.8 }, plateau);
+
+  // Trajet d'un joueur (aide) : ligne pointillée avec des flèches
+  if (voirTrajet) {
+    // En ligne : son propre trajet ; en local : celui du joueur humain qui joue (ou du premier humain)
+    const premierHumain = Math.max(0, etat.joueurs.findIndex((j) => !j.ordi));
+    const qui = session.mode === 'ligne' ? session.place : (etat.joueurs[etat.tour].ordi ? premierHumain : etat.tour);
+    const centre = (p) => { const z = zone(cle(p)); return `${z.x + z.w / 2},${z.y + z.w / 2}`; };
+    const ch = g.chemins[qui];
+    const couleur = etat.joueurs[qui].couleur;
+    let defs = plateau.querySelector('defs');
+    if (!defs) defs = svg('defs', {}, plateau);
+    const marqueur = svg('marker', { id: 'fleche', viewBox: '0 0 10 10', refX: 5, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto' }, defs);
+    svg('path', { d: 'M0 0L10 5L0 10Z', fill: couleur }, marqueur);
+    svg('polyline', { points: ch.map(centre).join(' '), fill: 'none', stroke: couleur, 'stroke-width': 8,
+      'stroke-dasharray': '4 14', 'stroke-linecap': 'round', opacity: 0.85 }, plateau);
+    for (let i = 2; i < ch.length; i += 3) {
+      svg('line', { x1: centre(ch[i - 1]).split(',')[0], y1: centre(ch[i - 1]).split(',')[1], x2: centre(ch[i]).split(',')[0],
+        y2: centre(ch[i]).split(',')[1], stroke: couleur, 'stroke-width': 8, 'marker-end': 'url(#fleche)', opacity: 0.9 }, plateau);
+    }
+  }
 
   // Dernier coup joué
   if (etat.dernierCoup) {
