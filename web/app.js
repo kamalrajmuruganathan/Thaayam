@@ -534,6 +534,12 @@ $('btn-quitter').addEventListener('click', () => {
   aller('accueil');
 });
 $('btn-regles-jeu').addEventListener('click', () => { $('jeu-regles').hidden = !$('jeu-regles').hidden; });
+$('btn-rejouer').addEventListener('click', () => {
+  const e = session && session.etat;
+  if (!e || session.mode !== 'local') return;
+  session.etat = nouvellePartie(e.regles, e.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
+  dessinerJeu();
+});
 $('btn-son').addEventListener('click', () => { basculerSon(); majBoutonSon(); });
 $('btn-trajet').addEventListener('click', () => {
   voirTrajet = !voirTrajet;
@@ -611,6 +617,7 @@ function dessinerJeu() {
   let consigne;
   if (etat.phase === 'fini') consigne = `🏆 ${etat.joueurs[etat.gagnant].nom} a gagné !`;
   else if (session.mode === 'ligne' && etat.tour !== moi) consigne = `C'est au tour de ${actif.nom}…`;
+  else if (animation) consigne = 'Le pion avance…';
   else if (actif.ordi) consigne = `${actif.nom} réfléchit…`;
   else if (etat.phase === 'lancer') consigne = `${session.mode === 'local' ? actif.nom + ', à toi' : 'À toi'} : lance les dés.`;
   else consigne = 'Touche un pion qui clignote pour le déplacer.';
@@ -619,6 +626,7 @@ function dessinerJeu() {
 
   $('btn-lancer').disabled = !(peut && etat.phase === 'lancer');
   $('btn-lancer').hidden = etat.phase === 'fini';
+  $('btn-rejouer').hidden = !(etat.phase === 'fini' && session.mode === 'local');
   const entree = coups.find((c) => c.depuis === -1);
   $('btn-entrer').hidden = !entree;
 
@@ -661,6 +669,12 @@ function dessinerPlateau(etat, g, coups) {
     coins.forEach(([x1, y1, x2, y2]) => {
       svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#5a2e10', 'stroke-width': 10, 'stroke-linecap': 'round' }, plateau);
       svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#e9b77f', 'stroke-width': 3, opacity: 0.7 }, plateau);
+    });
+    // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
+    [['தாயம்', 3.7], ['விளையாட்டு', n - 3.7]].forEach(([texte, cx]) => {
+      const t = svg('text', { x: cx * S, y: 1.75 * S, 'text-anchor': 'middle', 'font-size': 0.62 * S, 'font-weight': 700,
+        fill: '#fbe9cf', opacity: 0.9, 'font-family': "'Noto Sans Tamil', 'Latha', sans-serif" }, plateau);
+      t.textContent = texte;
     });
   }
   g.cases.forEach((k) => {

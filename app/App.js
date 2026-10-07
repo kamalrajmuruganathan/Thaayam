@@ -7,7 +7,7 @@ import Reglages from './src/ecrans/Reglages';
 import Jeu from './src/ecrans/Jeu';
 import { enLigne, stockage } from './src/enLigne';
 import { COULEURS, copieRegles, normaliserRegles, resumeRegles } from '../moteur/regles.js';
-import { nouvellePartie, lancer, jouer } from '../moteur/partie.js';
+import { nouvellePartie, lancer, jouer, geometrie, etapesCoup } from '../moteur/partie.js';
 import { choisirCoup } from '../moteur/ia.js';
 
 export default function App() {
@@ -33,6 +33,7 @@ function Racine() {
   const sessionRef = useRef(null);
   sessionRef.current = session;
   const arretRef = useRef(null);
+  const animRef = useRef(false);
 
   useEffect(() => {
     stockage.lire('thaayam:pseudo').then((p) => p && setPseudo(p)).catch(() => {});
@@ -43,12 +44,14 @@ function Racine() {
   // L'ordinateur joue tout seul en partie locale, avec une petite pause.
   useEffect(() => {
     const e = session && session.mode === 'local' ? session.etat : null;
-    if (!e || e.phase === 'fini' || !e.joueurs[e.tour].ordi) return undefined;
+    if (!e || animRef.current || e.phase === 'fini' || !e.joueurs[e.tour].ordi) return undefined;
     const m = setTimeout(() => {
-      if (e.phase === 'lancer') setSession((s) => (s && s.etat === e ? { ...s, etat: lancer(e) } : s));
+      const s = sessionRef.current;
+      if (!s || s.etat !== e) return;
+      if (e.phase === 'lancer') agir(lancer(e));
       else {
         const coup = choisirCoup(e);
-        if (coup) setSession((s) => (s && s.etat === e ? { ...s, etat: jouer(e, coup.pion) } : s));
+        if (coup) agir(jouer(e, coup.pion));
       }
     }, e.phase === 'lancer' ? 650 : 850);
     return () => clearTimeout(m);
@@ -128,11 +131,34 @@ function Racine() {
     }
   }
 
+  /** Fait avancer le pion déplacé case par case avant d'afficher le nouvel état. */
+  async function animer(ancien, nouveau) {
+    const dc = nouveau.dernierCoup;
+    if (!dc || dc.depuis < 0 || JSON.stringify(dc) === JSON.stringify(ancien.dernierCoup)) return;
+    const g = geometrie(nouveau.regles, nouveau.joueurs.length);
+    const etapes = etapesCoup(g, dc.depuis, dc.vers).slice(0, -1);
+    animRef.current = true;
+    setOccupe(true);
+    for (const pos of etapes) {
+      const vue = JSON.parse(JSON.stringify(ancien));
+      vue.lancer = null;
+      vue.joueurs[dc.joueur].pions[dc.pion] = pos;
+      setSession((x) => (x ? { ...x, etat: vue } : x));
+      await new Promise((r) => setTimeout(r, 110));
+      if (!sessionRef.current) break;
+    }
+    animRef.current = false;
+    setOccupe(false);
+  }
+
   async function agir(nouvelEtat) {
     const s = sessionRef.current;
-    if (s.mode === 'local') return setSession({ ...s, etat: nouvelEtat });
+    if (!s) return;
+    await animer(s.etat, nouvelEtat);
+    if (!sessionRef.current) return;
+    if (s.mode === 'local') return setSession({ ...sessionRef.current, etat: nouvelEtat });
     setOccupe(true);
-    setSession({ ...s, etat: nouvelEtat });
+    setSession({ ...sessionRef.current, etat: nouvelEtat });
     try {
       const v = await enLigne.envoyer(s.partie.code, s.jeton, s.partie.version, nouvelEtat);
       setSession((x) => (x.partie.version >= v ? x : {
@@ -200,7 +226,11 @@ function Racine() {
   } else if (ecran === 'jeu' && session && session.etat) {
     contenu = (
       <Jeu etat={session.etat} moi={session.mode === 'ligne' ? session.place : null} occupe={occupe}
-        message={message} surAction={agir} surQuitter={quitter} />
+        message={message} surAction={agir} surQuitter={quitter}
+        surRejouer={() => setSession((s) => ({
+          ...s,
+          etat: nouvellePartie(s.etat.regles, s.etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false }))),
+        }))} />
     );
   } else {
     contenu = (

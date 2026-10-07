@@ -10,7 +10,7 @@ import { resumeRegles } from '../../../moteur/regles.js';
  * moi : index du joueur sur cet appareil (null en local : tout le monde joue ici).
  * surAction(nouvelEtat) : applique / envoie le nouvel état.
  */
-export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter }) {
+export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter, surRejouer }) {
   const c = useCouleurs();
   const { width } = useWindowDimensions();
   const [voirRegles, setVoirRegles] = useState(false);
@@ -26,6 +26,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter 
   if (etat.phase === 'fini') consigne = `🏆 ${etat.joueurs[etat.gagnant].nom} a gagné !`;
   else if (moi !== null && etat.tour !== moi) consigne = `C'est au tour de ${actif.nom}…`;
   else if (actif.ordi) consigne = `${actif.nom} réfléchit…`;
+  else if (occupe) consigne = 'Le pion avance…';
   else if (etat.phase === 'lancer') consigne = moi === null ? `${actif.nom}, à toi : lance les dés.` : 'À toi : lance les dés.';
   else consigne = 'Touche un pion entouré de blanc pour le déplacer.';
 
@@ -82,6 +83,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter 
               onPress={() => surAction(lancer(etat))} />
           ) : null}
           {entree ? <Bouton style={{ flex: 1 }} titre="Faire entrer un pion" onPress={() => surAction(jouer(etat, entree.pion))} /> : null}
+          {etat.phase === 'fini' && moi === null ? <Bouton style={{ flex: 1 }} principal titre="Rejouer" onPress={surRejouer} /> : null}
         </View>
       </Carte>
 
