@@ -1,8 +1,11 @@
 // Hébergement du jeu sur Cloudflare (Workers, fichiers statiques).
-// La commande de build copie le moteur à côté de la page : web/moteur/.
+// Avant chaque publication, wrangler copie le moteur à côté de la page (web/moteur/).
 {
   "name": "thaayam",
   "compatibility_date": "2026-10-01",
+  "build": {
+    "command": "rm -rf web/moteur && cp -r moteur web/moteur && rm -f web/moteur/*.test.js"
+  },
   "assets": {
     "directory": "./web",
     "not_found_handling": "single-page-application"
