@@ -26,7 +26,7 @@ export function geometrie(regles, nbJoueurs) {
       arrivee: chemins[0].cases.length - 1,
       refuges: refugesCroix(),
       cases: casesCroix(),
-      centre: { r: 6, c: 6, taille: 3 }, // grand carré central (pazham)
+      centre: { r: CROIX.longueurBras, c: CROIX.longueurBras, taille: 3 }, // grand carré central (pazham)
     });
   }
   if (!cache.has(k)) {
@@ -258,6 +258,25 @@ export function etapesCoup(g, depuis, vers) {
     res.push(p);
   }
   return res;
+}
+
+/**
+ * Pour l'affichage du plateau en croix : 3 arcs (chemins SVG) à chacun des
+ * 4 coins du grand centre, là où le pion passe d'un bras au suivant.
+ */
+export function arcsCroix(g, S, rayons = [0.32, 0.58, 0.84]) {
+  const { r: r0, c: c0, taille: t } = g.centre;
+  const coins = [[c0, r0, -1, -1], [c0 + t, r0, 1, -1], [c0, r0 + t, -1, 1], [c0 + t, r0 + t, 1, 1]];
+  const arcs = [];
+  coins.forEach(([cx, cy, dx, dy]) => {
+    rayons.forEach((k) => {
+      const R = k * S;
+      const x = cx * S;
+      const y = cy * S;
+      arcs.push(`M${x + dx * R} ${y}A${R} ${R} 0 0 ${dx * dy > 0 ? 1 : 0} ${x} ${y + dy * R}`);
+    });
+  });
+  return arcs;
 }
 
 /** Pour l'affichage : pions groupés par case « r,c ». */

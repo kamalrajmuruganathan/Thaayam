@@ -2,7 +2,7 @@ import {
   REGLES_PAR_DEFAUT, PRESETS_DES, TAILLES, COULEURS,
   copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles,
 } from './moteur/regles.js';
-import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, zoneCase, etapesCoup } from './moteur/partie.js';
+import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, zoneCase, etapesCoup, arcsCroix } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
 import { sons, sonActif, basculerSon } from './sons.js';
@@ -670,9 +670,14 @@ function dessinerPlateau(etat, g, coups) {
       svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#5a2e10', 'stroke-width': 10, 'stroke-linecap': 'round' }, plateau);
       svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#e9b77f', 'stroke-width': 3, opacity: 0.7 }, plateau);
     });
+    // 3 arcs à chaque coin du centre : passage d'un bras au suivant
+    arcsCroix(g, S).forEach((d) => {
+      svg('path', { d, fill: 'none', stroke: '#5a2e10', 'stroke-width': 7, 'stroke-linecap': 'round' }, plateau);
+      svg('path', { d, fill: 'none', stroke: '#f3d9b0', 'stroke-width': 2.5, opacity: 0.8 }, plateau);
+    });
     // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
-    [['தாயம்', 3.7], ['விளையாட்டு', n - 3.7]].forEach(([texte, cx]) => {
-      const t = svg('text', { x: cx * S, y: 1.75 * S, 'text-anchor': 'middle', 'font-size': 0.62 * S, 'font-weight': 700,
+    [['தாயம்', 2.4], ['விளையாட்டு', n - 2.4]].forEach(([texte, cx]) => {
+      const t = svg('text', { x: cx * S, y: 1.05 * S, 'text-anchor': 'middle', 'font-size': 0.48 * S, 'font-weight': 700,
         fill: '#fbe9cf', opacity: 0.9, 'font-family': "'Noto Sans Tamil', 'Latha', sans-serif" }, plateau);
       t.textContent = texte;
     });

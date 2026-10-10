@@ -97,24 +97,26 @@ export function refuges(n, options = {}) {
 
 // ------------------------------------------------------------------ plateau en croix
 /**
- * Plateau en croix (Thaayam kattai) : 4 bras de 3 colonnes × 6 cases autour
- * d'un grand carré central, avec une case de coin entre deux bras.
- * Grille de 15 × 15 ; le bras du joueur du bas occupe les lignes 9 à 14,
- * colonnes 6 à 8 ; le centre occupe les lignes et colonnes 6 à 8.
+ * Plateau en croix (Thaayam kattai) : 4 bras de 3 colonnes × 4 cases autour
+ * d'un grand carré central. Il n'y a pas de case entre deux bras : le passage
+ * d'un bras au suivant se fait en diagonale, là où sont dessinés 3 arcs.
+ * Grille de 11 × 11 ; le bras du joueur du bas occupe les lignes 7 à 10,
+ * colonnes 4 à 6 ; le centre occupe les lignes et colonnes 4 à 6.
  *
  * Chemin : départ sur la croix au bout de son bras, tour complet de la croix
- * par les colonnes extérieures des bras et les cases de coin, retour sur la
- * case de départ, puis remontée de la colonne du milieu de son bras jusqu'au centre.
+ * par les colonnes extérieures des bras, retour sur la case de départ, puis
+ * remontée de la colonne du milieu de son bras jusqu'au centre.
  */
-export const CROIX = { n: 15, longueurBras: 6 };
+export const CROIX = { longueurBras: 4, n: 3 + 2 * 4 };
+const L = CROIX.longueurBras;
 
-/** Portion du tour sur le bras du bas : colonne gauche vers le bout, bout, colonne droite, coin. */
+/** Portion du tour sur le bras du bas : colonne gauche vers le bout, bout, colonne droite vers le centre. */
 function segmentBras() {
+  const n = CROIX.n;
   const seg = [];
-  for (let r = 9; r <= 14; r++) seg.push([r, 6]);
-  seg.push([14, 7]);
-  for (let r = 14; r >= 9; r--) seg.push([r, 8]);
-  seg.push([9, 9]);
+  for (let r = L + 3; r <= n - 1; r++) seg.push([r, L]);
+  seg.push([n - 1, L + 1]);
+  for (let r = n - 1; r >= L + 3; r--) seg.push([r, L + 2]);
   return seg;
 }
 
@@ -127,12 +129,12 @@ export function cheminCroix(cote = 0, sens = 'anti-horaire') {
     tour.push(...seg);
     seg = seg.map(tourner1);
   }
-  const i = tour.findIndex(([r, c]) => r === 14 && c === 7);
+  const i = tour.findIndex(([r, c]) => r === n - 1 && c === L + 1);
   let boucle = [...tour.slice(i), ...tour.slice(0, i)];
   if (sens === 'horaire') boucle = [boucle[0], ...boucle.slice(1).reverse()];
-  const cases = [...boucle, [14, 7]];
-  for (let r = 13; r >= 9; r--) cases.push([r, 7]);
-  cases.push([7, 7]); // centre (pazham)
+  const cases = [...boucle, [n - 1, L + 1]];
+  for (let r = n - 2; r >= L + 3; r--) cases.push([r, L + 1]);
+  cases.push([L + 1, L + 1]); // centre (pazham)
   let tournees = cases;
   for (let q = 0; q < cote; q++) tournees = tournees.map(tourner1);
   return { cases: tournees, longueurExterieur: boucle.length };
@@ -140,24 +142,25 @@ export function cheminCroix(cote = 0, sens = 'anti-horaire') {
 
 /** Toutes les cases dessinées du plateau en croix (sans le grand centre). */
 export function casesCroix() {
+  const n = CROIX.n;
   const ens = new Set();
   let bras = [];
-  for (let r = 9; r <= 14; r++) for (let c = 6; c <= 8; c++) bras.push([r, c]);
-  bras.push([9, 9]);
+  for (let r = L + 3; r <= n - 1; r++) for (let c = L; c <= L + 2; c++) bras.push([r, c]);
   for (let k = 0; k < 4; k++) {
     bras.forEach((p) => ens.add(cle(p)));
-    bras = bras.map((p) => tourner(CROIX.n, p));
+    bras = bras.map((p) => tourner(n, p));
   }
   return ens;
 }
 
-/** Croix : bout de chaque bras, case du milieu au bord du centre, coins, centre. */
+/** Croix : bout de chaque bras, case du milieu au bord du centre, centre. */
 export function refugesCroix() {
-  const ens = new Set([cle([7, 7])]);
-  let pts = [[14, 7], [9, 7], [9, 9]];
+  const n = CROIX.n;
+  const ens = new Set([cle([L + 1, L + 1])]);
+  let pts = [[n - 1, L + 1], [L + 3, L + 1]];
   for (let k = 0; k < 4; k++) {
     pts.forEach((p) => ens.add(cle(p)));
-    pts = pts.map((p) => tourner(CROIX.n, p));
+    pts = pts.map((p) => tourner(n, p));
   }
   return ens;
 }

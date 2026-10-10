@@ -40,27 +40,27 @@ test('refuges', () => {
 
 test('plateau en croix : chemin, cases et croix', () => {
   const cases = casesCroix();
-  assert.equal(cases.size, 4 * 18 + 4);
-  assert.equal(refugesCroix().size, 13);
+  assert.equal(cases.size, 4 * 12);
+  assert.equal(refugesCroix().size, 9);
   for (let cote = 0; cote < 4; cote++) {
     for (const sens of ['anti-horaire', 'horaire']) {
       const { cases: ch, longueurExterieur } = cheminCroix(cote, sens);
-      assert.equal(longueurExterieur, 56);
-      assert.equal(ch.length, 63);
-      assert.equal(new Set(ch.slice(0, 56).map(cle)).size, 56);
-      assert.deepEqual(ch[56], ch[0]); // retour sur la case de départ
-      ch.slice(0, 62).forEach((p) => assert.ok(cases.has(cle(p)), cle(p)));
-      for (let i = 1; i < 62; i++) {
+      assert.equal(longueurExterieur, 36);
+      assert.equal(ch.length, 41);
+      assert.equal(new Set(ch.slice(0, 36).map(cle)).size, 36);
+      assert.deepEqual(ch[36], ch[0]); // retour sur la case de départ
+      ch.slice(0, 40).forEach((p) => assert.ok(cases.has(cle(p)), cle(p)));
+      for (let i = 1; i < 40; i++) {
         const [a, b] = ch[i - 1], [c, d] = ch[i];
-        assert.equal(Math.abs(a - c) + Math.abs(b - d), 1, `saut ${i}`);
+        assert.equal(Math.max(Math.abs(a - c), Math.abs(b - d)), 1, `saut ${i}`);
       }
-      assert.deepEqual(ch[62], [7, 7]);
+      assert.deepEqual(ch[40], [5, 5]);
     }
   }
   const bas = cheminCroix(0).cases;
-  assert.deepEqual(bas.slice(0, 3), [[14, 7], [14, 8], [13, 8]]);
-  assert.deepEqual(bas.slice(7, 9), [[9, 9], [8, 9]]); // la case de coin fait tourner
-  assert.deepEqual(bas.slice(56, 63), [[14, 7], [13, 7], [12, 7], [11, 7], [10, 7], [9, 7], [7, 7]]);
+  assert.deepEqual(bas.slice(0, 3), [[10, 5], [10, 6], [9, 6]]);
+  assert.deepEqual(bas.slice(4, 6), [[7, 6], [6, 7]]); // passage en diagonale par les arcs
+  assert.deepEqual(bas.slice(36, 41), [[10, 5], [9, 5], [8, 5], [7, 5], [5, 5]]);
 });
 
 test('7 × 7 classique : extérieur anti-horaire, puis intérieur horaire par le coin en croix', () => {
@@ -222,6 +222,6 @@ test('étapes d’un déplacement (animation)', async () => {
   const g = geometrie(REGLES_PAR_DEFAUT, 2);
   assert.deepEqual(etapesCoup(g, 3, 6), [4, 5, 6]);
   assert.deepEqual(etapesCoup(g, -1, 0), [0]);
-  assert.deepEqual(etapesCoup(g, 54, 2), [55, 0, 1, 2]); // refait un tour
-  assert.deepEqual(etapesCoup(g, 60, 62), [61, 62]);
+  assert.deepEqual(etapesCoup(g, 34, 2), [35, 0, 1, 2]); // refait un tour
+  assert.deepEqual(etapesCoup(g, 38, 40), [39, 40]);
 });

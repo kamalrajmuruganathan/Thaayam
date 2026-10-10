@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Rect, Path, Circle, G, Ellipse, Line, Polyline, Text as SvgText } from 'react-native-svg';
-import { geometrie, pionsParCase, zoneCase } from '../../moteur/partie.js';
+import { geometrie, pionsParCase, zoneCase, arcsCroix } from '../../moteur/partie.js';
 import { cle } from '../../moteur/plateau.js';
 
 const S = 100;
@@ -120,9 +120,16 @@ function diagonales(g, n) {
         <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#e9b77f" strokeWidth={3} opacity={0.7} />
       </G>
     )),
+    // 3 arcs à chaque coin du centre : passage d'un bras au suivant
+    ...arcsCroix(g, S).map((d, i) => (
+      <G key={`arc${i}`}>
+        <Path d={d} fill="none" stroke="#5a2e10" strokeWidth={7} strokeLinecap="round" />
+        <Path d={d} fill="none" stroke="#f3d9b0" strokeWidth={2.5} opacity={0.8} />
+      </G>
+    )),
     // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
-    ...[['தாயம்', 3.7], ['விளையாட்டு', n - 3.7]].map(([texte, cx]) => (
-      <SvgText key={texte} x={cx * S} y={1.75 * S} textAnchor="middle" fontSize={0.62 * S} fontWeight="700" fill="#fbe9cf" opacity={0.9}>
+    ...[['தாயம்', 2.4], ['விளையாட்டு', n - 2.4]].map(([texte, cx]) => (
+      <SvgText key={texte} x={cx * S} y={1.05 * S} textAnchor="middle" fontSize={0.48 * S} fontWeight="700" fill="#fbe9cf" opacity={0.9}>
         {texte}
       </SvgText>
     )),
