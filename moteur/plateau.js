@@ -153,14 +153,7 @@ export function casesCroix() {
   return ens;
 }
 
-/** Croix : bout de chaque bras, case du milieu au bord du centre, centre. */
+/** Refuges du plateau en croix : seulement le centre (aucune croix dans les bras). */
 export function refugesCroix() {
-  const n = CROIX.n;
-  const ens = new Set([cle([L + 1, L + 1])]);
-  let pts = [[n - 1, L + 1], [L + 3, L + 1]];
-  for (let k = 0; k < 4; k++) {
-    pts.forEach((p) => ens.add(cle(p)));
-    pts = pts.map((p) => tourner(n, p));
-  }
-  return ens;
+  return new Set([cle([L + 1, L + 1])]);
 }

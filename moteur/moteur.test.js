@@ -41,7 +41,7 @@ test('refuges', () => {
 test('plateau en croix : chemin, cases et croix', () => {
   const cases = casesCroix();
   assert.equal(cases.size, 4 * 12);
-  assert.equal(refugesCroix().size, 9);
+  assert.equal(refugesCroix().size, 1); // seulement le centre
   for (let cote = 0; cote < 4; cote++) {
     for (const sens of ['anti-horaire', 'horaire']) {
       const { cases: ch, longueurExterieur } = cheminCroix(cote, sens);
