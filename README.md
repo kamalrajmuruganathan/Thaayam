@@ -22,7 +22,7 @@ Par défaut : le **Thaayam / Dayakattai classique** du Tamil Nadu.
 - Plateau **en croix** (thaayam kattai) : 4 bras de 3 colonnes × 4 cases, un grand centre, 3 arcs dessinés entre deux bras.
   2 à 4 joueurs, 6 pions chacun, départ au bout de son bras (case du milieu).
 - 2 dés longs à faces 0, 1, 2, 3 : on additionne, et 0 + 0 = 12.
-- Un pion entre avec un « thaayam » (total de 1) ; on rejoue avec 1, 5, 6, 12 et après une capture.
+- Un pion entre avec un « thaayam » (total de 1) ; on rejoue avec 1, 5, 6, 12, avec 2 sur chaque dé (2 + 2, mais pas 1 + 3) et après une capture.
 - Tour complet de la croix dans le sens inverse des aiguilles d'une montre (par les colonnes extérieures des bras,
   en passant en diagonale aux arcs), retour sur la case de départ, puis remontée de la colonne du milieu de son bras jusqu'au
   centre (arrivée exacte).

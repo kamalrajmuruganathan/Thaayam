@@ -16,6 +16,7 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
   // Textes bruts des listes (pour pouvoir taper « 1, » sans que ça saute)
   const [txtEntree, setTxtEntree] = useState(r.valeursEntree.join(', '));
   const [txtRejouer, setTxtRejouer] = useState(r.valeursRejouer.join(', '));
+  const [txtDoubles, setTxtDoubles] = useState(r.doublesRejouer.join(', '));
   const [txtFaces, setTxtFaces] = useState(r.des.faces.join(', '));
   const [txtZero, setTxtZero] = useState(String(r.des.valeurZero));
   const [txtToutZero, setTxtToutZero] = useState(String(r.des.valeurToutZero));
@@ -59,9 +60,11 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
               x.des.type = v;
               x.valeursEntree = [...PRESETS_DES[v].valeursEntree];
               x.valeursRejouer = [...PRESETS_DES[v].valeursRejouer];
+              x.doublesRejouer = [...PRESETS_DES[v].doublesRejouer];
             });
             setTxtEntree(PRESETS_DES[v].valeursEntree.join(', '));
             setTxtRejouer(PRESETS_DES[v].valeursRejouer.join(', '));
+            setTxtDoubles(PRESETS_DES[v].doublesRejouer.join(', '));
           }}
         />
         {r.des.type === 'cauris' ? (
@@ -81,6 +84,9 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
               onChangeText={(t) => { setTxtFaces(t); maj((x) => { x.des.faces = lireListe(t); }); }} />
             <Champ libelle="Valeur quand tous les dés montrent 0" keyboardType="number-pad" value={txtToutZero} aide="Classique : 0 + 0 = 12."
               onChangeText={(t) => { setTxtToutZero(t); maj((x) => { x.des.valeurToutZero = Number(t); }); }} />
+            <Champ libelle="On rejoue aussi quand chaque dé montre la face" value={txtDoubles}
+              aide="Classique : 2 (2 sur chaque dé, mais pas 1 + 3). Laisser vide pour aucun."
+              onChangeText={(t) => { setTxtDoubles(t); maj((x) => { x.doublesRejouer = lireListe(t); }); }} />
           </>
         )}
         <Texte attenue style={{ fontSize: 12 }}>Valeurs possibles avec ces dés : {valeursPossibles(r).join(', ')}</Texte>

@@ -32,6 +32,7 @@ export const REGLES_PAR_DEFAUT = {
   },
   valeursEntree: [1], // « thaayam » : lancer qui fait entrer un pion
   valeursRejouer: [1, 5, 6, 12],
+  doublesRejouer: [2], // dés longs : rejouer quand tous les dés montrent cette face (2 + 2)
   rejouerApresCapture: true,
   captureAvantInterieur: true, // il faut avoir « coupé » un pion pour entrer à l'intérieur
   arriveeExacte: true,
@@ -46,9 +47,20 @@ export const REGLES_PAR_DEFAUT = {
 
 /** Valeurs par défaut proposées quand on change de type de dés. */
 export const PRESETS_DES = {
-  desLongs: { valeursEntree: [1], valeursRejouer: [1, 5, 6, 12] },
-  cauris: { valeursEntree: [1], valeursRejouer: [1, 4, 8] },
+  desLongs: { valeursEntree: [1], valeursRejouer: [1, 5, 6, 12], doublesRejouer: [2] },
+  cauris: { valeursEntree: [1], valeursRejouer: [1, 4, 8], doublesRejouer: [] },
 };
+
+/**
+ * Le lancer fait-il rejouer ? Par sa valeur totale, ou (dés longs) parce que
+ * tous les dés montrent une face de `doublesRejouer` (ex. 2 sur chaque dé).
+ */
+export function faitRejouer(regles, tirage) {
+  if (regles.valeursRejouer.includes(tirage.valeur)) return true;
+  const d = tirage.detail || [];
+  return regles.des.type === 'desLongs' && d.length > 1 &&
+    d.every((f) => f === d[0]) && (regles.doublesRejouer || []).includes(d[0]);
+}
 
 export function copieRegles(r = REGLES_PAR_DEFAUT) {
   return JSON.parse(JSON.stringify(r));
@@ -124,6 +136,9 @@ export function normaliserRegles(source) {
     valeursRejouer: Array.isArray(s.valeursRejouer)
       ? s.valeursRejouer.filter((v) => Number.isInteger(v) && v > 0)
       : [...d0.valeursRejouer],
+    doublesRejouer: Array.isArray(s.doublesRejouer)
+      ? [...new Set(s.doublesRejouer.filter((v) => Number.isInteger(v) && v >= 0))]
+      : [...d0.doublesRejouer],
     rejouerApresCapture: s.rejouerApresCapture !== false,
     captureAvantInterieur: s.captureAvantInterieur !== false,
     arriveeExacte: s.arriveeExacte !== false,
@@ -172,6 +187,9 @@ export function resumeRegles(r) {
   lignes.push(`Entrée d'un pion avec : ${r.valeursEntree.join(', ')}`);
   lignes.push(
     `On rejoue avec : ${r.valeursRejouer.length ? r.valeursRejouer.join(', ') : 'aucune valeur'}` +
+      (r.des.type === 'desLongs' && r.doublesRejouer.length
+        ? `, avec ${r.doublesRejouer.map((f) => `${f} sur chaque dé`).join(' ou ')}`
+        : '') +
       (r.rejouerApresCapture ? ', et après une capture' : '')
   );
   if (r.unPionParCase) lignes.push('Un seul pion par case, sauf sur les refuges');

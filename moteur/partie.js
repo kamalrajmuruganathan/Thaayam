@@ -5,7 +5,7 @@
  * Position d'un pion : -1 = à la maison, 0 = case de départ,
  * dernier indice du chemin = centre (pion arrivé).
  */
-import { normaliserRegles, valeursPossibles, valeurDesLongs, COULEURS } from './regles.js';
+import { normaliserRegles, valeursPossibles, valeurDesLongs, faitRejouer, COULEURS } from './regles.js';
 import { chemin, cotesPourJoueurs, refuges, cle, cheminCroix, casesCroix, refugesCroix, CROIX } from './plateau.js';
 
 const MAX_JOURNAL = 30;
@@ -168,7 +168,7 @@ export function lancer(etat0, rng = Math.random, tirage = null) {
   etat.dernierLancer = { ...t, joueur: etat.tour };
   etat.phase = 'deplacer';
   if (coupsPossibles(etat).length === 0) {
-    if (etat.regles.valeursRejouer.includes(t.valeur)) {
+    if (faitRejouer(etat.regles, t)) {
       noter(etat, `${nom} fait ${t.valeur} : aucun pion ne peut bouger, mais ${nom} rejoue.`);
       etat.phase = 'lancer';
       etat.lancer = null;
@@ -191,7 +191,6 @@ export function jouer(etat0, pion) {
   const etat = cloner(etat0);
   const g = geometrie(etat.regles, etat.joueurs.length);
   const j = etat.joueurs[etat.tour];
-  const valeur = etat.lancer.valeur;
   j.pions[coup.pion] = coup.vers;
   etat.dernierCoup = { joueur: etat.tour, pion: coup.pion, depuis: coup.depuis, vers: coup.vers };
   coup.captures.forEach((v) => {
@@ -216,7 +215,7 @@ export function jouer(etat0, pion) {
     return etat;
   }
   const rejoue =
-    etat.regles.valeursRejouer.includes(valeur) || (coup.captures.length > 0 && etat.regles.rejouerApresCapture);
+    faitRejouer(etat.regles, etat.lancer) || (coup.captures.length > 0 && etat.regles.rejouerApresCapture);
   if (rejoue) {
     etat.phase = 'lancer';
     etat.lancer = null;

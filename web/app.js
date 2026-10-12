@@ -210,7 +210,11 @@ function construireFormulaire() {
     el('label', {}, 'Valeur quand tous les dés montrent 0',
       el('input', { type: 'number', min: 0, max: 24, value: r.des.valeurToutZero, inputmode: 'numeric',
         oninput: (e) => { r.des.valeurToutZero = Number(e.target.value); verifierReglages(); } }),
-      el('span', { class: 'aide' }, 'Classique : 0 + 0 = 12.')));
+      el('span', { class: 'aide' }, 'Classique : 0 + 0 = 12.')),
+    el('label', {}, 'On rejoue aussi quand chaque dé montre la face',
+      el('input', { id: 'champ-doubles', value: r.doublesRejouer.join(', '),
+        oninput: (e) => { r.doublesRejouer = lireListe(e.target.value); verifierReglages(); } }),
+      el('span', { class: 'aide' }, 'Classique : 2 (2 sur chaque dé, mais pas 1 + 3). Laisser vide pour aucun.')));
   const entree = el('input', { id: 'champ-entree', value: r.valeursEntree.join(', '),
     oninput: (e) => { r.valeursEntree = lireListe(e.target.value); verifierReglages(); } });
   const rejouer = el('input', { id: 'champ-rejouer', value: r.valeursRejouer.join(', '),
@@ -223,6 +227,8 @@ function construireFormulaire() {
       r.des.type = v;
       r.valeursEntree = [...PRESETS_DES[v].valeursEntree];
       r.valeursRejouer = [...PRESETS_DES[v].valeursRejouer];
+      r.doublesRejouer = [...PRESETS_DES[v].doublesRejouer];
+      blocDes.querySelector('#champ-doubles').value = r.doublesRejouer.join(', ');
       entree.value = r.valeursEntree.join(', ');
       rejouer.value = r.valeursRejouer.join(', ');
       montrerDes();

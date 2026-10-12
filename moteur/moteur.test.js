@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chemin, refuges, cle, cheminCroix, casesCroix, refugesCroix } from './plateau.js';
-import { normaliserRegles, valeursPossibles, copieRegles, REGLES_PAR_DEFAUT } from './regles.js';
+import { normaliserRegles, valeursPossibles, copieRegles, faitRejouer, REGLES_PAR_DEFAUT } from './regles.js';
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, tirerDes } from './partie.js';
 
 const t = (valeur) => ({ valeur, detail: [] });
@@ -86,6 +86,24 @@ test('dés longs : 0 + 0 = 12', () => {
   const vals = new Set();
   for (let i = 0; i < 3000; i++) vals.add(tirerDes(REGLES_PAR_DEFAUT).valeur);
   assert.deepEqual([...vals].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 12]);
+});
+
+test('on rejoue avec 1, 5, 6, 12 et avec 2 sur chaque dé (pas 1 + 3)', () => {
+  const R = REGLES_PAR_DEFAUT;
+  const d = (a, b) => ({ valeur: a === 0 && b === 0 ? 12 : a + b, detail: [a, b] });
+  assert.ok(faitRejouer(R, d(2, 2))); // 4 avec 2 + 2 : on rejoue
+  assert.ok(!faitRejouer(R, d(1, 3))); // 4 avec 1 + 3 : on ne rejoue pas
+  assert.ok(!faitRejouer(R, d(1, 1))); // autre double : non
+  for (const [a, b] of [[0, 1], [2, 3], [3, 3], [0, 0]]) assert.ok(faitRejouer(R, d(a, b)), `${a}+${b}`);
+  for (const [a, b] of [[0, 2], [1, 2], [0, 3]]) assert.ok(!faitRejouer(R, d(a, b)), `${a}+${b}`);
+  assert.deepEqual(normaliserRegles({}).regles.doublesRejouer, [2]);
+
+  let e = nouvellePartie(R, [{ nom: 'A' }, { nom: 'B' }]);
+  e.joueurs[0].pions[0] = 0;
+  e = jouer(lancer(e, undefined, d(2, 2)), 0);
+  assert.equal(e.tour, 0); // 2 + 2 : A rejoue
+  e = jouer(lancer(e, undefined, d(1, 3)), 0);
+  assert.equal(e.tour, 1); // 1 + 3 : au tour de B
 });
 
 test('un seul pion par case sauf refuge', () => {
