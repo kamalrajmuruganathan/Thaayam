@@ -38,6 +38,29 @@ grant select on public.thaayam_parties to anon, authenticated;
 revoke all on public.thaayam_jetons from anon, authenticated;
 
 -- ---------------------------------------------------------------------
+-- Ménage automatique : efface les vieilles parties (et leurs jetons).
+--   * terminées depuis plus d'un jour ;
+--   * jamais commencées après un jour ;
+--   * en cours mais sans aucun coup depuis 7 jours.
+-- Appelé à chaque création de partie, et chaque nuit si pg_cron est actif.
+-- Renvoie le nombre de parties effacées.
+-- ---------------------------------------------------------------------
+create or replace function public.thaayam_menage()
+returns integer
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_nb integer;
+begin
+  delete from thaayam_parties
+   where (statut = 'finie'    and maj_le < now() - interval '1 day')
+      or (statut = 'attente'  and maj_le < now() - interval '1 day')
+      or (statut = 'en_cours' and maj_le < now() - interval '7 days');
+  get diagnostics v_nb = row_count;
+  return v_nb;
+end $$;
+
+-- ---------------------------------------------------------------------
 -- Créer une partie : renvoie { code, place, jeton }
 -- ---------------------------------------------------------------------
 create or replace function public.thaayam_creer(p_regles jsonb, p_nom text)
@@ -51,6 +74,7 @@ declare
   alphabet constant text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 begin
   if v_nom = '' then raise exception 'Pseudo obligatoire'; end if;
+  perform thaayam_menage();
   if p_regles is null or jsonb_typeof(p_regles) <> 'object' or pg_column_size(p_regles) > 4000 then
     raise exception 'Règles invalides';
   end if;
@@ -149,6 +173,7 @@ begin
   return v_partie.version + 1;
 end $$;
 
+revoke all on function public.thaayam_menage() from public, anon, authenticated;
 revoke all on function public.thaayam_creer(jsonb, text) from public;
 revoke all on function public.thaayam_rejoindre(text, text) from public;
 revoke all on function public.thaayam_demarrer(text, uuid, jsonb) from public;
@@ -167,4 +192,16 @@ begin
   ) then
     alter publication supabase_realtime add table public.thaayam_parties;
   end if;
+end $$;
+
+-- Ménage chaque nuit (3 h 17) si l'extension pg_cron est activée
+-- (Supabase : Database → Extensions → pg_cron). Sinon, rien ne se passe :
+-- le ménage se fait quand même à chaque création de partie.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.schedule('thaayam-menage', '17 3 * * *', 'select public.thaayam_menage()');
+  end if;
+exception when others then
+  raise notice 'Ménage de nuit non programmé : %', sqlerrm;
 end $$;

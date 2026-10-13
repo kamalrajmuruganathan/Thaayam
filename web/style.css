@@ -107,3 +107,29 @@ input, select {
 .des > .attenue.petit { flex-basis: 100%; text-align: center; }
 .ligne-joueur { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
 .ligne-joueur .case { padding-bottom: 10px; }
+
+/* Page « Règles du jeu » */
+.regles-page { max-width: 640px; }
+.regles-page .carte p, .regles-page .carte ul, .regles-page .carte ol { margin: 0; line-height: 1.5; }
+.regles-page .carte ul, .regles-page .carte ol { padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+a.retour { align-self: flex-start; color: var(--accent); text-decoration: none; font-weight: 600; padding: 6px 0; }
+.dessin-plateau { background: var(--bois-fonce); padding: 6px; border-radius: 12px; }
+.dessin-plateau svg { display: block; width: 100%; height: auto; }
+.faces { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.faces figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.faces figcaption { font-size: 0.85rem; color: var(--attenue); }
+.tableau-defile { overflow-x: auto; }
+.tableau-des { border-collapse: collapse; margin: 0 auto; font-variant-numeric: tabular-nums; }
+.tableau-des th, .tableau-des td { border: 1px solid var(--trait); padding: 6px 8px; text-align: center; }
+.tableau-des th { color: var(--attenue); font-weight: 600; font-size: 0.85rem; }
+.tableau-des td { font-weight: 800; font-size: 1.1rem; min-width: 52px; }
+.tableau-des .de-long { width: 62px; height: 22px; gap: 8px; }
+.tableau-des .de-long .point { width: 7px; height: 7px; }
+.entree { background: #f6c28b; color: #3b2410; }
+.rejoue { background: #b9dfc4; color: #17361f; }
+.kaapal { background: #cfc6ba; color: #2b1d10; font-size: 0.85rem !important; }
+.legende-des { list-style: none; padding-left: 0 !important; }
+.pastille-legende { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 8px; vertical-align: -2px; border: 1px solid var(--trait); }
+a.bouton-lien { display: block; text-align: center; text-decoration: none; padding: 12px 16px; border-radius: 12px; font-weight: 700; }
+a.bouton-lien.principal { background: var(--accent); color: var(--accent-texte); }
+a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }

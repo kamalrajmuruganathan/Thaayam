@@ -10,7 +10,7 @@ import { resumeRegles, nomLancer } from '../../../moteur/regles.js';
  * moi : index du joueur sur cet appareil (null en local : tout le monde joue ici).
  * surAction(nouvelEtat) : applique / envoie le nouvel état.
  */
-export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter, surRejouer }) {
+export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter, surRejouer, surReglesJeu }) {
   const c = useCouleurs();
   const { width } = useWindowDimensions();
   const [voirRegles, setVoirRegles] = useState(false);
@@ -103,6 +103,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
         <Bouton style={{ flex: 1 }} titre={voirRegles ? 'Masquer les règles' : 'Voir les règles'} onPress={() => setVoirRegles(!voirRegles)} />
       </View>
       {voirRegles ? resumeRegles(etat.regles).map((x, i) => <Texte key={i} attenue>• {x}</Texte>) : null}
+      {surReglesJeu ? <Bouton titre="📖 Règles du jeu avec dessins" onPress={surReglesJeu} /> : null}
     </View>
   );
 }

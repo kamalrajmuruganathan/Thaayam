@@ -317,6 +317,29 @@ test("l'ordinateur termine ses parties et bat un joueur au hasard", async () => 
   assert.ok(victoires >= N * 0.6, `seulement ${victoires}/${N} victoires`);
 });
 
+test("l'ordinateur « fort » bat l'ordinateur « normal »", async () => {
+  const { choisirCoup, distributionLancers } = await import('./ia.js');
+  const dist = distributionLancers(REGLES_PAR_DEFAUT);
+  assert.equal(dist.length, 16);
+  assert.ok(Math.abs(dist.reduce((a, d) => a + d.p, 0) - 1) < 1e-9);
+  let graine = 2024;
+  const rng = () => ((graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648);
+  let victoires = 0;
+  const N = 30;
+  for (let k = 0; k < N; k++) {
+    const niv = k % 2 ? ['normal', 'fort'] : ['fort', 'normal']; // chacun commence à son tour
+    let e = nouvellePartie(REGLES_PAR_DEFAUT, niv.map((ordi) => ({ nom: ordi, ordi })));
+    let n = 0;
+    while (e.phase !== 'fini' && n++ < 100000) {
+      if (e.phase === 'lancer') e = lancer(e, rng);
+      else { const c = choisirCoup(e, rng); e = jouer(e, c.pion, !!c.groupe); }
+    }
+    assert.equal(e.phase, 'fini');
+    if (niv[e.gagnant] === 'fort') victoires++;
+  }
+  assert.ok(victoires >= N * 0.55, `seulement ${victoires}/${N} victoires`);
+});
+
 test('étapes d’un déplacement (animation)', async () => {
   const { etapesCoup } = await import('./partie.js');
   const g = geometrie(REGLES_PAR_DEFAUT, 2);

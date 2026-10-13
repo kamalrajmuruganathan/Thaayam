@@ -38,7 +38,8 @@ relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pio
 - Les pions avancent case par case ; sons des dés, des captures, de l'arrivée et de la victoire
   (bouton 🔊 pour couper), vibration du téléphone quand un pion est mangé.
 - Bouton « Voir le trajet » : dessine le chemin complet de son pion.
-- Ordinateur en niveau facile (joue au hasard) ou normal.
+- Ordinateur en niveau facile (joue au hasard), normal ou fort (il calcule les risques et regarde un lancer plus loin).
+- Page « Règles du jeu » avec des dessins (`web/regles.html`, et l'écran « Règles du jeu » dans l'appli), à partager aux amis.
 
 ## Mise en route
 
@@ -68,4 +69,5 @@ Créer un site Netlify relié à ce dépôt : `netlify.toml` est déjà prêt (d
 ## Limites connues
 - En ligne, le serveur vérifie que c'est bien ton tour et que personne n'a joué entre-temps, mais les coups
   eux-mêmes sont calculés par l'appli : c'est fait pour jouer entre amis, pas pour un tournoi.
-- Les parties terminées restent dans la base (on pourra ajouter un ménage automatique).
+- Ménage automatique (`thaayam_menage`) : les parties finies ou jamais commencées sont effacées après un jour,
+  les parties abandonnées après 7 jours (à chaque création de partie, et chaque nuit si pg_cron est activé).

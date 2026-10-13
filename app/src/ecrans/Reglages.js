@@ -38,7 +38,7 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
             </View>
           ))}
           <Texte style={{ fontWeight: '600' }}>Niveau de l'ordinateur</Texte>
-          <Choix options={[['facile', 'Facile'], ['normal', 'Normal']]} valeur={niveau} onChange={setNiveau} />
+          <Choix options={[['facile', 'Facile'], ['normal', 'Normal'], ['fort', 'Fort']]} valeur={niveau} onChange={setNiveau} />
         </Carte>
       ) : null}
 

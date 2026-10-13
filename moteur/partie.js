@@ -63,7 +63,7 @@ export function nouvellePartie(reglesSource, joueurs) {
       pions: Array(regles.nbPions).fill(-1),
       captures: 0,
       groupes: [], // pions mangés ensemble, qui peuvent rentrer ensemble
-      ...(j.ordi ? { ordi: j.ordi === 'facile' ? 'facile' : 'normal' } : {}),
+      ...(j.ordi ? { ordi: ['facile', 'fort'].includes(j.ordi) ? j.ordi : 'normal' } : {}),
     })),
     tour: 0,
     phase: 'lancer', // 'lancer' | 'deplacer' | 'fini'

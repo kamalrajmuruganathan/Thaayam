@@ -164,7 +164,7 @@ function construireFormulaire() {
       choix([[2, '2 joueurs'], [3, '3 joueurs'], [4, '4 joueurs']], nbLocal, (v) => { nbLocal = v; dessinerNoms(); }),
       noms,
       el('label', {}, "Niveau de l'ordinateur",
-        choix([['facile', 'Facile'], ['normal', 'Normal']], niveauOrdi, (v) => {
+        choix([['facile', 'Facile'], ['normal', 'Normal'], ['fort', 'Fort']], niveauOrdi, (v) => {
           niveauOrdi = v;
           try { localStorage.setItem('thaayam:niveau', v); } catch { /* ignoré */ }
         }))));

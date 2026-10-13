@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Bouton, Carte, Champ, Texte, useCouleurs } from './src/ui';
 import Reglages from './src/ecrans/Reglages';
 import Jeu from './src/ecrans/Jeu';
+import ReglesJeu from './src/ecrans/ReglesJeu';
 import { enLigne, stockage } from './src/enLigne';
 import { COULEURS, copieRegles, normaliserRegles, resumeRegles } from '../moteur/regles.js';
 import { nouvellePartie, lancer, jouer, geometrie, etapesCoup } from '../moteur/partie.js';
@@ -20,7 +21,9 @@ export default function App() {
 
 function Racine() {
   const c = useCouleurs();
-  const [ecran, setEcran] = useState('accueil'); // accueil | reglages | salon | jeu
+  const [ecran, setEcran] = useState('accueil'); // accueil | reglages | salon | jeu | regles
+  const [retourRegles, setRetourRegles] = useState('accueil');
+  const voirReglesJeu = () => { setRetourRegles(ecran); setEcran('regles'); };
   const [pseudo, setPseudo] = useState('');
   const [code, setCode] = useState('');
   const [message, setMessage] = useState('');
@@ -185,7 +188,15 @@ function Racine() {
   }
 
   let contenu;
-  if (ecran === 'reglages') {
+  if (ecran === 'regles') {
+    contenu = (
+      <>
+        <Bouton titre="← Retour" onPress={() => setEcran(retourRegles)} />
+        <ReglesJeu />
+        <Bouton principal titre="← Retour" onPress={() => setEcran(retourRegles)} />
+      </>
+    );
+  } else if (ecran === 'reglages') {
     contenu = (
       <>
         <Bouton titre="← Retour" onPress={() => { setMessage(''); setEcran('accueil'); }} />
@@ -226,7 +237,7 @@ function Racine() {
   } else if (ecran === 'jeu' && session && session.etat) {
     contenu = (
       <Jeu etat={session.etat} moi={session.mode === 'ligne' ? session.place : null} occupe={occupe}
-        message={message} surAction={agir} surQuitter={quitter}
+        message={message} surAction={agir} surQuitter={quitter} surReglesJeu={voirReglesJeu}
         surRejouer={() => setSession((s) => ({
           ...s,
           etat: nouvellePartie(s.etat.regles, s.etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false }))),
@@ -258,6 +269,7 @@ function Racine() {
           <Bouton titre="À plusieurs, chacun son tour"
             onPress={() => { setMessage(''); setOrdiInitial([false, false, false, false]); setMode('local'); setEcran('reglages'); }} />
         </Carte>
+        <Bouton titre="📖 Règles du jeu (avec dessins)" onPress={voirReglesJeu} />
         {message ? <Texte erreur>{message}</Texte> : null}
       </>
     );
