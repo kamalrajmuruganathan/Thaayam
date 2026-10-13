@@ -15,8 +15,8 @@ export const TAILLES = [5, 7, 9];
 
 /**
  * Règles par défaut : Thaayam / Dayakattai classique du Tamil Nadu.
- * Plateau en croix (bras de 3 × 6 cases), deux dés longs à faces 0, 1, 2, 3 (0 + 0 = 12),
- * entrée avec un « thaayam » (1), on rejoue avec 1, 5, 6 et 12.
+ * Plateau en croix (bras de 3 × 4 cases), deux dés longs à faces 0, 1, 2, 3 (0 + 0 = Kaapal),
+ * entrée avec un « thaayam » (1), on rejoue avec 1, 5, 6 et 2 + 2 ; 0 + 0 = Kaapal (on passe les dés).
  */
 export const REGLES_PAR_DEFAUT = {
   forme: 'croix', // 'croix' (Thaayam kattai) ou 'carre'
@@ -26,12 +26,12 @@ export const REGLES_PAR_DEFAUT = {
     type: 'desLongs', // 'desLongs' ou 'cauris'
     nbDes: 2,
     faces: [0, 1, 2, 3],
-    valeurToutZero: 12, // valeur quand tous les dés longs montrent 0
+    valeurToutZero: 0, // valeur quand tous les dés longs montrent 0 ; 0 = « Kaapal » : on passe les dés
     nbCauris: 4,
     valeurZero: 8, // valeur quand aucun cauri ne tombe ouvert
   },
   valeursEntree: [1], // « thaayam » : lancer qui fait entrer un pion
-  valeursRejouer: [1, 5, 6, 12],
+  valeursRejouer: [1, 5, 6],
   doublesRejouer: [2], // dés longs : rejouer quand tous les dés montrent cette face (2 + 2)
   rejouerApresCapture: true,
   captureAvantInterieur: true, // il faut avoir « coupé » un pion pour entrer à l'intérieur
@@ -47,7 +47,7 @@ export const REGLES_PAR_DEFAUT = {
 
 /** Valeurs par défaut proposées quand on change de type de dés. */
 export const PRESETS_DES = {
-  desLongs: { valeursEntree: [1], valeursRejouer: [1, 5, 6, 12], doublesRejouer: [2] },
+  desLongs: { valeursEntree: [1], valeursRejouer: [1, 5, 6], doublesRejouer: [2] },
   cauris: { valeursEntree: [1], valeursRejouer: [1, 4, 8], doublesRejouer: [] },
 };
 
@@ -60,6 +60,13 @@ export function faitRejouer(regles, tirage) {
   const d = tirage.detail || [];
   return regles.des.type === 'desLongs' && d.length > 1 &&
     d.every((f) => f === d[0]) && (regles.doublesRejouer || []).includes(d[0]);
+}
+
+/** Nom d'un lancer pour l'affichage : « Kaapal » quand tous les dés longs montrent 0 et que cela vaut 0. */
+export function nomLancer(regles, tirage) {
+  const d = tirage.detail || [];
+  const kaapal = regles.des.type === 'desLongs' && tirage.valeur === 0 && d.length > 0 && d.every((f) => f === 0);
+  return kaapal ? 'Kaapal' : String(tirage.valeur);
 }
 
 export function copieRegles(r = REGLES_PAR_DEFAUT) {
@@ -181,7 +188,11 @@ export function resumeRegles(r) {
   } else {
     lignes.push(
       `${r.des.nbDes} dé${r.des.nbDes > 1 ? 's' : ''} long${r.des.nbDes > 1 ? 's' : ''} (faces ${r.des.faces.join(', ')})` +
-        (r.des.faces.includes(0) ? ` ; tout à 0 = ${r.des.valeurToutZero}` : '')
+        (r.des.faces.includes(0)
+          ? r.des.valeurToutZero === 0
+            ? ' ; tout à 0 = Kaapal : on passe les dés au joueur suivant'
+            : ` ; tout à 0 = ${r.des.valeurToutZero}`
+          : '')
     );
   }
   lignes.push(`Entrée d'un pion avec : ${r.valeursEntree.join(', ')}`);

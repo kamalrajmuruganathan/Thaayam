@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chemin, refuges, cle, cheminCroix, casesCroix, refugesCroix } from './plateau.js';
-import { normaliserRegles, valeursPossibles, copieRegles, faitRejouer, REGLES_PAR_DEFAUT } from './regles.js';
+import { normaliserRegles, valeursPossibles, copieRegles, faitRejouer, nomLancer, REGLES_PAR_DEFAUT } from './regles.js';
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, tirerDes } from './partie.js';
 
 const t = (valeur) => ({ valeur, detail: [] });
@@ -73,29 +73,43 @@ test('7 × 7 classique : extérieur anti-horaire, puis intérieur horaire par le
 });
 
 test('valeurs possibles', () => {
-  assert.deepEqual(valeursPossibles(REGLES_PAR_DEFAUT), [1, 2, 3, 4, 5, 6, 12]);
+  assert.deepEqual(valeursPossibles(REGLES_PAR_DEFAUT), [0, 1, 2, 3, 4, 5, 6]);
   assert.deepEqual(valeursPossibles(CAURIS5), [1, 2, 3, 4, 8]);
   const r = copieRegles();
   r.des = { ...r.des, nbDes: 2, faces: [1, 2, 3, 4] };
   assert.deepEqual(valeursPossibles(r), [2, 3, 4, 5, 6, 7, 8]);
 });
 
-test('dés longs : 0 + 0 = 12', () => {
+test('dés longs : 0 + 0 = Kaapal, les dés passent au joueur suivant', () => {
   const zero = () => 0; // face d'indice 0 = 0
-  assert.equal(tirerDes(REGLES_PAR_DEFAUT, zero).valeur, 12);
+  const k = tirerDes(REGLES_PAR_DEFAUT, zero);
+  assert.equal(k.valeur, 0);
+  assert.equal(nomLancer(REGLES_PAR_DEFAUT, k), 'Kaapal');
+  assert.equal(nomLancer(REGLES_PAR_DEFAUT, { valeur: 3, detail: [1, 2] }), '3');
   const vals = new Set();
   for (let i = 0; i < 3000; i++) vals.add(tirerDes(REGLES_PAR_DEFAUT).valeur);
-  assert.deepEqual([...vals].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 12]);
+  assert.deepEqual([...vals].sort((a, b) => a - b), [0, 1, 2, 3, 4, 5, 6]);
+
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  e.joueurs[0].pions[0] = 3; // un pion dehors : il ne bouge pas quand même
+  e = lancer(e, undefined, { valeur: 0, detail: [0, 0] });
+  assert.equal(e.tour, 1);
+  assert.equal(e.joueurs[0].pions[0], 3);
+  assert.match(e.journal.at(-1), /Kaapal : les dés passent au joueur suivant/);
+  // L'ancien réglage reste possible : 0 + 0 = 12.
+  const r = copieRegles();
+  r.des.valeurToutZero = 12;
+  assert.equal(tirerDes(r, zero).valeur, 12);
 });
 
-test('on rejoue avec 1, 5, 6, 12 et avec 2 sur chaque dé (pas 1 + 3)', () => {
+test('on rejoue avec 1, 5, 6 et avec 2 sur chaque dé (pas 1 + 3)', () => {
   const R = REGLES_PAR_DEFAUT;
-  const d = (a, b) => ({ valeur: a === 0 && b === 0 ? 12 : a + b, detail: [a, b] });
+  const d = (a, b) => ({ valeur: a + b, detail: [a, b] });
   assert.ok(faitRejouer(R, d(2, 2))); // 4 avec 2 + 2 : on rejoue
   assert.ok(!faitRejouer(R, d(1, 3))); // 4 avec 1 + 3 : on ne rejoue pas
   assert.ok(!faitRejouer(R, d(1, 1))); // autre double : non
-  for (const [a, b] of [[0, 1], [2, 3], [3, 3], [0, 0]]) assert.ok(faitRejouer(R, d(a, b)), `${a}+${b}`);
-  for (const [a, b] of [[0, 2], [1, 2], [0, 3]]) assert.ok(!faitRejouer(R, d(a, b)), `${a}+${b}`);
+  for (const [a, b] of [[0, 1], [2, 3], [3, 3]]) assert.ok(faitRejouer(R, d(a, b)), `${a}+${b}`);
+  for (const [a, b] of [[0, 0], [0, 2], [1, 2], [0, 3]]) assert.ok(!faitRejouer(R, d(a, b)), `${a}+${b}`);
   assert.deepEqual(normaliserRegles({}).regles.doublesRejouer, [2]);
 
   let e = nouvellePartie(R, [{ nom: 'A' }, { nom: 'B' }]);

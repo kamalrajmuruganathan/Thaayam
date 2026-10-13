@@ -3,7 +3,7 @@ import { View, useWindowDimensions } from 'react-native';
 import { Bouton, Carte, Texte, useCouleurs } from '../ui';
 import { Plateau, Cauri } from '../Plateau';
 import { lancer, jouer, coupsPossibles, geometrie } from '../../../moteur/partie.js';
-import { resumeRegles } from '../../../moteur/regles.js';
+import { resumeRegles, nomLancer } from '../../../moteur/regles.js';
 
 /**
  * Écran de jeu (local ou en ligne).
@@ -72,7 +72,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
                       : Array.from({ length: f }, (_, k) => <View key={k} style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: '#3b2410' }} />)}
                   </View>
                 ))}
-              <Texte style={{ fontSize: 30, fontWeight: '800', color: c.accent, marginLeft: 6 }}>{l.valeur}</Texte>
+              <Texte style={{ fontSize: 30, fontWeight: '800', color: c.accent, marginLeft: 6 }}>{nomLancer(etat.regles, l)}</Texte>
             </>
           )}
         </View>

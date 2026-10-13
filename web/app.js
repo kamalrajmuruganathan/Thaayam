@@ -1,6 +1,6 @@
 import {
   REGLES_PAR_DEFAUT, PRESETS_DES, TAILLES, COULEURS,
-  copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles,
+  copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles, nomLancer,
 } from './moteur/regles.js';
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, zoneCase, etapesCoup, arcsCroix } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
@@ -96,7 +96,7 @@ let niveauOrdi = (() => { try { return localStorage.getItem('thaayam:niveau') ||
 function ouvrirReglages(mode) {
   modeReglages = mode;
   try {
-    edition = normaliserRegles(JSON.parse(memoire.lire('thaayam:regles:v4')) || REGLES_PAR_DEFAUT).regles;
+    edition = normaliserRegles(JSON.parse(memoire.lire('thaayam:regles:v5')) || REGLES_PAR_DEFAUT).regles;
   } catch {
     edition = copieRegles();
   }
@@ -210,7 +210,7 @@ function construireFormulaire() {
     el('label', {}, 'Valeur quand tous les dés montrent 0',
       el('input', { type: 'number', min: 0, max: 24, value: r.des.valeurToutZero, inputmode: 'numeric',
         oninput: (e) => { r.des.valeurToutZero = Number(e.target.value); verifierReglages(); } }),
-      el('span', { class: 'aide' }, 'Classique : 0 + 0 = 12.')),
+      el('span', { class: 'aide' }, 'Classique : 0 = « Kaapal », on passe les dés au joueur suivant.')),
     el('label', {}, 'On rejoue aussi quand chaque dé montre la face',
       el('input', { id: 'champ-doubles', value: r.doublesRejouer.join(', '),
         oninput: (e) => { r.doublesRejouer = lireListe(e.target.value); verifierReglages(); } }),
@@ -289,7 +289,7 @@ $('form-regles').addEventListener('submit', (e) => e.preventDefault());
 $('btn-valider-regles').addEventListener('click', async () => {
   if (!verifierReglages()) return;
   const { regles } = normaliserRegles(edition);
-  memoire.ecrire('thaayam:regles:v4', JSON.stringify(regles));
+  memoire.ecrire('thaayam:regles:v5', JSON.stringify(regles));
   if (modeReglages === 'local') {
     const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: $(`nom-${i}`).value.trim() || COULEURS[i].nom, ordi: ordiLocal[i] ? niveauOrdi : false }));
     session = { mode: 'local', etat: nouvellePartie(regles, joueurs) };
@@ -569,7 +569,7 @@ function dessinerDes(etat) {
   } else {
     l.detail.forEach((f) => zone.append(deLong(f)));
   }
-  zone.append(el('span', { class: 'valeur' }, String(l.valeur)));
+  zone.append(el('span', { class: 'valeur' }, nomLancer(etat.regles, l)));
 }
 
 /** Dé long (dayakattai) vu de dessus : une face avec 0 à 3 points. */

@@ -5,7 +5,7 @@
  * Position d'un pion : -1 = à la maison, 0 = case de départ,
  * dernier indice du chemin = centre (pion arrivé).
  */
-import { normaliserRegles, valeursPossibles, valeurDesLongs, faitRejouer, COULEURS } from './regles.js';
+import { normaliserRegles, valeursPossibles, valeurDesLongs, faitRejouer, nomLancer, COULEURS } from './regles.js';
 import { chemin, cotesPourJoueurs, refuges, cle, cheminCroix, casesCroix, refugesCroix, CROIX } from './plateau.js';
 
 const MAX_JOURNAL = 30;
@@ -163,21 +163,24 @@ export function lancer(etat0, rng = Math.random, tirage = null) {
   const etat = cloner(etat0);
   const t = tirage || tirerDes(etat.regles, rng);
   const nom = etat.joueurs[etat.tour].nom;
+  const fait = nomLancer(etat.regles, t);
   etat.numero += 1;
   etat.lancer = t;
   etat.dernierLancer = { ...t, joueur: etat.tour };
   etat.phase = 'deplacer';
   if (coupsPossibles(etat).length === 0) {
     if (faitRejouer(etat.regles, t)) {
-      noter(etat, `${nom} fait ${t.valeur} : aucun pion ne peut bouger, mais ${nom} rejoue.`);
+      noter(etat, `${nom} fait ${fait} : aucun pion ne peut bouger, mais ${nom} rejoue.`);
       etat.phase = 'lancer';
       etat.lancer = null;
     } else {
-      noter(etat, `${nom} fait ${t.valeur} : aucun pion ne peut bouger.`);
+      noter(etat, fait === 'Kaapal'
+        ? `${nom} fait Kaapal : les dés passent au joueur suivant.`
+        : `${nom} fait ${fait} : aucun pion ne peut bouger.`);
       joueurSuivant(etat);
     }
   } else {
-    noter(etat, `${nom} fait ${t.valeur}.`);
+    noter(etat, `${nom} fait ${fait}.`);
   }
   return etat;
 }

@@ -82,7 +82,7 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
             <Choix options={[[1, '1'], [2, '2'], [3, '3']]} valeur={r.des.nbDes} onChange={(v) => maj((x) => { x.des.nbDes = v; })} />
             <Champ libelle="Valeurs des faces de chaque dé" value={txtFaces} aide="Séparées par des virgules. Dayakattai classique : 0, 1, 2, 3."
               onChangeText={(t) => { setTxtFaces(t); maj((x) => { x.des.faces = lireListe(t); }); }} />
-            <Champ libelle="Valeur quand tous les dés montrent 0" keyboardType="number-pad" value={txtToutZero} aide="Classique : 0 + 0 = 12."
+            <Champ libelle="Valeur quand tous les dés montrent 0" keyboardType="number-pad" value={txtToutZero} aide="Classique : 0 = « Kaapal », on passe les dés au joueur suivant."
               onChangeText={(t) => { setTxtToutZero(t); maj((x) => { x.des.valeurToutZero = Number(t); }); }} />
             <Champ libelle="On rejoue aussi quand chaque dé montre la face" value={txtDoubles}
               aide="Classique : 2 (2 sur chaque dé, mais pas 1 + 3). Laisser vide pour aucun."
