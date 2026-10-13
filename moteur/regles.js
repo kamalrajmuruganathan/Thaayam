@@ -34,6 +34,7 @@ export const REGLES_PAR_DEFAUT = {
   valeursRejouer: [1, 5, 6],
   doublesRejouer: [2], // dés longs : rejouer quand tous les dés montrent cette face (2 + 2)
   rejouerApresCapture: true,
+  groupeRentreEnsemble: true, // un groupe mangé d'un coup peut rentrer d'un coup avec une valeur qui fait rejouer
   captureAvantInterieur: true, // il faut avoir « coupé » un pion pour entrer à l'intérieur
   arriveeExacte: true,
   unPionParCase: false, // false : on peut empiler ses pions ; un adversaire qui tombe dessus mange tout le groupe
@@ -147,6 +148,7 @@ export function normaliserRegles(source) {
       ? [...new Set(s.doublesRejouer.filter((v) => Number.isInteger(v) && v >= 0))]
       : [...d0.doublesRejouer],
     rejouerApresCapture: s.rejouerApresCapture !== false,
+    groupeRentreEnsemble: s.groupeRentreEnsemble !== false,
     captureAvantInterieur: s.captureAvantInterieur !== false,
     arriveeExacte: s.arriveeExacte !== false,
     sens: s.sens === 'horaire' ? 'horaire' : 'anti-horaire',
@@ -206,6 +208,9 @@ export function resumeRegles(r) {
   lignes.push(r.unPionParCase
     ? 'Un seul pion par case, sauf sur les refuges'
     : 'On peut empiler ses pions ; un adversaire qui tombe sur le groupe le mange en entier');
+  if (!r.unPionParCase && r.groupeRentreEnsemble) {
+    lignes.push('Un groupe mangé d’un coup peut rentrer d’un coup avec une valeur qui fait rejouer');
+  }
   if (r.captureAvantInterieur) lignes.push("Il faut avoir capturé un pion pour entrer à l'intérieur");
   lignes.push(r.arriveeExacte ? 'Il faut tomber pile sur le centre' : 'Pas besoin de tomber pile sur le centre');
   return lignes;

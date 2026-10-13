@@ -41,7 +41,7 @@ export function choisirCoup(etat, rng = Math.random, niveau = etat.joueurs[etat.
     const abri = g.refuges.has(la) || c.vers === g.arrivee;
     let score = c.captures.length * 100;
     if (c.vers === g.arrivee) score += 80;
-    if (c.depuis === -1) score += 45;
+    if (c.depuis === -1) score += 45 + (c.groupe ? 40 * (c.groupe.length - 1) : 0);
     if (abri) score += 20;
     else if (menace.has(la)) score -= 40;
     if (ici && menace.has(ici) && !g.refuges.has(ici)) score += 25; // fuir le danger

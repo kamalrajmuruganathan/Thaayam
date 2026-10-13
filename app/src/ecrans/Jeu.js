@@ -20,7 +20,8 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
   const actif = etat.joueurs[etat.tour];
   const peut = etat.phase !== 'fini' && !occupe && (moi === null ? !actif.ordi : etat.tour === moi);
   const coups = peut ? coupsPossibles(etat) : [];
-  const entree = coups.find((x) => x.depuis === -1);
+  const entree = coups.find((x) => x.depuis === -1 && !x.groupe);
+  const groupe = coups.find((x) => x.groupe);
 
   let consigne;
   if (etat.phase === 'fini') consigne = `🏆 ${etat.joueurs[etat.gagnant].nom} a gagné !`;
@@ -77,12 +78,13 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
           )}
         </View>
         <Texte style={{ textAlign: 'center', fontWeight: '700', color: etat.phase === 'fini' ? c.texte : actif.couleur }}>{consigne}</Texte>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {etat.phase !== 'fini' ? (
             <Bouton style={{ flex: 1 }} principal titre="Lancer" desactive={!(peut && etat.phase === 'lancer')}
               onPress={() => surAction(lancer(etat))} />
           ) : null}
           {entree ? <Bouton style={{ flex: 1 }} titre="Faire entrer un pion" onPress={() => surAction(jouer(etat, entree.pion))} /> : null}
+          {groupe ? <Bouton style={{ flex: 1 }} titre={`Faire entrer les ${groupe.groupe.length} pions mangés`} onPress={() => surAction(jouer(etat, groupe.pion, true))} /> : null}
           {etat.phase === 'fini' && moi === null ? <Bouton style={{ flex: 1 }} principal titre="Rejouer" onPress={surRejouer} /> : null}
         </View>
       </Carte>

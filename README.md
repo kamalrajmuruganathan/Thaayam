@@ -29,6 +29,7 @@ Par défaut : le **Thaayam / Dayakattai classique** du Tamil Nadu.
 - Pas de croix (refuges) dans les bras : seul le centre est protégé.
 - Il faut avoir capturé un pion adverse pour monter vers le centre.
 - On peut empiler ses propres pions sur une case ; un adversaire qui tombe sur le groupe le mange en entier.
+  Le joueur mangé peut faire rentrer ce groupe d'un coup avec une valeur qui fait rejouer (1, 5, 6, 2 + 2), ou un seul pion avec 1.
 
 Tout est réglable avant la partie : plateau en croix ou carré (5/7/9), 1 à 12 pions, dés longs ou cauris, valeurs d'entrée et de
 relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pion par case ou empilement.

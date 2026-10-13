@@ -246,6 +246,8 @@ function construireFormulaire() {
     caseACocher('Il faut tomber pile sur le centre', r.arriveeExacte, (v) => { r.arriveeExacte = v; }),
     caseACocher('Un seul pion par case (sauf au centre)', r.unPionParCase, (v) => { r.unPionParCase = v; },
       'Décoché : on peut empiler ses pions, et un adversaire qui tombe dessus mange tout le groupe.'),
+    caseACocher('Un groupe mangé d’un coup rentre d’un coup', r.groupeRentreEnsemble, (v) => { r.groupeRentreEnsemble = v; },
+      'Avec une valeur qui fait rejouer (1, 5, 6, 2 + 2), les pions mangés ensemble peuvent rentrer ensemble.'),
     el('label', {}, 'Sens du tour',
       (() => {
         const s = el('select', { onchange: (e) => { r.sens = e.target.value; } });
@@ -426,7 +428,7 @@ function faireJouerOrdi() {
       appliquer(lancer(e, tirageAleatoire()));
     } else {
       const coup = choisirCoup(e);
-      if (coup) appliquer(jouer(e, coup.pion));
+      if (coup) appliquer(jouer(e, coup.pion, !!coup.groupe));
     }
   }, e.phase === 'lancer' ? 650 : 850);
 }
@@ -529,8 +531,12 @@ $('btn-lancer').addEventListener('click', () => {
   appliquer(lancer(session.etat, tirageAleatoire()));
 });
 $('btn-entrer').addEventListener('click', () => {
-  const coup = coupsPossibles(session.etat).find((c) => c.depuis === -1);
+  const coup = coupsPossibles(session.etat).find((c) => c.depuis === -1 && !c.groupe);
   if (coup && jePeuxJouer()) appliquer(jouer(session.etat, coup.pion));
+});
+$('btn-entrer-groupe').addEventListener('click', () => {
+  const coup = coupsPossibles(session.etat).find((c) => c.groupe);
+  if (coup && jePeuxJouer()) appliquer(jouer(session.etat, coup.pion, true));
 });
 $('btn-quitter').addEventListener('click', () => {
   arreterSuivi();
@@ -633,8 +639,11 @@ function dessinerJeu() {
   $('btn-lancer').disabled = !(peut && etat.phase === 'lancer');
   $('btn-lancer').hidden = etat.phase === 'fini';
   $('btn-rejouer').hidden = !(etat.phase === 'fini' && session.mode === 'local');
-  const entree = coups.find((c) => c.depuis === -1);
+  const entree = coups.find((c) => c.depuis === -1 && !c.groupe);
   $('btn-entrer').hidden = !entree;
+  const groupe = coups.find((c) => c.groupe);
+  $('btn-entrer-groupe').hidden = !groupe;
+  if (groupe) $('btn-entrer-groupe').textContent = `Faire entrer les ${groupe.groupe.length} pions mangés`;
 
   const journal = $('journal');
   journal.innerHTML = '';

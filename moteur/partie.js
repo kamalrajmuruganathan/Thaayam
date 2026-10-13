@@ -62,6 +62,7 @@ export function nouvellePartie(reglesSource, joueurs) {
       couleur: COULEURS[i].code,
       pions: Array(regles.nbPions).fill(-1),
       captures: 0,
+      groupes: [], // pions mangés ensemble, qui peuvent rentrer ensemble
       ...(j.ordi ? { ordi: j.ordi === 'facile' ? 'facile' : 'normal' } : {}),
     })),
     tour: 0,
@@ -148,7 +149,19 @@ export function coupsPossibles(etat) {
     const vers = destination(etat, etat.tour, i, etat.lancer.valeur);
     if (vers !== null) coups.push({ pion: i, depuis: p, vers, captures: victimes(etat, etat.tour, vers) });
   });
+  // Un groupe mangé d'un coup rentre d'un coup avec une valeur qui fait rejouer.
+  const r = etat.regles;
+  if (r.groupeRentreEnsemble && !r.unPionParCase && faitRejouer(r, etat.lancer)) {
+    (j.groupes || []).forEach((gr) => {
+      if (gr.length < 2 || !gr.every((i) => j.pions[i] === -1)) return;
+      coups.push({ pion: gr[0], depuis: -1, vers: 0, captures: victimes(etat, etat.tour, 0), groupe: [...gr] });
+    });
+  }
   return coups;
+}
+
+function retirerDesGroupes(groupes = [], pions) {
+  return groupes.map((gr) => gr.filter((i) => !pions.includes(i))).filter((gr) => gr.length >= 2);
 }
 
 function joueurSuivant(etat) {
@@ -185,24 +198,37 @@ export function lancer(etat0, rng = Math.random, tirage = null) {
   return etat;
 }
 
-/** Action « déplacer le pion n° pion » avec le dernier lancer. */
-export function jouer(etat0, pion) {
-  const coup = coupsPossibles(etat0).find((c) => c.pion === pion) ||
-    (etat0.joueurs[etat0.tour].pions[pion] === -1 &&
-      coupsPossibles(etat0).find((c) => c.depuis === -1));
+/**
+ * Action « déplacer le pion n° pion » avec le dernier lancer.
+ * groupe = true : faire entrer d'un coup le groupe mangé dont fait partie ce pion.
+ */
+export function jouer(etat0, pion, groupe = false) {
+  const coups = coupsPossibles(etat0).filter((c) => !!c.groupe === !!groupe);
+  const coup = coups.find((c) => c.pion === pion || (c.groupe || []).includes(pion)) ||
+    (!groupe && etat0.joueurs[etat0.tour].pions[pion] === -1 && coups.find((c) => c.depuis === -1));
   if (!coup) throw new Error('Ce pion ne peut pas bouger.');
   const etat = cloner(etat0);
   const g = geometrie(etat.regles, etat.joueurs.length);
   const j = etat.joueurs[etat.tour];
-  j.pions[coup.pion] = coup.vers;
-  etat.dernierCoup = { joueur: etat.tour, pion: coup.pion, depuis: coup.depuis, vers: coup.vers };
+  const bouges = coup.groupe || [coup.pion];
+  bouges.forEach((i) => { j.pions[i] = coup.vers; });
+  if (coup.depuis === -1) j.groupes = retirerDesGroupes(j.groupes, bouges);
+  etat.dernierCoup = { joueur: etat.tour, pion: coup.pion, depuis: coup.depuis, vers: coup.vers,
+    ...(coup.groupe ? { groupe: coup.groupe } : {}) };
   coup.captures.forEach((v) => {
     etat.joueurs[v.joueur].pions[v.pion] = -1;
+  });
+  // Les pions d'un même joueur mangés d'un coup forment un groupe.
+  etat.joueurs.forEach((adv, a) => {
+    const manges = coup.captures.filter((v) => v.joueur === a).map((v) => v.pion);
+    if (manges.length < 2) return;
+    adv.groupes = [...retirerDesGroupes(adv.groupes, manges), manges];
   });
   j.captures += coup.captures.length;
   etat.numero += 1;
 
-  if (coup.depuis === -1) noter(etat, `${j.nom} fait entrer un pion.`);
+  if (coup.groupe) noter(etat, `${j.nom} fait entrer ${coup.groupe.length} pions d'un coup.`);
+  else if (coup.depuis === -1) noter(etat, `${j.nom} fait entrer un pion.`);
   else if (coup.vers === g.arrivee) noter(etat, `${j.nom} amène un pion au centre !`);
   if (coup.captures.length) {
     const noms = [...new Set(coup.captures.map((v) => etat.joueurs[v.joueur].nom))].join(' et ');

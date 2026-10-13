@@ -107,6 +107,9 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
         <Interrupteur libelle="Un seul pion par case (sauf au centre)" valeur={r.unPionParCase}
           aide="Décoché : on peut empiler ses pions, et un adversaire qui tombe dessus mange tout le groupe."
           onChange={(v) => maj((x) => { x.unPionParCase = v; })} />
+        <Interrupteur libelle="Un groupe mangé d’un coup rentre d’un coup" valeur={r.groupeRentreEnsemble}
+          aide="Avec une valeur qui fait rejouer (1, 5, 6, 2 + 2), les pions mangés ensemble peuvent rentrer ensemble."
+          onChange={(v) => maj((x) => { x.groupeRentreEnsemble = v; })} />
         <Texte style={{ fontWeight: '600' }}>Sens du tour</Texte>
         <Choix options={[['anti-horaire', '↺ Anti-horaire'], ['horaire', '↻ Horaire']]} valeur={r.sens}
           onChange={(v) => maj((x) => { x.sens = v; })} />

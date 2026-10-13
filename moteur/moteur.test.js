@@ -150,6 +150,53 @@ test('par défaut : 4 pions, on empile, et le groupe est mangé en entier', () =
   assert.equal(e.joueurs[1].captures, 2);
 });
 
+test('un groupe mangé d’un coup rentre d’un coup avec une valeur qui fait rejouer', () => {
+  const d = (a, b) => ({ valeur: a + b, detail: [a, b] });
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  const g = geometrie(e.regles, 2);
+  // Deux pions de A empilés, B tombe dessus et mange le groupe.
+  e.joueurs[0].pions[0] = 4;
+  e.joueurs[0].pions[1] = 4;
+  const iB = g.chemins[1].findIndex((p) => cle(p) === cle(g.chemins[0][4]));
+  e.tour = 1;
+  e.joueurs[1].pions[0] = iB - 3;
+  e = jouer(lancer(e, undefined, d(1, 2)), 0);
+  assert.deepEqual(e.joueurs[0].groupes, [[0, 1]]);
+  assert.equal(e.tour, 1); // B rejoue après sa capture
+  e = lancer(e, undefined, d(0, 0)); // Kaapal : les dés passent à A
+  assert.equal(e.tour, 0);
+
+  // Avec 1 + 2 (pas de relance), le groupe ne peut pas rentrer.
+  let x = lancer(e, undefined, d(1, 2));
+  assert.ok(!coupsPossibles(x).some((c) => c.groupe));
+  // Avec 5, 6 ou 2 + 2 : le groupe peut rentrer d'un coup (et pas un pion seul).
+  for (const t of [d(2, 3), d(3, 3), d(2, 2)]) {
+    x = lancer(e, undefined, t);
+    const cs = coupsPossibles(x);
+    assert.deepEqual(cs.find((c) => c.groupe).groupe, [0, 1]);
+    assert.ok(!cs.some((c) => c.depuis === -1 && !c.groupe));
+  }
+  // Avec 1 : au choix, un seul pion ou tout le groupe.
+  x = lancer(e, undefined, d(0, 1));
+  const cs = coupsPossibles(x);
+  assert.ok(cs.some((c) => c.depuis === -1 && !c.groupe));
+  assert.ok(cs.some((c) => c.groupe));
+  const seul = jouer(x, 0);
+  assert.deepEqual(seul.joueurs[0].pions.slice(0, 3), [0, -1, -1]);
+  assert.deepEqual(seul.joueurs[0].groupes, []); // le groupe est défait
+  const tous = jouer(x, 0, true);
+  assert.deepEqual(tous.joueurs[0].pions.slice(0, 3), [0, 0, -1]); // le pion jamais sorti reste à la maison
+  assert.deepEqual(tous.joueurs[0].groupes, []);
+  assert.equal(tous.tour, 0); // 1 fait rejouer
+  assert.match(tous.journal.at(-2), /fait entrer 2 pions d'un coup/);
+
+  // Règle décochée : pas d'entrée en groupe.
+  const r = copieRegles();
+  r.groupeRentreEnsemble = false;
+  x = lancer({ ...e, regles: r }, undefined, d(0, 1));
+  assert.ok(!coupsPossibles(x).some((c) => c.groupe));
+});
+
 test('règles incohérentes refusées', () => {
   const r = copieRegles(CAURIS5);
   r.valeursEntree = [5];
@@ -232,7 +279,7 @@ test('parties aléatoires complètes sans erreur', () => {
         if (e.phase === 'lancer') e = lancer(e, rng);
         else {
           const c = coupsPossibles(e);
-          e = jouer(e, c[Math.floor(rng() * c.length)].pion);
+          { const k = c[Math.floor(rng() * c.length)]; e = jouer(e, k.pion, !!k.groupe); }
         }
       }
       assert.equal(e.phase, 'fini', `partie ${taille} ${nb} non terminée`);
@@ -257,10 +304,10 @@ test("l'ordinateur termine ses parties et bat un joueur au hasard", async () => 
     let n = 0;
     while (e.phase !== 'fini' && n++ < 200000) {
       if (e.phase === 'lancer') e = lancer(e, rng);
-      else if (e.tour === 0) e = jouer(e, choisirCoup(e, rng).pion);
+      else if (e.tour === 0) { const k = choisirCoup(e, rng); e = jouer(e, k.pion, !!k.groupe); }
       else {
         const c = coupsPossibles(e);
-        e = jouer(e, c[Math.floor(rng() * c.length)].pion);
+        { const k = c[Math.floor(rng() * c.length)]; e = jouer(e, k.pion, !!k.groupe); }
       }
     }
     assert.equal(e.phase, 'fini');

@@ -51,7 +51,7 @@ function Racine() {
       if (e.phase === 'lancer') agir(lancer(e));
       else {
         const coup = choisirCoup(e);
-        if (coup) agir(jouer(e, coup.pion));
+        if (coup) agir(jouer(e, coup.pion, !!coup.groupe));
       }
     }, e.phase === 'lancer' ? 650 : 850);
     return () => clearTimeout(m);
