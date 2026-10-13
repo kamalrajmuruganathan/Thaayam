@@ -106,13 +106,34 @@ test('on rejoue avec 1, 5, 6, 12 et avec 2 sur chaque dé (pas 1 + 3)', () => {
   assert.equal(e.tour, 1); // 1 + 3 : au tour de B
 });
 
-test('un seul pion par case sauf refuge', () => {
-  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+test('un seul pion par case sauf refuge (si la règle est cochée)', () => {
+  let e = nouvellePartie({ ...REGLES_PAR_DEFAUT, unPionParCase: true }, [{ nom: 'A' }, { nom: 'B' }]);
   e.joueurs[0].pions[0] = 2;
   e.joueurs[0].pions[1] = 4;
   e = lancer(e, undefined, t(2));
   assert.ok(!coupsPossibles(e).some((c) => c.pion === 0)); // 4 est déjà pris
   assert.ok(coupsPossibles(e).some((c) => c.pion === 1));
+});
+
+test('par défaut : 4 pions, on empile, et le groupe est mangé en entier', () => {
+  assert.equal(REGLES_PAR_DEFAUT.nbPions, 4);
+  assert.equal(normaliserRegles({}).regles.unPionParCase, false);
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  assert.equal(e.joueurs[0].pions.length, 4);
+  e.joueurs[0].pions[0] = 2;
+  e.joueurs[0].pions[1] = 4;
+  e = jouer(lancer(e, undefined, t(2)), 0);
+  assert.deepEqual(e.joueurs[0].pions.slice(0, 2), [4, 4]); // deux pions rouges empilés
+  // B tombe sur le groupe : les deux pions de A retournent à la maison.
+  const g = geometrie(e.regles, 2);
+  const iB = g.chemins[1].findIndex((p) => cle(p) === cle(g.chemins[0][4]));
+  e.tour = 1;
+  e.joueurs[1].pions[0] = iB - 3;
+  e = lancer(e, undefined, t(3));
+  assert.equal(coupsPossibles(e).find((c) => c.pion === 0).captures.length, 2);
+  e = jouer(e, 0);
+  assert.deepEqual(e.joueurs[0].pions.slice(0, 2), [-1, -1]);
+  assert.equal(e.joueurs[1].captures, 2);
 });
 
 test('règles incohérentes refusées', () => {

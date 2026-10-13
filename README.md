@@ -20,17 +20,18 @@ Deux versions qui partagent le même moteur de jeu :
 
 Par défaut : le **Thaayam / Dayakattai classique** du Tamil Nadu.
 - Plateau **en croix** (thaayam kattai) : 4 bras de 3 colonnes × 4 cases, un grand centre, 3 arcs dessinés entre deux bras.
-  2 à 4 joueurs, 6 pions chacun, départ au bout de son bras (case du milieu).
+  2 à 4 joueurs, 4 pions chacun, départ au bout de son bras (case du milieu).
 - 2 dés longs à faces 0, 1, 2, 3 : on additionne, et 0 + 0 = 12.
 - Un pion entre avec un « thaayam » (total de 1) ; on rejoue avec 1, 5, 6, 12, avec 2 sur chaque dé (2 + 2, mais pas 1 + 3) et après une capture.
 - Tour complet de la croix dans le sens inverse des aiguilles d'une montre (par les colonnes extérieures des bras,
   en passant en diagonale aux arcs), retour sur la case de départ, puis remontée de la colonne du milieu de son bras jusqu'au
   centre (arrivée exacte).
 - Pas de croix (refuges) dans les bras : seul le centre est protégé.
-- Il faut avoir capturé un pion adverse pour entrer à l'intérieur ; un seul pion par case hors refuges.
+- Il faut avoir capturé un pion adverse pour monter vers le centre.
+- On peut empiler ses propres pions sur une case ; un adversaire qui tombe sur le groupe le mange en entier.
 
 Tout est réglable avant la partie : plateau en croix ou carré (5/7/9), 1 à 12 pions, dés longs ou cauris, valeurs d'entrée et de
-relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pion par case.
+relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pion par case ou empilement.
 
 ## Confort de jeu (page web)
 - Les pions avancent case par case ; sons des dés, des captures, de l'arrivée et de la victoire

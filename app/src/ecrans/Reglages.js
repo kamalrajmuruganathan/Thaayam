@@ -104,8 +104,8 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
           valeur={r.captureAvantInterieur} onChange={(v) => maj((x) => { x.captureAvantInterieur = v; })} />
         <Interrupteur libelle="Il faut tomber pile sur le centre" valeur={r.arriveeExacte}
           onChange={(v) => maj((x) => { x.arriveeExacte = v; })} />
-        <Interrupteur libelle="Un seul pion par case (sauf sur les croix)" valeur={r.unPionParCase}
-          aide="Deux pions du même joueur ne peuvent pas partager une case ordinaire."
+        <Interrupteur libelle="Un seul pion par case (sauf au centre)" valeur={r.unPionParCase}
+          aide="Décoché : on peut empiler ses pions, et un adversaire qui tombe dessus mange tout le groupe."
           onChange={(v) => maj((x) => { x.unPionParCase = v; })} />
         <Texte style={{ fontWeight: '600' }}>Sens du tour</Texte>
         <Choix options={[['anti-horaire', '↺ Anti-horaire'], ['horaire', '↻ Horaire']]} valeur={r.sens}

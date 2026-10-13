@@ -96,7 +96,7 @@ let niveauOrdi = (() => { try { return localStorage.getItem('thaayam:niveau') ||
 function ouvrirReglages(mode) {
   modeReglages = mode;
   try {
-    edition = normaliserRegles(JSON.parse(memoire.lire('thaayam:regles:v3')) || REGLES_PAR_DEFAUT).regles;
+    edition = normaliserRegles(JSON.parse(memoire.lire('thaayam:regles:v4')) || REGLES_PAR_DEFAUT).regles;
   } catch {
     edition = copieRegles();
   }
@@ -244,8 +244,8 @@ function construireFormulaire() {
     caseACocher("Il faut avoir capturé un pion pour entrer à l'intérieur", r.captureAvantInterieur,
       (v) => { r.captureAvantInterieur = v; }, 'Sinon, les pions refont le tour du plateau.'),
     caseACocher('Il faut tomber pile sur le centre', r.arriveeExacte, (v) => { r.arriveeExacte = v; }),
-    caseACocher('Un seul pion par case (sauf sur les croix)', r.unPionParCase, (v) => { r.unPionParCase = v; },
-      'Deux pions du même joueur ne peuvent pas partager une case ordinaire.'),
+    caseACocher('Un seul pion par case (sauf au centre)', r.unPionParCase, (v) => { r.unPionParCase = v; },
+      'Décoché : on peut empiler ses pions, et un adversaire qui tombe dessus mange tout le groupe.'),
     el('label', {}, 'Sens du tour',
       (() => {
         const s = el('select', { onchange: (e) => { r.sens = e.target.value; } });
@@ -289,7 +289,7 @@ $('form-regles').addEventListener('submit', (e) => e.preventDefault());
 $('btn-valider-regles').addEventListener('click', async () => {
   if (!verifierReglages()) return;
   const { regles } = normaliserRegles(edition);
-  memoire.ecrire('thaayam:regles:v3', JSON.stringify(regles));
+  memoire.ecrire('thaayam:regles:v4', JSON.stringify(regles));
   if (modeReglages === 'local') {
     const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: $(`nom-${i}`).value.trim() || COULEURS[i].nom, ordi: ordiLocal[i] ? niveauOrdi : false }));
     session = { mode: 'local', etat: nouvellePartie(regles, joueurs) };

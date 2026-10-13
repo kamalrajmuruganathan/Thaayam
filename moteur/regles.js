@@ -21,7 +21,7 @@ export const TAILLES = [5, 7, 9];
 export const REGLES_PAR_DEFAUT = {
   forme: 'croix', // 'croix' (Thaayam kattai) ou 'carre'
   taille: 7, // côté du plateau carré
-  nbPions: 6,
+  nbPions: 4,
   des: {
     type: 'desLongs', // 'desLongs' ou 'cauris'
     nbDes: 2,
@@ -36,7 +36,7 @@ export const REGLES_PAR_DEFAUT = {
   rejouerApresCapture: true,
   captureAvantInterieur: true, // il faut avoir « coupé » un pion pour entrer à l'intérieur
   arriveeExacte: true,
-  unPionParCase: true, // deux pions d'un même joueur ne partagent pas une case (sauf refuge)
+  unPionParCase: false, // false : on peut empiler ses pions ; un adversaire qui tombe dessus mange tout le groupe
   sens: 'anti-horaire', // sens de l'anneau extérieur
   sensInterieurs: 'inverse', // 'inverse' | 'meme' | 'alterne' (par rapport à l'anneau extérieur)
   refuges: {
@@ -143,7 +143,7 @@ export function normaliserRegles(source) {
     captureAvantInterieur: s.captureAvantInterieur !== false,
     arriveeExacte: s.arriveeExacte !== false,
     sens: s.sens === 'horaire' ? 'horaire' : 'anti-horaire',
-    unPionParCase: s.unPionParCase !== false,
+    unPionParCase: typeof s.unPionParCase === 'boolean' ? s.unPionParCase : d0.unPionParCase,
     sensInterieurs: ['inverse', 'meme', 'alterne'].includes(s.sensInterieurs) ? s.sensInterieurs : d0.sensInterieurs,
     refuges: {
       coinsDeuxiemeAnneau: !(s.refuges && s.refuges.coinsDeuxiemeAnneau === false),
@@ -192,7 +192,9 @@ export function resumeRegles(r) {
         : '') +
       (r.rejouerApresCapture ? ', et après une capture' : '')
   );
-  if (r.unPionParCase) lignes.push('Un seul pion par case, sauf sur les refuges');
+  lignes.push(r.unPionParCase
+    ? 'Un seul pion par case, sauf sur les refuges'
+    : 'On peut empiler ses pions ; un adversaire qui tombe sur le groupe le mange en entier');
   if (r.captureAvantInterieur) lignes.push("Il faut avoir capturé un pion pour entrer à l'intérieur");
   lignes.push(r.arriveeExacte ? 'Il faut tomber pile sur le centre' : 'Pas besoin de tomber pile sur le centre');
   return lignes;
