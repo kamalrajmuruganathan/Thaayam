@@ -26,7 +26,7 @@ Par défaut : le **Thaayam / Dayakattai classique** du Tamil Nadu.
 - Tour complet de la croix dans le sens inverse des aiguilles d'une montre (par les colonnes extérieures des bras,
   en passant en diagonale aux arcs), retour sur la case de départ, puis remontée de la colonne du milieu de son bras jusqu'au
   centre (arrivée exacte).
-- Pas de croix (refuges) dans les bras : seul le centre est protégé.
+- Pas de refuge dans les bras : seul le centre est protégé.
 - Il faut avoir capturé un pion adverse pour monter vers le centre.
 - On peut empiler ses propres pions sur une case ; un adversaire qui tombe sur le groupe le mange en entier.
   Le joueur mangé peut faire rentrer ce groupe d'un coup avec une valeur qui fait rejouer (1, 5, 6, 2 + 2), ou un seul pion avec 1.
@@ -63,8 +63,13 @@ npm install
 npx expo start  # puis scanner le QR code avec Expo Go
 ```
 
-### 4. Publier la page web (Netlify)
-Créer un site Netlify relié à ce dépôt : `netlify.toml` est déjà prêt (dossier publié : `web/`).
+### 4. Publier la page web (Cloudflare)
+Le site https://thaayam.kamalraj-28.workers.dev est relié à la branche `main` : chaque push sur `main` le republie
+(`wrangler.jsonc` copie le moteur dans `web/moteur` avant la publication). `netlify.toml` reste disponible.
+
+### 5. Installer le site comme une appli
+Sur le téléphone, ouvrir le site puis menu du navigateur → « Ajouter à l'écran d'accueil » : Thaayam s'ouvre
+alors en plein écran, avec son icône.
 
 ## Limites connues
 - En ligne, le serveur vérifie que c'est bien ton tour et que personne n'a joué entre-temps, mais les coups

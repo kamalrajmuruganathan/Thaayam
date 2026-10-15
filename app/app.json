@@ -6,8 +6,23 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#f6efe3",
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.kamal.thaayam" },
-    "android": { "package": "com.kamal.thaayam" },
-    "plugins": ["expo-status-bar"]
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kamal.thaayam"
+    },
+    "android": {
+      "package": "com.kamal.thaayam",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#7a3e12"
+      }
+    },
+    "plugins": [
+      "expo-status-bar"
+    ],
+    "icon": "./assets/icon.png",
+    "web": {
+      "favicon": "./assets/icon.png"
+    }
   }
 }
