@@ -38,6 +38,7 @@ relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pio
 - Les pions avancent case par case ; sons des dés, des captures, de l'arrivée et de la victoire
   (bouton 🔊 pour couper), vibration du téléphone quand un pion est mangé.
 - Bouton « Voir le trajet » : dessine le chemin complet de son pion.
+- Accueil : « Mes parties en ligne » pour reprendre une partie en cours (et voir si c'est à soi de jouer).
 - Ordinateur en niveau facile (joue au hasard), normal ou fort (il calcule les risques et regarde un lancer plus loin).
 - Page « Règles du jeu » avec des dessins (`web/regles.html`, et l'écran « Règles du jeu » dans l'appli), à partager aux amis.
 
@@ -70,6 +71,19 @@ Le site https://thaayam.kamalraj-28.workers.dev est relié à la branche `main` 
 ### 5. Installer le site comme une appli
 Sur le téléphone, ouvrir le site puis menu du navigateur → « Ajouter à l'écran d'accueil » : Thaayam s'ouvre
 alors en plein écran, avec son icône.
+
+### 6. Fabriquer l'appli Android (fichier .apk à installer, sans Play Store)
+1. Créer un compte gratuit sur https://expo.dev.
+2. Dans le Codespace :
+   ```bash
+   cd app
+   npx eas-cli login
+   npx eas-cli build --platform android --profile apk
+   ```
+3. À la fin, Expo donne un lien (et un QR code) : l'ouvrir sur le téléphone Android pour télécharger et installer
+   Thaayam (autoriser l'installation d'applis de sources inconnues si le téléphone le demande).
+
+Pour le Play Store, utiliser le profil `production` (fichier .aab) et un compte développeur Google.
 
 ## Limites connues
 - En ligne, le serveur vérifie que c'est bien ton tour et que personne n'a joué entre-temps, mais les coups

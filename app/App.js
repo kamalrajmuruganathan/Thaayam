@@ -60,6 +60,15 @@ function Racine() {
     return () => clearTimeout(m);
   }, [session]);
 
+  // Parties en ligne de cet appareil, rechargées à chaque retour à l'accueil
+  const [mesParties, setMesParties] = useState([]);
+  useEffect(() => {
+    if (ecran !== 'accueil') return undefined;
+    let actif = true;
+    enLigne.mesParties().then((l) => actif && setMesParties(l)).catch(() => actif && setMesParties([]));
+    return () => { actif = false; };
+  }, [ecran]);
+
   const memoriserPseudo = (p) => { setPseudo(p); stockage.ecrire('thaayam:pseudo', p.trim()).catch(() => {}); };
 
   function arreterSuivi() {
@@ -251,6 +260,15 @@ function Racine() {
           <Texte style={{ fontSize: 36, fontWeight: '800', color: c.accent }}>Thaayam</Texte>
           <Texte attenue>Le jeu de plateau traditionnel tamoul</Texte>
         </View>
+        {mesParties.length ? (
+          <Carte titre="Mes parties en ligne">
+            {mesParties.map((p) => (
+              <Bouton key={p.code} principal={p.aMoi}
+                titre={`${p.code} · ${p.statut === 'attente' ? 'En attente des joueurs' : p.aMoi ? 'À toi de jouer !' : 'En cours'}`}
+                onPress={() => ouvrirEnLigne(p.code, p.place, p.jeton).catch((e) => setMessage(e.message))} />
+            ))}
+          </Carte>
+        ) : null}
         <Champ libelle="Ton pseudo" value={pseudo} onChangeText={memoriserPseudo} maxLength={20} placeholder="Ex. Kamal" />
         <Carte titre="Jouer en ligne">
           <Bouton principal titre="Créer une partie" desactive={occupe}

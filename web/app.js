@@ -61,6 +61,33 @@ function message(id, texte, erreur = false) {
 function afficherAccueil() {
   const params = new URLSearchParams(location.search);
   if (params.get('code')) $('code-rejoindre').value = params.get('code').toUpperCase();
+  afficherMesParties();
+}
+
+/** Parties en ligne de cet appareil, pour les reprendre en un clic. */
+async function afficherMesParties() {
+  const carte = $('mes-parties');
+  let liste = [];
+  try { liste = JSON.parse(memoire.lire('thaayam:mes-parties') || '[]'); } catch { /* rien */ }
+  if (!liste.length) { carte.hidden = true; return; }
+  try {
+    const parties = await (await obtenirEnLigne()).mesParties();
+    const zone = $('liste-mes-parties');
+    zone.innerHTML = '';
+    parties.forEach((p) => {
+      const noms = p.joueurs.map((j) => j.nom).join(', ');
+      const etat = p.statut === 'attente' ? 'En attente des joueurs' : p.aMoi ? 'À toi de jouer !' : 'En cours';
+      const b = el('button', { class: p.aMoi ? 'principal' : '' },
+        el('span', { class: 'code-partie' }, p.code), ' ', el('span', { class: 'petit' }, `${etat} · ${noms}`));
+      b.addEventListener('click', async () => {
+        try { await ouvrirPartieEnLigne(p.code, p.place, p.jeton); } catch (e) { message('message-accueil', e.message, true); }
+      });
+      zone.append(b);
+    });
+    carte.hidden = parties.length === 0;
+  } catch {
+    carte.hidden = true; // hors ligne : on n'affiche rien
+  }
 }
 
 $('pseudo').value = memoire.lire('thaayam:pseudo') || '';

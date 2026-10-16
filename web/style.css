@@ -133,3 +133,8 @@ a.retour { align-self: flex-start; color: var(--accent); text-decoration: none; 
 a.bouton-lien { display: block; text-align: center; text-decoration: none; padding: 12px 16px; border-radius: 12px; font-weight: 700; }
 a.bouton-lien.principal { background: var(--accent); color: var(--accent-texte); }
 a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
+
+/* Mes parties en ligne */
+.liste-parties { display: flex; flex-direction: column; gap: 8px; }
+.liste-parties button { text-align: left; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.code-partie { font-weight: 800; letter-spacing: 0.15em; }
