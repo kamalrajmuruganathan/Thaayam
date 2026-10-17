@@ -801,7 +801,7 @@ function dessinerPlateau(etat, g, coups) {
     });
     // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
     [['தாயம்', 2.4], ['விளையாட்டு', n - 2.4]].forEach(([texte, cx]) => {
-      const t = svg('text', { x: cx * S, y: 1.05 * S, 'text-anchor': 'middle', 'font-size': 0.48 * S, 'font-weight': 700,
+      const t = svg('text', { x: cx * S, y: 0.62 * S, 'text-anchor': 'middle', 'font-size': 0.48 * S, 'font-weight': 700,
         fill: '#fbe9cf', opacity: 0.9, 'font-family': "'Noto Sans Tamil', 'Latha', sans-serif" }, plateau);
       t.textContent = texte;
     });

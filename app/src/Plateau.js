@@ -146,7 +146,7 @@ function diagonales(g, n) {
     )),
     // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
     ...[['தாயம்', 2.4], ['விளையாட்டு', n - 2.4]].map(([texte, cx]) => (
-      <SvgText key={texte} x={cx * S} y={1.05 * S} textAnchor="middle" fontSize={0.48 * S} fontWeight="700" fill="#fbe9cf" opacity={0.9}>
+      <SvgText key={texte} x={cx * S} y={0.62 * S} textAnchor="middle" fontSize={0.48 * S} fontWeight="700" fill="#fbe9cf" opacity={0.9}>
         {texte}
       </SvgText>
     )),

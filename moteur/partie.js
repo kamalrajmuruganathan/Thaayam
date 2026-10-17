@@ -292,7 +292,7 @@ export function etapesCoup(g, depuis, vers) {
  * Pour l'affichage du plateau en croix : 3 arcs (chemins SVG) à chacun des
  * 4 coins du grand centre, là où le pion passe d'un bras au suivant.
  */
-export function arcsCroix(g, S, rayons = [0.32, 0.58, 0.84]) {
+export function arcsCroix(g, S, rayons = [1, 2, 3]) {
   const { r: r0, c: c0, taille: t } = g.centre;
   const coins = [[c0, r0, -1, -1], [c0 + t, r0, 1, -1], [c0, r0 + t, -1, 1], [c0 + t, r0 + t, 1, 1]];
   const arcs = [];
