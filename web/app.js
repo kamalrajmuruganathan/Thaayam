@@ -2,7 +2,7 @@ import {
   REGLES_PAR_DEFAUT, PRESETS_DES, TAILLES, COULEURS,
   copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles, nomLancer,
 } from './moteur/regles.js';
-import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, zoneCase, etapesCoup, arcsCroix } from './moteur/partie.js';
+import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, pionsAuCentre, zoneCase, etapesCoup, arcsCroix } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
 import { sons, sonActif, basculerSon } from './sons.js';
@@ -864,7 +864,25 @@ function dessinerPlateau(etat, g, coups) {
 
   // Pions
   const jouables = new Set(coups.filter((c) => c.depuis >= 0).map((c) => `${etat.tour}:${c.pion}`));
+  // Plateau en croix : pions à la maison et pions arrivés dessinés dans le centre
+  const auCentre = pionsAuCentre(g, etat, S);
+  const cleCentre = cle(g.chemins[0][g.arrivee]);
+  const entree = coups.find((c) => c.depuis === -1 && !c.groupe);
+  auCentre.forEach((p) => {
+    const j = etat.joueurs[p.joueur];
+    const jouable = !p.arrive && !!entree && p.joueur === etat.tour;
+    const grp = svg('g', { class: jouable ? 'pion-jouable' : '' }, plateau);
+    if (p.arrive) svg('circle', { cx: p.cx, cy: p.cy, r: p.r + 6, fill: '#f5c518', stroke: '#7a5418', 'stroke-width': 2 }, grp);
+    svg('circle', { cx: p.cx, cy: p.cy, r: p.r, fill: j.couleur, stroke: jouable ? '#fff' : '#2b1d10', 'stroke-width': jouable ? 5 : 2.5 }, grp);
+    svg('circle', { cx: p.cx - p.r * 0.3, cy: p.cy - p.r * 0.3, r: p.r * 0.3, fill: '#fff', opacity: 0.35 }, grp);
+    if (jouable) {
+      const cible = svg('circle', { cx: p.cx, cy: p.cy, r: Math.max(p.r, 40), fill: 'transparent' }, grp);
+      cible.style.cursor = 'pointer';
+      grp.addEventListener('click', () => { if (jePeuxJouer()) appliquer(jouer(session.etat, entree.pion)); });
+    }
+  });
   pionsParCase(etat).forEach((liste, k) => {
+    if (auCentre.length && k === cleCentre) return;
     const z = zone(k);
     const cote = Math.ceil(Math.sqrt(liste.length));
     const pas = (z.w - 16) / cote;

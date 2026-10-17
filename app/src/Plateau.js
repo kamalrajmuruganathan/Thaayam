@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Rect, Path, Circle, G, Ellipse, Line, Polyline, Text as SvgText } from 'react-native-svg';
-import { geometrie, pionsParCase, zoneCase, arcsCroix } from '../../moteur/partie.js';
+import { geometrie, pionsParCase, pionsAuCentre, zoneCase, arcsCroix } from '../../moteur/partie.js';
 import { cle } from '../../moteur/plateau.js';
 
 const S = 100;
@@ -73,7 +73,24 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
   });
 
   const pions = [];
+  // Plateau en croix : pions à la maison et pions arrivés dessinés dans le centre
+  const auCentre = pionsAuCentre(g, etat, S);
+  const cleCentre = cle(g.chemins[0][g.arrivee]);
+  const entree = coups.find((c) => c.depuis === -1 && !c.groupe);
+  auCentre.forEach((p) => {
+    const jouable = !p.arrive && !!entree && p.joueur === etat.tour;
+    pions.push(
+      <G key={`m${p.joueur}-${p.pion}`} onPress={jouable ? () => surPion(entree.pion) : undefined}>
+        {jouable ? <Circle cx={p.cx} cy={p.cy} r={Math.max(p.r + 8, 40)} fill="#ffffff" fillOpacity={0.45} /> : null}
+        {p.arrive ? <Circle cx={p.cx} cy={p.cy} r={p.r + 6} fill="#f5c518" stroke="#7a5418" strokeWidth={2} /> : null}
+        <Circle cx={p.cx} cy={p.cy} r={p.r} fill={etat.joueurs[p.joueur].couleur}
+          stroke={jouable ? '#ffffff' : '#2b1d10'} strokeWidth={jouable ? 5 : 2.5} />
+        <Circle cx={p.cx - p.r * 0.3} cy={p.cy - p.r * 0.3} r={p.r * 0.3} fill="#ffffff" opacity={0.35} />
+      </G>
+    );
+  });
   pionsParCase(etat).forEach((liste, k) => {
+    if (auCentre.length && k === cleCentre) return;
     const z = zone(k);
     const cote = Math.ceil(Math.sqrt(liste.length));
     const pas = (z.w - 16) / cote;

@@ -307,6 +307,48 @@ export function arcsCroix(g, S, rayons = [0.32, 0.58, 0.84]) {
   return arcs;
 }
 
+/**
+ * Pour l'affichage (plateau en croix) : les pions à la maison et les pions
+ * arrivés sont dessinés dans le grand centre, dans le triangle tourné vers le
+ * bras de leur joueur. Renvoie [{ joueur, pion, cx, cy, r, arrive }].
+ */
+export function pionsAuCentre(g, etat, S) {
+  if (g.forme !== 'croix') return [];
+  const { r: r0, c: c0, taille: t } = g.centre;
+  const C = [(c0 + t / 2) * S, (r0 + t / 2) * S];
+  const res = [];
+  etat.joueurs.forEach((j, a) => {
+    const liste = [];
+    j.pions.forEach((pos, i) => { if (pos === -1) liste.push({ pion: i, arrive: false }); });
+    j.pions.forEach((pos, i) => { if (pos === g.arrivee) liste.push({ pion: i, arrive: true }); });
+    if (!liste.length) return;
+    // Direction du centre vers la case d'entrée du joueur, et direction perpendiculaire
+    const [er, ec] = g.chemins[a][0];
+    let dx = (ec + 0.5) * S - C[0], dy = (er + 0.5) * S - C[1];
+    const L = Math.hypot(dx, dy);
+    dx /= L; dy /= L;
+    const px = -dy, py = dx;
+    const demi = (t / 2) * S; // distance du centre au bord du grand carré
+    const essai = (rayon) => {
+      const pas = rayon * 2.3;
+      const rangs = [0.8, 0.53, 0.27].map((f) => ({ d: f * demi, n: Math.floor((2 * f * demi * 0.85) / pas) }));
+      return { rayon, pas, rangs, place: rangs.reduce((s, x) => s + x.n, 0) };
+    };
+    const choix = [0.2, 0.14, 0.1].map((k) => essai(k * S)).find((e) => e.place >= liste.length) || essai(0.08 * S);
+    let k = 0;
+    for (const { d, n } of choix.rangs) {
+      const dansRang = Math.min(n, liste.length - k);
+      for (let m = 0; m < dansRang; m++, k++) {
+        const decal = (m - (dansRang - 1) / 2) * choix.pas;
+        res.push({ joueur: a, pion: liste[k].pion, arrive: liste[k].arrive, r: choix.rayon,
+          cx: C[0] + dx * d + px * decal, cy: C[1] + dy * d + py * decal });
+      }
+      if (k >= liste.length) break;
+    }
+  });
+  return res;
+}
+
 /** Pour l'affichage : pions groupés par case « r,c ». */
 export function pionsParCase(etat) {
   const g = geometrie(etat.regles, etat.joueurs.length);
