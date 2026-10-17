@@ -129,7 +129,7 @@ export default function ReglesJeu() {
         <Texte>1. Avec un 1, le pion sort du centre sur la <Gras>première case de sa colonne</Gras>, collée au centre.</Texte>
         <Texte>2. Il <Gras>descend sa colonne</Gras> jusqu'au bout de son bras.</Texte>
         <Texte>3. Il fait <Gras>tout le tour de la croix</Gras> dans le sens inverse des aiguilles d'une montre, par les colonnes extérieures des bras (d'un bras à l'autre, il passe directement en diagonale, là où sont les arcs).</Texte>
-        <Texte>4. Il revient au bout de son bras et <Gras>remonte sa colonne</Gras> : personne d'autre n'y passe.</Texte>
+        <Texte>4. Il revient au bout de son bras, puis <Gras>remonte par les 3 arcs</Gras> du coin à gauche de son bras : le grand arc, le moyen, puis le petit. Personne d'autre n'y passe.</Texte>
         <Texte>5. Il rentre au <Gras>centre</Gras>. Il faut tomber <Gras>pile</Gras> dessus.</Texte>
       </Carte>
 

@@ -42,7 +42,7 @@ function versInterieur(n, k, [r, c]) {
 
 /** Rotation d'un quart de tour anti-horaire : le côté bas devient le côté droit. */
 function tourner(n, [r, c]) {
-  return [n - 1 - c, r];
+  return [Math.round((n - 1 - c) * 1000) / 1000, r];
 }
 
 /**
@@ -110,6 +110,8 @@ export function refuges(n, options = {}) {
  * bras et remonte sa colonne jusqu'au centre.
  */
 export const CROIX = { longueurBras: 4, n: 3 + 2 * 4 };
+/** Rayons des 3 arcs dessinés à chaque coin du centre (en cases), du petit au grand. */
+export const ARCS_RAYONS = [0.5, 1.5, 2.5];
 const L = CROIX.longueurBras;
 
 /** Portion du tour sur le bras du bas : colonne gauche vers le bout, bout, colonne droite vers le centre. */
@@ -136,7 +138,14 @@ export function cheminCroix(cote = 0, sens = 'anti-horaire') {
   if (sens === 'horaire') boucle = [boucle[0], ...boucle.slice(1).reverse()];
   const descente = [];
   for (let r = L + 3; r <= n - 2; r++) descente.push([r, L + 1]); // sa colonne, du centre vers le bout
-  const montee = [...descente].reverse();
+  // Remontée : sur les 3 arcs du coin à gauche de son bras, du grand (en face de la 3e case
+  // de sa colonne) au petit (en face de la 1re). Un arc n'est pas une case : sa position est
+  // le milieu de l'arc, en coordonnées [ligne, colonne] non entières.
+  const coin = [L + 3, L]; // coin du grand centre entre son bras et le bras de gauche
+  const montee = ARCS_RAYONS.slice().reverse().map((k) => {
+    const d = k * Math.SQRT1_2;
+    return [coin[0] + d - 0.5, coin[1] - d - 0.5].map((v) => Math.round(v * 1000) / 1000);
+  });
   const cases = [...descente, ...boucle, [n - 1, L + 1], ...montee, [L + 1, L + 1]]; // … puis le centre (pazham)
   let tournees = cases;
   for (let q = 0; q < cote; q++) tournees = tournees.map(tourner1);

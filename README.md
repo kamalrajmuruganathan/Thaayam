@@ -25,8 +25,8 @@ Par défaut : le **Thaayam / Dayakattai classique** du Tamil Nadu.
 - Un pion entre avec un « thaayam » (total de 1) ; on rejoue avec 1, 5, 6, avec 2 sur chaque dé (2 + 2, mais pas 1 + 3) et après une capture.
 - Trajet : le pion sort du centre sur la 1re case de sa colonne (colonne du milieu de son bras), descend sa colonne,
   fait le tour complet de la croix dans le sens inverse des aiguilles d'une montre (par les colonnes extérieures des
-  bras, passage direct en diagonale aux arcs), revient au bout de son bras et remonte sa colonne jusqu'au centre
-  (arrivée exacte).
+  bras, passage direct en diagonale aux coins), revient au bout de son bras, puis remonte par les 3 arcs du coin à
+  gauche de son bras (grand, moyen, petit) jusqu'au centre (arrivée exacte).
 - Pas de refuge dans les bras : seul le centre est protégé.
 - Il faut avoir capturé un pion adverse pour monter vers le centre.
 - On peut empiler ses propres pions sur une case ; un adversaire qui tombe sur le groupe le mange en entier.

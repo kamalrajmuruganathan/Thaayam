@@ -50,9 +50,9 @@ test('plateau en croix : chemin, cases et croix', () => {
       assert.equal(ch.length, 44);
       assert.equal(new Set(ch.slice(0, 39).map(cle)).size, 39); // descente + tour : chaque case une fois
       assert.deepEqual(ch[39], ch[3]); // retour au bout de son bras
-      assert.deepEqual(ch.slice(40, 43), ch.slice(0, 3).reverse()); // remontée de sa colonne
-      ch.slice(0, 43).forEach((p) => assert.ok(cases.has(cle(p)), cle(p)));
-      for (let i = 1; i < 43; i++) {
+      ch.slice(0, 40).forEach((p) => assert.ok(cases.has(cle(p)), cle(p)));
+      ch.slice(40, 43).forEach((p) => assert.ok(!cases.has(cle(p)), `arc ${cle(p)}`)); // remontée sur les arcs
+      for (let i = 1; i < 40; i++) {
         const [a, b] = ch[i - 1], [c, d] = ch[i];
         assert.equal(Math.max(Math.abs(a - c), Math.abs(b - d)), 1, `saut ${i}`);
       }
@@ -63,9 +63,20 @@ test('plateau en croix : chemin, cases et croix', () => {
   // 38 41 44 47 48 45 42 39 33 … 32 37 40 43 46 47 44 41 38 centre
   const numero = new Map();
   [...cases].map((k) => k.split(',').map(Number)).sort((x, y) => x[0] - y[0] || x[1] - y[1]).forEach((q, i) => numero.set(cle(q), i + 1));
-  const bas = cheminCroix(0).cases.map((q) => numero.get(cle(q)) || 'centre');
+  // puis remontée sur les arcs du coin en bas à gauche : BG3 (en face de 44), BG2 (41), BG1 (38)
+  const bas = cheminCroix(0).cases.map((q) => numero.get(cle(q)) || cle(q));
   assert.deepEqual(bas, [38, 41, 44, 47, 48, 45, 42, 39, 33, 34, 35, 36, 28, 20, 19, 18, 17, 12, 9, 6, 3, 2, 1, 4, 7, 10,
-    16, 15, 14, 13, 21, 29, 30, 31, 32, 37, 40, 43, 46, 47, 44, 41, 38, 'centre']);
+    16, 15, 14, 13, 21, 29, 30, 31, 32, 37, 40, 43, 46, 47, '8.268,1.732', '7.561,2.439', '6.854,3.146', '5,5']);
+  // Chaque arc est dans l'alignement de la ligne de sa case (milieu de l'arc à 45°)
+  const arcs = cheminCroix(0).cases.slice(40, 43);
+  [[9, 2.5], [8, 1.5], [7, 0.5]].forEach(([ligne, rayon], i) => {
+    assert.ok(Math.abs(arcs[i][0] + 0.5 - (7 + rayon * Math.SQRT1_2)) < 1e-3);
+    assert.ok(Math.abs(arcs[i][1] + 0.5 - (4 - rayon * Math.SQRT1_2)) < 1e-3);
+    assert.ok(ligne >= 7);
+  });
+  // Les 4 joueurs remontent chacun par un coin différent
+  const coinsArcs = new Set([0, 1, 2, 3].map((c) => cle(cheminCroix(c).cases[41])));
+  assert.equal(coinsArcs.size, 4);
   // Un autre joueur ne passe jamais dans la colonne du rouge (sauf au bout du bras)
   const autres = new Set([1, 2, 3].flatMap((c) => cheminCroix(c).cases.map(cle)));
   [38, 41, 44].forEach((k) => assert.ok(![...autres].some((x) => numero.get(x) === k), `case ${k}`));

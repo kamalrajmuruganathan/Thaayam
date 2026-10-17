@@ -6,7 +6,7 @@
  * dernier indice du chemin = centre (pion arrivé).
  */
 import { normaliserRegles, valeursPossibles, valeurDesLongs, faitRejouer, nomLancer, COULEURS } from './regles.js';
-import { chemin, cotesPourJoueurs, refuges, cle, cheminCroix, casesCroix, refugesCroix, CROIX } from './plateau.js';
+import { chemin, cotesPourJoueurs, refuges, cle, cheminCroix, casesCroix, refugesCroix, CROIX, ARCS_RAYONS } from './plateau.js';
 
 const MAX_JOURNAL = 30;
 
@@ -294,7 +294,7 @@ export function etapesCoup(g, depuis, vers) {
  * Pour l'affichage du plateau en croix : 3 arcs (chemins SVG) à chacun des
  * 4 coins du grand centre, là où le pion passe d'un bras au suivant.
  */
-export function arcsCroix(g, S, rayons = [0.5, 1.5, 2.5]) {
+export function arcsCroix(g, S, rayons = ARCS_RAYONS) {
   const { r: r0, c: c0, taille: t } = g.centre;
   const coins = [[c0, r0, -1, -1], [c0 + t, r0, 1, -1], [c0, r0 + t, -1, 1], [c0 + t, r0 + t, 1, 1]];
   const arcs = [];

@@ -91,7 +91,7 @@ function fleche(p, de, a, couleur, id) {
   ch.forEach((q, i) => { const k = cle(q); pas.set(k, [...(pas.get(k) || []), i]); });
   pas.forEach((liste, k) => {
     const [x, y] = milieu(k.split(',').map(Number));
-    const colonne = liste[0] <= g.debutBoucle || liste[0] === g.arrivee;
+    const colonne = liste[0] <= g.debutBoucle || liste[0] >= g.longueurExterieur;
     const etiquette = liste.join('/');
     svg('circle', { cx: x, cy: y, r: liste[0] === g.arrivee ? 40 : 32, fill: colonne ? COULEURS[0].code : '#fffaf1', stroke: COULEURS[0].code, 'stroke-width': 4 }, p);
     texte(p, x, y, etiquette, { 'font-size': etiquette.length > 3 ? 21 : 30, fill: colonne ? '#fff' : '#2b1d10' });
