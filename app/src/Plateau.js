@@ -19,7 +19,7 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
   etat.joueurs.forEach((j, i) => {
     const ch = g.chemins[i];
     teintes.set(cle(ch[0]), j.couleur);
-    if (croix) ch.slice(g.longueurExterieur + 1, g.arrivee).forEach((p) => teintes.set(cle(p), j.couleur));
+    if (croix) ch.slice(0, g.debutBoucle + 1).forEach((p) => teintes.set(cle(p), j.couleur));
   });
 
   const cases = [];

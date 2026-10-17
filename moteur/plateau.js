@@ -47,7 +47,7 @@ function tourner(n, [r, c]) {
 
 /**
  * Chemin complet d'un joueur partant du côté `cote` (0 à 3).
- * Renvoie { cases: [[r, c], ...], longueurExterieur }.
+ * Renvoie { cases: [[r, c], ...], debutBoucle, longueurExterieur }.
  */
 export function chemin(n, cote = 0, sens = 'anti-horaire', sensInterieurs = 'inverse') {
   const m = (n - 1) / 2;
@@ -68,7 +68,7 @@ export function chemin(n, cote = 0, sens = 'anti-horaire', sensInterieurs = 'inv
   }
   let tournees = cases;
   for (let q = 0; q < cote; q++) tournees = tournees.map((p) => tourner(n, p));
-  return { cases: tournees, longueurExterieur: 4 * (n - 1) };
+  return { cases: tournees, debutBoucle: 0, longueurExterieur: 4 * (n - 1) };
 }
 
 /** Ensemble des clés « r,c » des cases refuges (marquées d'une croix). */
@@ -103,9 +103,11 @@ export function refuges(n, options = {}) {
  * Grille de 11 × 11 ; le bras du joueur du bas occupe les lignes 7 à 10,
  * colonnes 4 à 6 ; le centre occupe les lignes et colonnes 4 à 6.
  *
- * Chemin : départ sur la croix au bout de son bras, tour complet de la croix
- * par les colonnes extérieures des bras, retour sur la case de départ, puis
- * remontée de la colonne du milieu de son bras jusqu'au centre.
+ * Chemin : le pion sort du centre sur la case de sa colonne (colonne du milieu
+ * de son bras) collée au centre, descend sa colonne jusqu'au bout du bras,
+ * fait le tour complet de la croix par les colonnes extérieures des bras
+ * (passage direct en diagonale d'un bras au suivant), revient au bout de son
+ * bras et remonte sa colonne jusqu'au centre.
  */
 export const CROIX = { longueurBras: 4, n: 3 + 2 * 4 };
 const L = CROIX.longueurBras;
@@ -130,14 +132,16 @@ export function cheminCroix(cote = 0, sens = 'anti-horaire') {
     seg = seg.map(tourner1);
   }
   const i = tour.findIndex(([r, c]) => r === n - 1 && c === L + 1);
-  let boucle = [...tour.slice(i), ...tour.slice(0, i)];
+  let boucle = [...tour.slice(i), ...tour.slice(0, i)]; // commence au bout de son bras
   if (sens === 'horaire') boucle = [boucle[0], ...boucle.slice(1).reverse()];
-  const cases = [...boucle, [n - 1, L + 1]];
-  for (let r = n - 2; r >= L + 3; r--) cases.push([r, L + 1]);
-  cases.push([L + 1, L + 1]); // centre (pazham)
+  const descente = [];
+  for (let r = L + 3; r <= n - 2; r++) descente.push([r, L + 1]); // sa colonne, du centre vers le bout
+  const montee = [...descente].reverse();
+  const cases = [...descente, ...boucle, [n - 1, L + 1], ...montee, [L + 1, L + 1]]; // … puis le centre (pazham)
   let tournees = cases;
   for (let q = 0; q < cote; q++) tournees = tournees.map(tourner1);
-  return { cases: tournees, longueurExterieur: boucle.length };
+  // debutBoucle : indice du bout du bras (début du tour) ; longueurExterieur : indice où commence la remontée
+  return { cases: tournees, debutBoucle: descente.length, longueurExterieur: descente.length + boucle.length };
 }
 
 /** Toutes les cases dessinées du plateau en croix (sans le grand centre). */

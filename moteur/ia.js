@@ -44,7 +44,7 @@ export function distributionLancers(regles) {
 }
 
 // Poids de l'évaluation (réglés en faisant jouer « fort » contre « normal »).
-const W = { cap: 30, risque: 15, rejoue: 40, arr: 90, col: 40 };
+const W = { cap: 80, risque: 15, rejoue: 40, arr: 90, col: 40, attaque: 1, prof: 1 };
 /** Valeur d'une position de pion pour son propriétaire (plus il est avancé, plus elle vaut). */
 function valeurPion(g, pos) {
   if (pos < 0) return 0;
@@ -91,10 +91,23 @@ function evaluer(etat, moi, distribution) {
     const poids = rejoue ? 0.5 : k === 1 ? 1 : 0.6;
     const r = risques(etat, adv, distribution);
     etat.joueurs[moi].pions.forEach((pos) => {
-      if (pos < 0 || pos >= g.longueurExterieur) return;
+      if (pos < g.debutBoucle || pos >= g.longueurExterieur) return; // à la maison ou dans sa colonne
       const kc = cle(g.chemins[moi][pos]);
       if (g.refuges.has(kc)) return;
       score -= poids * (r.get(kc) || 0) * (valeurPion(g, pos) + W.risque);
+    });
+  }
+  // Attaque : pions adverses que je pourrai manger à mon prochain lancer
+  if (W.attaque) {
+    const r = risques(etat, moi, distribution);
+    etat.joueurs.forEach((adv, a) => {
+      if (a === moi) return;
+      adv.pions.forEach((pos) => {
+        if (pos < g.debutBoucle || pos >= g.longueurExterieur) return;
+        const kc = cle(g.chemins[a][pos]);
+        if (g.refuges.has(kc)) return;
+        score += W.attaque * (rejoue ? 1 : 0.4) * (r.get(kc) || 0) * (valeurPion(g, pos) + W.risque) / (n - 1);
+      });
     });
   }
   if (rejoue) score += W.rejoue; // un lancer de plus
@@ -135,7 +148,7 @@ export function choisirCoup(etat, rng = Math.random, niveau = etat.joueurs[etat.
     const distribution = distributionLancers(etat.regles);
     let meilleur = null;
     for (const c of coups) {
-      const s = esperance(jouer(etat, c.pion, !!c.groupe), etat.tour, distribution, 1) + rng() * 0.01;
+      const s = esperance(jouer(etat, c.pion, !!c.groupe), etat.tour, distribution, W.prof) + rng() * 0.01;
       if (!meilleur || s > meilleur.s) meilleur = { c, s };
     }
     return meilleur.c;

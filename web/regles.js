@@ -34,7 +34,7 @@ function plateau(idSvg, legende) {
   for (let i = 0; i < 4; i++) {
     const ch = g.chemins[i];
     teintes.set(cle(ch[0]), COULEURS[i].code);
-    ch.slice(g.longueurExterieur + 1, g.arrivee).forEach((q) => teintes.set(cle(q), COULEURS[i].code));
+    ch.slice(0, g.debutBoucle + 1).forEach((q) => teintes.set(cle(q), COULEURS[i].code));
   }
   svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: '#b8653a' }, p);
   const { r: r0, c: c0, taille: t } = g.centre;
@@ -81,18 +81,20 @@ function fleche(p, de, a, couleur, id) {
   for (let i = 0; i < 4; i++) pion(p, i, 0);
 }
 
-// 2. Le trajet du pion rouge, numéroté de 0 à 40
+// 2. Le trajet du pion rouge, numéroté pas à pas (sa colonne est parcourue deux fois)
 {
-  const p = plateau('dessin-trajet', 'Trajet complet du pion rouge, de 0 à 40');
+  const p = plateau('dessin-trajet', `Trajet complet du pion rouge, de 0 à ${g.arrivee}`);
   const ch = g.chemins[0];
   svg('polyline', { points: ch.map((q) => milieu(q).join(',')).join(' '), fill: 'none', stroke: COULEURS[0].code,
     'stroke-width': 7, 'stroke-dasharray': '4 12', 'stroke-linecap': 'round', opacity: 0.7 }, p);
-  ch.forEach((q, i) => {
-    if (i === g.longueurExterieur) return; // même case que le départ
-    const [x, y] = milieu(q);
-    const fin = i === 0 || i > g.longueurExterieur;
-    svg('circle', { cx: x, cy: y, r: i === g.arrivee ? 40 : 30, fill: fin ? COULEURS[0].code : '#fffaf1', stroke: COULEURS[0].code, 'stroke-width': 4 }, p);
-    texte(p, x, y, i === 0 ? '0/36' : String(i), { 'font-size': i === 0 ? 24 : 30, fill: fin ? '#fff' : '#2b1d10' });
+  const pas = new Map(); // case → numéros des pas
+  ch.forEach((q, i) => { const k = cle(q); pas.set(k, [...(pas.get(k) || []), i]); });
+  pas.forEach((liste, k) => {
+    const [x, y] = milieu(k.split(',').map(Number));
+    const colonne = liste[0] <= g.debutBoucle || liste[0] === g.arrivee;
+    const etiquette = liste.join('/');
+    svg('circle', { cx: x, cy: y, r: liste[0] === g.arrivee ? 40 : 32, fill: colonne ? COULEURS[0].code : '#fffaf1', stroke: COULEURS[0].code, 'stroke-width': 4 }, p);
+    texte(p, x, y, etiquette, { 'font-size': etiquette.length > 3 ? 21 : 30, fill: colonne ? '#fff' : '#2b1d10' });
   });
 }
 

@@ -782,7 +782,7 @@ function dessinerPlateau(etat, g, coups) {
   etat.joueurs.forEach((j, i) => {
     const ch = g.chemins[i];
     teintes.set(cle(ch[0]), j.couleur);
-    if (g.forme === 'croix') ch.slice(g.longueurExterieur + 1, g.arrivee).forEach((p) => teintes.set(cle(p), j.couleur));
+    if (g.forme === 'croix') ch.slice(0, g.debutBoucle + 1).forEach((p) => teintes.set(cle(p), j.couleur));
   });
 
   if (g.forme === 'croix') {

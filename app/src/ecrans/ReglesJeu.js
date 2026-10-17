@@ -69,7 +69,7 @@ export default function ReglesJeu() {
       <Carte titre="2. Le plateau">
         {dessin(etatPlateau, false)}
         <Puce>Une <Gras>croix</Gras> de 4 bras ; chaque bras a 3 colonnes de 4 cases.</Puce>
-        <Puce>Chaque joueur a son bras et sa couleur. Son pion entre sur la case du bout, au milieu.</Puce>
+        <Puce>Chaque joueur a son bras et sa couleur. Au début, ses pions attendent <Gras>au centre</Gras>, du côté de son bras. La colonne du milieu de son bras est à sa couleur.</Puce>
         <Puce>Entre deux bras, il n'y a pas de case : on passe en <Gras>diagonale</Gras>, là où sont dessinés les 3 arcs.</Puce>
         <Puce>Au milieu, le grand carré barré est le <Gras>centre</Gras> : l'arrivée.</Puce>
       </Carte>
@@ -126,11 +126,11 @@ export default function ReglesJeu() {
 
       <Carte titre="5. Le trajet d'un pion">
         {dessin(etatTrajet, true)}
-        <Texte>1. Le pion entre sur sa case de départ, au bout de son bras.</Texte>
-        <Texte>2. Il fait <Gras>tout le tour de la croix</Gras> dans le sens inverse des aiguilles d'une montre, par les colonnes extérieures des bras.</Texte>
-        <Texte>3. Il revient sur son départ.</Texte>
-        <Texte>4. Il remonte la <Gras>colonne du milieu</Gras> de son bras : personne d'autre n'y passe.</Texte>
-        <Texte>5. Il entre au <Gras>centre</Gras>. Il faut tomber <Gras>pile</Gras> dessus.</Texte>
+        <Texte>1. Avec un 1, le pion sort du centre sur la <Gras>première case de sa colonne</Gras>, collée au centre.</Texte>
+        <Texte>2. Il <Gras>descend sa colonne</Gras> jusqu'au bout de son bras.</Texte>
+        <Texte>3. Il fait <Gras>tout le tour de la croix</Gras> dans le sens inverse des aiguilles d'une montre, par les colonnes extérieures des bras (d'un bras à l'autre, il passe directement en diagonale, là où sont les arcs).</Texte>
+        <Texte>4. Il revient au bout de son bras et <Gras>remonte sa colonne</Gras> : personne d'autre n'y passe.</Texte>
+        <Texte>5. Il rentre au <Gras>centre</Gras>. Il faut tomber <Gras>pile</Gras> dessus.</Texte>
       </Carte>
 
       <Carte titre="6. Manger">
@@ -142,7 +142,7 @@ export default function ReglesJeu() {
       </Carte>
 
       <Carte titre="7. Capture obligatoire">
-        <Texte>Tant que tu n'as mangé <Gras>aucun</Gras> pion adverse, tes pions ne peuvent pas monter vers le centre : arrivés à leur départ, ils <Gras>refont un tour</Gras>. Dès que tu as mangé un pion, tous tes pions peuvent monter.</Texte>
+        <Texte>Tant que tu n'as mangé <Gras>aucun</Gras> pion adverse, tes pions ne peuvent pas monter vers le centre : revenus au bout de leur bras, ils <Gras>refont un tour</Gras>. Dès que tu as mangé un pion, tous tes pions peuvent monter.</Texte>
       </Carte>
 
       <Carte titre="8. Jouer">

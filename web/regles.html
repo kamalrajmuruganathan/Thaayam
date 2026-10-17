@@ -33,7 +33,7 @@
         <div class="dessin-plateau"><svg id="dessin-plateau"></svg></div>
         <ul>
           <li>Une <strong>croix</strong> de 4 bras ; chaque bras a 3 colonnes de 4 cases.</li>
-          <li>Chaque joueur a son bras et sa couleur. Son pion entre sur la case du bout, au milieu (le rond de sa couleur).</li>
+          <li>Chaque joueur a son bras et sa couleur. Au début, ses pions attendent <strong>au centre</strong>, du côté de son bras. La colonne du milieu de son bras est à sa couleur : c'est sa colonne.</li>
           <li>Entre deux bras, il n'y a pas de case : on passe en <strong>diagonale</strong>, là où sont dessinés les 3 arcs.</li>
           <li>Au milieu, le grand carré barré est le <strong>centre</strong> : l'arrivée.</li>
         </ul>
@@ -72,11 +72,11 @@
         <h2>5. Le trajet d'un pion</h2>
         <div class="dessin-plateau"><svg id="dessin-trajet"></svg></div>
         <ol>
-          <li>Le pion entre sur sa case de départ (0).</li>
-          <li>Il fait <strong>tout le tour de la croix</strong> dans le sens inverse des aiguilles d'une montre (1 à 35), par les colonnes extérieures des bras.</li>
-          <li>Il revient sur son départ (36).</li>
-          <li>Il remonte la <strong>colonne du milieu</strong> de son bras (37 à 39) : personne d'autre n'y passe.</li>
-          <li>Il entre au <strong>centre</strong> (40). Il faut tomber <strong>pile</strong> dessus.</li>
+          <li>Avec un 1, le pion sort du centre sur la <strong>première case de sa colonne</strong>, collée au centre (0).</li>
+          <li>Il <strong>descend sa colonne</strong> jusqu'au bout de son bras (1 à 3).</li>
+          <li>Il fait <strong>tout le tour de la croix</strong> dans le sens inverse des aiguilles d'une montre (4 à 38), par les colonnes extérieures des bras. D'un bras à l'autre, il passe directement en diagonale, là où sont dessinés les arcs.</li>
+          <li>Il revient au bout de son bras (39) et <strong>remonte sa colonne</strong> (40 à 42) : personne d'autre n'y passe.</li>
+          <li>Il rentre au <strong>centre</strong> (43). Il faut tomber <strong>pile</strong> dessus.</li>
         </ol>
       </section>
 
@@ -93,7 +93,7 @@
 
       <section class="carte">
         <h2>7. Capture obligatoire</h2>
-        <p>Tant que tu n'as mangé <strong>aucun</strong> pion adverse, tes pions ne peuvent pas monter vers le centre : arrivés à leur départ, ils <strong>refont un tour</strong>. Dès que tu as mangé un pion, tous tes pions peuvent monter.</p>
+        <p>Tant que tu n'as mangé <strong>aucun</strong> pion adverse, tes pions ne peuvent pas monter vers le centre : revenus au bout de leur bras, ils <strong>refont un tour</strong>. Dès que tu as mangé un pion, tous tes pions peuvent monter.</p>
       </section>
 
       <section class="carte">
