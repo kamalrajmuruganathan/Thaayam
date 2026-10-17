@@ -6,6 +6,10 @@
 import { nouvellePartie } from './partie.js';
 
 const CLE = (code) => `thaayam:${code}`;
+
+/** Messages rapides autorisés (la même liste est vérifiée par Supabase). */
+export const REACTIONS = ['👏', '😂', '😮', '😡', '🔥', '🙏',
+  'Bien joué !', 'Pas de chance !', 'Vite !', 'Bravo !', 'Oh non !', 'Merci !'];
 const LISTE = 'thaayam:mes-parties'; // [{ code, quand }] : parties de cet appareil, la plus récente d'abord
 
 async function lireListe(stockage) {
@@ -96,6 +100,23 @@ export function creerEnLigne(client, stockage) {
     async demarrer(partie, jeton) {
       const etat = nouvellePartie(partie.regles, partie.joueurs);
       await rpc(client, 'thaayam_demarrer', { p_code: partie.code, p_jeton: jeton, p_etat: etat });
+    },
+
+    /**
+     * Revanche d'une partie terminée : même joueurs, mêmes places, mêmes règles.
+     * Renvoie le code de la nouvelle partie (la même pour tous les joueurs).
+     */
+    async revanche(code, jeton) {
+      const moi = await this.maPlace(code);
+      const nouveau = await rpc(client, 'thaayam_revanche', { p_code: code, p_jeton: jeton });
+      if (moi) await stockage.ecrire(CLE(nouveau), JSON.stringify(moi));
+      await retenir(stockage, nouveau);
+      return nouveau;
+    },
+
+    /** Envoie un message rapide (un de REACTIONS) aux autres joueurs. */
+    async reagir(code, jeton, texte) {
+      await rpc(client, 'thaayam_reagir', { p_code: code, p_jeton: jeton, p_texte: texte });
     },
 
     /** Envoie le nouvel état ; échoue si quelqu'un a joué entre-temps. */

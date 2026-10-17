@@ -6,7 +6,8 @@ import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase,
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
 import { sons, sonActif, basculerSon } from './sons.js';
-import { creerEnLigne } from './moteur/en-ligne.js';
+import { creerEnLigne, REACTIONS } from './moteur/en-ligne.js';
+import { noterFin, resumeStats, normaliserStats, statsVides } from './moteur/stats.js';
 import { SUPABASE_URL, SUPABASE_CLE_PUBLIQUE } from './config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -62,6 +63,31 @@ function afficherAccueil() {
   const params = new URLSearchParams(location.search);
   if (params.get('code')) $('code-rejoindre').value = params.get('code').toUpperCase();
   afficherMesParties();
+  afficherStats();
+}
+
+// ---------------------------------------------------------------- statistiques
+function lireStats() {
+  try { return normaliserStats(JSON.parse(memoire.lire('thaayam:stats') || 'null')); } catch { return statsVides(); }
+}
+function afficherStats() {
+  const lignes = resumeStats(lireStats());
+  $('mes-stats').hidden = lignes.length === 0;
+  $('liste-stats').innerHTML = '';
+  lignes.forEach((l) => $('liste-stats').append(el('li', {}, l)));
+}
+$('btn-stats-zero').addEventListener('click', () => {
+  if (!window.confirm('Remettre tes statistiques à zéro ?')) return;
+  memoire.ecrire('thaayam:stats', JSON.stringify(statsVides()));
+  afficherStats();
+});
+/** Compte la partie une seule fois, quand elle se termine. */
+function noterStats(etat) {
+  if (!session || etat.phase !== 'fini' || session.statsNotees === etat) return;
+  session.statsNotees = etat;
+  const s = noterFin(lireStats(), etat, session.mode === 'ligne'
+    ? { mode: 'ligne', place: session.place, code: session.partie.code } : { mode: 'local' });
+  memoire.ecrire('thaayam:stats', JSON.stringify(s));
 }
 
 /** Parties en ligne de cet appareil, pour les reprendre en un clic. */
@@ -353,9 +379,17 @@ async function ouvrirPartieEnLigne(code, place, jeton) {
   arreterSuivi();
   const api = await obtenirEnLigne();
   const partie = await api.lire(code);
-  session = { mode: 'ligne', partie, etat: partie.etat, place, jeton };
+  session = { mode: 'ligne', partie, etat: partie.etat, place, jeton, reactionVue: partie.reaction ? partie.reaction.n : 0 };
   session.arret = api.suivre(code, (nouvelle) => {
     if (!session || session.mode !== 'ligne' || nouvelle.code !== session.partie.code) return;
+    if (nouvelle.reaction && nouvelle.reaction.n !== session.reactionVue) {
+      session.reactionVue = nouvelle.reaction.n;
+      montrerReaction(nouvelle.reaction);
+    }
+    if (nouvelle.revanche && nouvelle.revanche !== session.partie.revanche) {
+      session.partie = { ...session.partie, revanche: nouvelle.revanche };
+      if (session.etat && session.etat.phase === 'fini') dessinerJeu();
+    }
     const changementStatut = nouvelle.statut !== session.partie.statut;
     const plusRecente = nouvelle.version > session.partie.version ||
       (nouvelle.statut === 'attente' && JSON.stringify(nouvelle.joueurs) !== JSON.stringify(session.partie.joueurs));
@@ -571,12 +605,14 @@ $('btn-quitter').addEventListener('click', () => {
   session = null;
   history.replaceState(null, '', location.pathname);
   aller('accueil');
+  afficherAccueil();
 });
 $('btn-regles-jeu').addEventListener('click', () => { $('jeu-regles').hidden = !$('jeu-regles').hidden; });
 $('btn-rejouer').addEventListener('click', () => {
   const e = session && session.etat;
   if (!e || session.mode !== 'local') return;
   session.etat = nouvellePartie(e.regles, e.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
+  session.statsNotees = null;
   dessinerJeu();
 });
 $('btn-son').addEventListener('click', () => { basculerSon(); majBoutonSon(); });
@@ -666,6 +702,11 @@ function dessinerJeu() {
   $('btn-lancer').disabled = !(peut && etat.phase === 'lancer');
   $('btn-lancer').hidden = etat.phase === 'fini';
   $('btn-rejouer').hidden = !(etat.phase === 'fini' && session.mode === 'local');
+  const enLigneFinie = etat.phase === 'fini' && session.mode === 'ligne';
+  $('btn-revanche').hidden = !enLigneFinie;
+  $('btn-revanche').textContent = session.partie && session.partie.revanche ? 'Rejoindre la revanche' : 'Revanche !';
+  $('reactions').hidden = session.mode !== 'ligne';
+  noterStats(etat);
   const entree = coups.find((c) => c.depuis === -1 && !c.groupe);
   $('btn-entrer').hidden = !entree;
   const groupe = coups.find((c) => c.groupe);
@@ -678,6 +719,47 @@ function dessinerJeu() {
   $('jeu-regles').innerHTML = '';
   resumeRegles(etat.regles).forEach((l) => $('jeu-regles').append(el('li', {}, l)));
   faireJouerOrdi();
+}
+
+// ---------------------------------------------------------------- revanche et messages rapides
+$('btn-revanche').addEventListener('click', async () => {
+  if (!session || session.mode !== 'ligne') return;
+  $('btn-revanche').disabled = true;
+  try {
+    const api = await obtenirEnLigne();
+    const code = await api.revanche(session.partie.code, session.jeton);
+    await ouvrirPartieEnLigne(code, session.place, session.jeton);
+  } catch (e) {
+    message('jeu-message', e.message, true);
+  } finally {
+    $('btn-revanche').disabled = false;
+  }
+});
+
+REACTIONS.forEach((texte) => {
+  const b = el('button', { class: 'reaction' }, texte);
+  b.addEventListener('click', async () => {
+    if (!session || session.mode !== 'ligne') return;
+    try {
+      await (await obtenirEnLigne()).reagir(session.partie.code, session.jeton, texte);
+    } catch (e) {
+      message('jeu-message', e.message, true);
+    }
+  });
+  $('reactions').append(b);
+});
+
+let minuteurBulle = null;
+/** Affiche un message rapide reçu (ou envoyé) pendant 3 secondes. */
+function montrerReaction(reaction) {
+  const j = session && session.etat && session.etat.joueurs[reaction.place];
+  const nom = j ? j.nom : (session.partie.joueurs[reaction.place] || {}).nom || '?';
+  const bulle = $('bulle-reaction');
+  bulle.textContent = `${nom}${reaction.place === session.place ? ' (toi)' : ''} : ${reaction.texte}`;
+  bulle.style.borderColor = COULEURS[reaction.place] ? COULEURS[reaction.place].code : '';
+  bulle.hidden = false;
+  clearTimeout(minuteurBulle);
+  minuteurBulle = setTimeout(() => { bulle.hidden = true; }, 3000);
 }
 
 function svg(tag, attrs, parent) {

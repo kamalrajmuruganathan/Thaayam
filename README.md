@@ -39,6 +39,9 @@ relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pio
   (bouton 🔊 pour couper), vibration du téléphone quand un pion est mangé.
 - Bouton « Voir le trajet » : dessine le chemin complet de son pion.
 - Accueil : « Mes parties en ligne » pour reprendre une partie en cours (et voir si c'est à soi de jouer).
+- Accueil : « Mes statistiques » (victoires et défaites contre l'ordinateur par niveau, en ligne, parties à plusieurs).
+- En ligne : messages rapides (👏 😂 « Bien joué ! »…) et bouton « Revanche ! » en fin de partie (mêmes joueurs,
+  mêmes règles, sans retaper de code).
 - Ordinateur en niveau facile (joue au hasard), normal ou fort (il calcule les risques et regarde un lancer plus loin).
 - Page « Règles du jeu » avec des dessins (`web/regles.html`, et l'écran « Règles du jeu » dans l'appli), à partager aux amis.
 

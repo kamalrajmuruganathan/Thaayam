@@ -7,7 +7,8 @@
   `web/moteur/` par `npm run web` et par le build Cloudflare (`wrangler.jsonc`) — ce dossier copié est ignoré par git) et par `app/`
   (Metro surveille `../moteur` via `metro.config.js`).
 - En ligne : Supabase (même projet que Kamal Campus), tables `thaayam_parties` / `thaayam_jetons`, RPC
-  `thaayam_creer`, `thaayam_rejoindre`, `thaayam_demarrer`, `thaayam_jouer` (`supabase/thaayam.sql`).
+  `thaayam_creer`, `thaayam_rejoindre`, `thaayam_demarrer`, `thaayam_jouer`, `thaayam_revanche`, `thaayam_reagir`,
+  `thaayam_menage` (`supabase/thaayam.sql`). Statistiques locales : `moteur/stats.js`.
   L'état complet du jeu (JSON) est stocké dans `thaayam_parties.etat` ; `version` évite les coups en double.
 
 - Ordinateur : `moteur/ia.js` (`choisirCoup`), niveaux `facile`, `normal`, `fort` (évaluation + un lancer d'avance).

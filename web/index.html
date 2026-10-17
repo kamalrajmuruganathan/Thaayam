@@ -27,6 +27,12 @@
         <input id="pseudo" maxlength="20" autocomplete="nickname" placeholder="Ex. Kamal" />
       </label>
 
+      <div id="mes-stats" class="carte" hidden>
+        <h2>Mes statistiques</h2>
+        <ul id="liste-stats" class="liste-stats"></ul>
+        <button id="btn-stats-zero" class="discret petit">Remettre à zéro</button>
+      </div>
+
       <div id="mes-parties" class="carte" hidden>
         <h2>Mes parties en ligne</h2>
         <div id="liste-mes-parties" class="liste-parties"></div>
@@ -90,8 +96,11 @@
           <button id="btn-entrer" hidden>Faire entrer un pion</button>
           <button id="btn-entrer-groupe" hidden>Faire entrer les pions mangés</button>
           <button id="btn-rejouer" class="principal" hidden>Rejouer</button>
+          <button id="btn-revanche" class="principal" hidden>Revanche !</button>
         </div>
       </div>
+      <div id="reactions" class="reactions" hidden></div>
+      <div id="bulle-reaction" class="bulle-reaction" role="status" aria-live="polite" hidden></div>
       <p id="jeu-message" class="message"></p>
       <details class="carte" open>
         <summary>Journal</summary>

@@ -10,6 +10,7 @@ import { enLigne, stockage } from './src/enLigne';
 import { COULEURS, copieRegles, normaliserRegles, resumeRegles } from '../moteur/regles.js';
 import { nouvellePartie, lancer, jouer, geometrie, etapesCoup } from '../moteur/partie.js';
 import { choisirCoup } from '../moteur/ia.js';
+import { noterFin, resumeStats, normaliserStats, statsVides } from '../moteur/stats.js';
 
 export default function App() {
   return (
@@ -60,14 +61,55 @@ function Racine() {
     return () => clearTimeout(m);
   }, [session]);
 
-  // Parties en ligne de cet appareil, rechargées à chaque retour à l'accueil
+  // Parties en ligne de cet appareil et statistiques, rechargées à chaque retour à l'accueil
   const [mesParties, setMesParties] = useState([]);
+  const [stats, setStats] = useState(statsVides());
   useEffect(() => {
     if (ecran !== 'accueil') return undefined;
     let actif = true;
     enLigne.mesParties().then((l) => actif && setMesParties(l)).catch(() => actif && setMesParties([]));
+    stockage.lire('thaayam:stats').then((t) => actif && setStats(normaliserStats(JSON.parse(t || 'null')))).catch(() => {});
     return () => { actif = false; };
   }, [ecran]);
+
+  // Compte chaque partie terminée une seule fois
+  const statsNoteesRef = useRef(null);
+  useEffect(() => {
+    const e = session && session.etat;
+    if (!e || e.phase !== 'fini' || statsNoteesRef.current === e) return;
+    statsNoteesRef.current = e;
+    const infos = session.mode === 'ligne' ? { mode: 'ligne', place: session.place, code: session.partie.code } : { mode: 'local' };
+    stockage.lire('thaayam:stats')
+      .then((t) => stockage.ecrire('thaayam:stats', JSON.stringify(noterFin(normaliserStats(JSON.parse(t || 'null')), e, infos))))
+      .catch(() => {});
+  }, [session]);
+
+  // Messages rapides reçus (affichés 3 secondes)
+  const [bulle, setBulle] = useState(null);
+  const minuteurBulle = useRef(null);
+  function montrerReaction(r, s) {
+    const nom = (s.etat && s.etat.joueurs[r.place] && s.etat.joueurs[r.place].nom) || (s.partie.joueurs[r.place] || {}).nom || '?';
+    setBulle({ texte: `${nom}${r.place === s.place ? ' (toi)' : ''} : ${r.texte}`, place: r.place });
+    clearTimeout(minuteurBulle.current);
+    minuteurBulle.current = setTimeout(() => setBulle(null), 3000);
+  }
+  async function reagir(texte) {
+    const s = sessionRef.current;
+    try { await enLigne.reagir(s.partie.code, s.jeton, texte); } catch (e) { setMessage(e.message); }
+  }
+  async function revanche() {
+    const s = sessionRef.current;
+    setOccupe(true);
+    try {
+      const nouveau = await enLigne.revanche(s.partie.code, s.jeton);
+      await ouvrirEnLigne(nouveau, s.place, s.jeton);
+      setMessage('');
+    } catch (e) {
+      setMessage(e.message);
+    } finally {
+      setOccupe(false);
+    }
+  }
 
   const memoriserPseudo = (p) => { setPseudo(p); stockage.ecrire('thaayam:pseudo', p.trim()).catch(() => {}); };
 
@@ -79,11 +121,19 @@ function Racine() {
   async function ouvrirEnLigne(codePartie, place, jeton) {
     arreterSuivi();
     const partie = await enLigne.lire(codePartie);
+    const reactionVue = { n: partie.reaction ? partie.reaction.n : 0 };
     setSession({ mode: 'ligne', partie, etat: partie.etat, place, jeton });
     setEcran(partie.statut === 'attente' ? 'salon' : 'jeu');
     arretRef.current = enLigne.suivre(codePartie, (nouvelle) => {
       const s = sessionRef.current;
       if (!s || s.mode !== 'ligne' || nouvelle.code !== s.partie.code) return;
+      if (nouvelle.reaction && nouvelle.reaction.n !== reactionVue.n) {
+        reactionVue.n = nouvelle.reaction.n;
+        montrerReaction(nouvelle.reaction, s);
+      }
+      if (nouvelle.revanche && nouvelle.revanche !== s.partie.revanche) {
+        setSession((x) => (x && x.partie.code === nouvelle.code ? { ...x, partie: { ...x.partie, revanche: nouvelle.revanche } } : x));
+      }
       const plusRecente = nouvelle.version > s.partie.version || nouvelle.statut !== s.partie.statut ||
         (nouvelle.statut === 'attente' && JSON.stringify(nouvelle.joueurs) !== JSON.stringify(s.partie.joueurs));
       if (!plusRecente) return;
@@ -247,6 +297,8 @@ function Racine() {
     contenu = (
       <Jeu etat={session.etat} moi={session.mode === 'ligne' ? session.place : null} occupe={occupe}
         message={message} surAction={agir} surQuitter={quitter} surReglesJeu={voirReglesJeu}
+        bulle={bulle} surReaction={session.mode === 'ligne' ? reagir : null}
+        surRevanche={session.mode === 'ligne' ? revanche : null} revancheExiste={!!(session.partie && session.partie.revanche)}
         surRejouer={() => setSession((s) => ({
           ...s,
           etat: nouvellePartie(s.etat.regles, s.etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false }))),
@@ -260,6 +312,11 @@ function Racine() {
           <Texte style={{ fontSize: 36, fontWeight: '800', color: c.accent }}>Thaayam</Texte>
           <Texte attenue>Le jeu de plateau traditionnel tamoul</Texte>
         </View>
+        {resumeStats(stats).length ? (
+          <Carte titre="Mes statistiques">
+            {resumeStats(stats).map((l) => <Texte key={l}>• {l}</Texte>)}
+          </Carte>
+        ) : null}
         {mesParties.length ? (
           <Carte titre="Mes parties en ligne">
             {mesParties.map((p) => (

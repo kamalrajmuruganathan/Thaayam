@@ -17,6 +17,11 @@ create table if not exists public.thaayam_parties (
   maj_le    timestamptz not null default now()
 );
 
+-- Colonnes ajoutées après la première version (ré-exécutable)
+alter table public.thaayam_parties add column if not exists revanche   text;        -- code de la revanche
+alter table public.thaayam_parties add column if not exists reaction   jsonb;       -- { place, texte, n }
+alter table public.thaayam_parties add column if not exists reaction_le timestamptz;
+
 create table if not exists public.thaayam_jetons (
   code   text not null references public.thaayam_parties(code) on delete cascade,
   place  integer not null,
@@ -173,15 +178,83 @@ begin
   return v_partie.version + 1;
 end $$;
 
+-- ---------------------------------------------------------------------
+-- Revanche : à la fin d'une partie, n'importe quel joueur crée une
+-- nouvelle partie avec les mêmes joueurs (même ordre, mêmes jetons) et
+-- les mêmes règles. Si elle existe déjà, renvoie simplement son code.
+-- ---------------------------------------------------------------------
+create or replace function public.thaayam_revanche(p_code text, p_jeton uuid)
+returns text
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_partie thaayam_parties%rowtype;
+  v_code   text;
+  alphabet constant text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+begin
+  select * into v_partie from thaayam_parties where code = p_code for update;
+  if not found then raise exception 'Partie introuvable'; end if;
+  if not exists (select 1 from thaayam_jetons where code = p_code and jeton = p_jeton) then
+    raise exception 'Tu ne fais pas partie de cette partie';
+  end if;
+  if v_partie.statut <> 'finie' then raise exception 'La partie n''est pas terminée'; end if;
+  if v_partie.revanche is not null and exists (select 1 from thaayam_parties where code = v_partie.revanche) then
+    return v_partie.revanche;
+  end if;
+  loop
+    v_code := '';
+    for i in 1..5 loop
+      v_code := v_code || substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1);
+    end loop;
+    exit when not exists (select 1 from thaayam_parties where code = v_code);
+  end loop;
+  insert into thaayam_parties (code, regles, joueurs) values (v_code, v_partie.regles, v_partie.joueurs);
+  insert into thaayam_jetons (code, place, jeton)
+    select v_code, place, jeton from thaayam_jetons where code = p_code;
+  update thaayam_parties set revanche = v_code, maj_le = now() where code = p_code;
+  return v_code;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- Messages rapides : un joueur envoie une réaction choisie dans une liste
+-- fixe (pas de texte libre). Au plus une par seconde et par partie.
+-- ---------------------------------------------------------------------
+create or replace function public.thaayam_reagir(p_code text, p_jeton uuid, p_texte text)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_place integer;
+  v_n     integer;
+begin
+  if p_texte is null or not (p_texte = any (array['👏', '😂', '😮', '😡', '🔥', '🙏',
+      'Bien joué !', 'Pas de chance !', 'Vite !', 'Bravo !', 'Oh non !', 'Merci !'])) then
+    raise exception 'Message non autorisé';
+  end if;
+  select place into v_place from thaayam_jetons where code = p_code and jeton = p_jeton;
+  if v_place is null then raise exception 'Tu ne fais pas partie de cette partie'; end if;
+  select coalesce((reaction ->> 'n')::int, 0) + 1 into v_n from thaayam_parties
+   where code = p_code and (reaction_le is null or reaction_le < now() - interval '1 second') for update;
+  if not found then raise exception 'Doucement : un message par seconde'; end if;
+  update thaayam_parties
+     set reaction = jsonb_build_object('place', v_place, 'texte', p_texte, 'n', v_n),
+         reaction_le = now()
+   where code = p_code;
+end $$;
+
 revoke all on function public.thaayam_menage() from public, anon, authenticated;
 revoke all on function public.thaayam_creer(jsonb, text) from public;
 revoke all on function public.thaayam_rejoindre(text, text) from public;
 revoke all on function public.thaayam_demarrer(text, uuid, jsonb) from public;
 revoke all on function public.thaayam_jouer(text, uuid, integer, jsonb) from public;
+revoke all on function public.thaayam_revanche(text, uuid) from public;
+revoke all on function public.thaayam_reagir(text, uuid, text) from public;
 grant execute on function public.thaayam_creer(jsonb, text) to anon, authenticated;
 grant execute on function public.thaayam_rejoindre(text, text) to anon, authenticated;
 grant execute on function public.thaayam_demarrer(text, uuid, jsonb) to anon, authenticated;
 grant execute on function public.thaayam_jouer(text, uuid, integer, jsonb) to anon, authenticated;
+grant execute on function public.thaayam_revanche(text, uuid) to anon, authenticated;
+grant execute on function public.thaayam_reagir(text, uuid, text) to anon, authenticated;
 
 -- Temps réel : les autres joueurs voient chaque coup instantanément.
 do $$

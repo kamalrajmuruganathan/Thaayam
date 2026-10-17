@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import { Pressable, View, useWindowDimensions } from 'react-native';
 import { Bouton, Carte, Texte, useCouleurs } from '../ui';
 import { Plateau, Cauri } from '../Plateau';
 import { lancer, jouer, coupsPossibles, geometrie } from '../../../moteur/partie.js';
 import { resumeRegles, nomLancer } from '../../../moteur/regles.js';
+import { REACTIONS } from '../../../moteur/en-ligne.js';
 
 /**
  * Écran de jeu (local ou en ligne).
  * moi : index du joueur sur cet appareil (null en local : tout le monde joue ici).
  * surAction(nouvelEtat) : applique / envoie le nouvel état.
  */
-export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter, surRejouer, surReglesJeu }) {
+export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter, surRejouer, surReglesJeu,
+  bulle, surReaction, surRevanche, revancheExiste }) {
   const c = useCouleurs();
   const { width } = useWindowDimensions();
   const [voirRegles, setVoirRegles] = useState(false);
@@ -86,9 +88,28 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
           {entree ? <Bouton style={{ flex: 1 }} titre="Faire entrer un pion" onPress={() => surAction(jouer(etat, entree.pion))} /> : null}
           {groupe ? <Bouton style={{ flex: 1 }} titre={`Faire entrer les ${groupe.groupe.length} pions mangés`} onPress={() => surAction(jouer(etat, groupe.pion, true))} /> : null}
           {etat.phase === 'fini' && moi === null ? <Bouton style={{ flex: 1 }} principal titre="Rejouer" onPress={surRejouer} /> : null}
+          {etat.phase === 'fini' && surRevanche ? (
+            <Bouton style={{ flex: 1 }} principal desactive={occupe} titre={revancheExiste ? 'Rejoindre la revanche' : 'Revanche !'} onPress={surRevanche} />
+          ) : null}
         </View>
       </Carte>
 
+      {bulle ? (
+        <View style={{ alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 999, borderWidth: 3,
+          borderColor: (etat.joueurs[bulle.place] || {}).couleur || c.accent, backgroundColor: c.surface }}>
+          <Texte style={{ fontWeight: '800', fontSize: 16 }}>{bulle.texte}</Texte>
+        </View>
+      ) : null}
+      {surReaction ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+          {REACTIONS.map((r) => (
+            <Pressable key={r} onPress={() => surReaction(r)} accessibilityRole="button"
+              style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: c.trait, backgroundColor: c.surface }}>
+              <Texte style={{ fontSize: 15 }}>{r}</Texte>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       {message ? <Texte erreur>{message}</Texte> : null}
 
       <Carte titre="Journal">

@@ -340,6 +340,27 @@ test("l'ordinateur « fort » bat l'ordinateur « normal »", async () => {
   assert.ok(victoires >= N * 0.55, `seulement ${victoires}/${N} victoires`);
 });
 
+test('statistiques : victoires, défaites, une seule fois par partie en ligne', async () => {
+  const { statsVides, noterFin, resumeStats, normaliserStats } = await import('./stats.js');
+  const fin = (gagnant, joueurs) => ({ phase: 'fini', gagnant, joueurs });
+  let s = statsVides();
+  assert.deepEqual(resumeStats(s), []);
+  s = noterFin(s, fin(0, [{ nom: 'Moi' }, { nom: 'Ordi', ordi: 'fort' }]), { mode: 'local' });
+  s = noterFin(s, fin(1, [{ nom: 'Moi' }, { nom: 'Ordi', ordi: 'fort' }]), { mode: 'local' });
+  s = noterFin(s, fin(1, [{ nom: 'Moi' }, { nom: 'Ordi', ordi: 'fort' }]), { mode: 'local' });
+  s = noterFin(s, fin(0, [{ nom: 'A' }, { nom: 'B' }]), { mode: 'local' });
+  s = noterFin(s, fin(2, [{ nom: 'A' }, { nom: 'B' }, { nom: 'C' }]), { mode: 'ligne', place: 2, code: 'ABCDE' });
+  s = noterFin(s, fin(2, [{ nom: 'A' }, { nom: 'B' }, { nom: 'C' }]), { mode: 'ligne', place: 2, code: 'ABCDE' }); // déjà comptée
+  s = noterFin(s, { phase: 'deplacer', gagnant: null, joueurs: [] }, { mode: 'local' }); // pas finie
+  assert.deepEqual(resumeStats(s), [
+    "Contre l'ordinateur (fort) : 1 victoire, 2 défaites",
+    'En ligne : 1 victoire, 0 défaite',
+    'À plusieurs sur cet appareil : 1 partie',
+  ]);
+  assert.deepEqual(normaliserStats('n’importe quoi'), statsVides());
+  assert.equal(normaliserStats(JSON.parse(JSON.stringify(s))).ordi.fort.d, 2);
+});
+
 test('étapes d’un déplacement (animation)', async () => {
   const { etapesCoup } = await import('./partie.js');
   const g = geometrie(REGLES_PAR_DEFAUT, 2);
