@@ -243,3 +243,71 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 .choix-theme { display: flex; gap: 8px; }
 .choix-theme button { flex: 1 1 0; }
 .choix-theme button.actif { background: var(--accent); color: var(--accent-texte); border-color: var(--accent); }
+
+/* --------------------------------------------------------------------- */
+/* Cristal — ambiance « bureau du futur » : bandeau LED au plafond, sol    */
+/* brillant en perspective, grille d'hologramme, reflets et balayage.     */
+/* --------------------------------------------------------------------- */
+:root[data-skin="cristal"] body { position: relative; min-height: 100vh; overflow-x: hidden; }
+/* Bandeau LED courbe en haut de l'écran */
+:root[data-skin="cristal"] body::before {
+  content: ""; position: fixed; z-index: 0; pointer-events: none;
+  top: calc(env(safe-area-inset-top, 0px) - 58px); left: 12%; right: 12%; height: 72px;
+  border: 2px solid rgba(160, 230, 255, 0.85); border-top: none; border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  box-shadow: 0 6px 22px rgba(95, 212, 255, 0.55), inset 0 -6px 18px rgba(95, 212, 255, 0.25);
+  opacity: 0.75;
+}
+/* Sol brillant : grille en perspective qui s'éloigne, avec un reflet */
+:root[data-skin="cristal"] body::after {
+  content: ""; position: fixed; z-index: 0; pointer-events: none; left: -30%; right: -30%; bottom: -10px; height: 42vh;
+  background:
+    linear-gradient(to top, rgba(95, 212, 255, 0.10), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(95, 212, 255, 0.16) 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(0deg, rgba(95, 212, 255, 0.12) 0 1px, transparent 1px 48px);
+  transform: perspective(420px) rotateX(62deg); transform-origin: bottom;
+  -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 85%); mask-image: linear-gradient(to top, #000 10%, transparent 85%);
+}
+:root[data-skin="cristal"] #racine { position: relative; z-index: 1; }
+/* Titre : fine ligne de lumière dessous, comme un bandeau LED */
+:root[data-skin="cristal"] .titre h1::after {
+  content: ""; display: block; height: 2px; width: 62%; margin: 10px auto 0; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #bff0ff, #5fd4ff, #bff0ff, transparent);
+  box-shadow: 0 0 12px rgba(95, 212, 255, 0.9);
+}
+/* Cartes : arête lumineuse en haut et reflet de vitre qui balaie lentement */
+:root[data-skin="cristal"] .carte,
+:root[data-skin="cristal"] .zone-des { position: relative; overflow: hidden; }
+:root[data-skin="cristal"] .carte::before,
+:root[data-skin="cristal"] .zone-des::before {
+  content: ""; position: absolute; left: 10%; right: 10%; top: 0; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(191, 240, 255, 0.95), transparent);
+  box-shadow: 0 0 10px rgba(95, 212, 255, 0.8);
+}
+:root[data-skin="cristal"] .carte::after,
+:root[data-skin="cristal"] .zone-des::after {
+  content: ""; position: absolute; inset: -40% auto -40% -60%; width: 40%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+  transform: skewX(-18deg); animation: reflet-vitre 9s ease-in-out infinite;
+}
+:root[data-skin="cristal"] .carte > *, :root[data-skin="cristal"] .zone-des > * { position: relative; z-index: 1; }
+@keyframes reflet-vitre { 0%, 55% { left: -60%; } 100% { left: 130%; } }
+/* Plateau : posé sur un sol brillant (reflet dessous) avec un liseré qui pulse */
+:root[data-skin="cristal"] .zone-plateau {
+  -webkit-box-reflect: below 10px linear-gradient(transparent 72%, rgba(255, 255, 255, 0.16));
+  animation: halo-plateau 5s ease-in-out infinite; margin-bottom: 18px;
+}
+@keyframes halo-plateau {
+  50% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 60px rgba(95, 212, 255, 0.32), 0 18px 40px rgba(0, 0, 0, 0.6); }
+}
+/* Boutons principaux : reflet qui traverse au survol */
+:root[data-skin="cristal"] button.principal { position: relative; overflow: hidden; }
+:root[data-skin="cristal"] button.principal::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent); transform: skewX(-20deg);
+  transition: left 0.6s ease;
+}
+:root[data-skin="cristal"] button.principal:hover::after { left: 120%; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-skin="cristal"] .carte::after, :root[data-skin="cristal"] .zone-des::after,
+  :root[data-skin="cristal"] .zone-plateau { animation: none; }
+}

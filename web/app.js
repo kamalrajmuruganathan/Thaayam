@@ -826,6 +826,17 @@ function dessinerPlateau(etat, g, coups) {
 
   if (g.forme === 'croix') {
     svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: T.fondLueur ? 'url(#fond-lueur)' : T.fond }, plateau);
+    if (T.lueur) {
+      // Grille d'hologramme très fine, plus visible au centre
+      const motif = svg('pattern', { id: 'holo', width: S / 4, height: S / 4, patternUnits: 'userSpaceOnUse' }, defs);
+      svg('path', { d: `M${S / 4} 0V${S / 4}M0 ${S / 4}H${S / 4}`, stroke: T.diagonaleLueur, 'stroke-width': 0.6, opacity: 0.35, fill: 'none' }, motif);
+      const masque = svg('radialGradient', { id: 'holo-masque', cx: '50%', cy: '50%', r: '55%' }, defs);
+      svg('stop', { offset: '0%', 'stop-color': '#fff', 'stop-opacity': 0.9 }, masque);
+      svg('stop', { offset: '100%', 'stop-color': '#fff', 'stop-opacity': 0.08 }, masque);
+      const m = svg('mask', { id: 'holo-m' }, defs);
+      svg('rect', { x: 0, y: 0, width: n * S, height: n * S, fill: 'url(#holo-masque)' }, m);
+      svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: 'url(#holo)', mask: 'url(#holo-m)' }, plateau);
+    }
     // Diagonales : des coins du plateau jusqu'au centre, à travers les cases de coin
     const { r: r0, c: c0, taille: t } = g.centre;
     const coins = [[0, 0, c0, r0], [n, 0, c0 + t, r0], [0, n, c0, r0 + t], [n, n, c0 + t, r0 + t]];
