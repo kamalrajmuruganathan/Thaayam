@@ -9,6 +9,10 @@ import { sons, sonActif, basculerSon } from './sons.js';
 import { creerEnLigne, REACTIONS } from './moteur/en-ligne.js';
 import { noterFin, resumeStats, normaliserStats, statsVides } from './moteur/stats.js';
 import { themePlateau, THEME_PAR_DEFAUT } from './moteur/themes.js';
+import {
+  LANGUES, traducteur, traduireJournal, traduireErreur, traduireNom, traduireReaction,
+  resumeReglesTraduit, resumeStatsTraduit,
+} from './moteur/i18n.js';
 import { SUPABASE_URL, SUPABASE_CLE_PUBLIQUE } from './config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -19,6 +23,45 @@ const memoire = {
   lire(k) { try { return localStorage.getItem(k); } catch { return null; } },
   ecrire(k, v) { try { localStorage.setItem(k, v); } catch { /* navigation privée */ } },
 };
+
+// ---------------------------------------------------------------- langue
+function langueChoisie() {
+  const l = memoire.lire('thaayam:langue');
+  if (LANGUES.some((x) => x.code === l)) return l;
+  const nav = (navigator.language || 'fr').slice(0, 2);
+  return LANGUES.some((x) => x.code === nav) ? nav : 'fr';
+}
+let t = traducteur(langueChoisie());
+const nomAffiche = (nom) => traduireNom(nom, t);
+/** Met à jour tous les textes de la page (attributs data-i18n) et l'écran en cours. */
+function appliquerLangue() {
+  const code = langueChoisie();
+  t = traducteur(code);
+  document.documentElement.lang = code;
+  document.querySelectorAll('[data-i18n]').forEach((e) => { e.textContent = t(e.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((e) => { e.placeholder = t(e.dataset.i18nPlaceholder); });
+  document.querySelectorAll('#choix-langue button').forEach((b) => b.classList.toggle('actif', b.dataset.langue === code));
+  if (typeof majBoutonSon === 'function') majBoutonSon();
+  if (typeof majBoutonTrajet === 'function') majBoutonTrajet();
+  document.querySelectorAll('[data-reaction]').forEach((b) => { b.textContent = traduireReaction(b.dataset.reaction, t); });
+}
+LANGUES.forEach(({ code, nom }) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.dataset.langue = code;
+  b.textContent = nom;
+  b.lang = code;
+  b.addEventListener('click', () => {
+    memoire.ecrire('thaayam:langue', code);
+    appliquerLangue();
+    // Redessiner l'écran visible dans la nouvelle langue
+    if (!$('ecran-accueil').hidden) afficherAccueil();
+    if (!$('ecran-reglages').hidden) ouvrirReglages(modeReglages);
+    if (session && !$('ecran-salon').hidden) afficherPartieEnLigne();
+    if (session && session.etat && !$('ecran-jeu').hidden) dessinerJeu();
+  });
+  $('choix-langue').append(b);
+});
 
 // ---------------------------------------------------------------- thème (Cristal ou Bois)
 function themeChoisi() {
@@ -49,7 +92,7 @@ async function obtenirEnLigne() {
     try {
       ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'));
     } catch {
-      throw new Error('Impossible de charger le jeu en ligne : vérifie ta connexion internet.');
+      throw new Error(t('errInternet'));
     }
     const client = createClient(SUPABASE_URL, SUPABASE_CLE_PUBLIQUE, { auth: { persistSession: false } });
     enLigne = creerEnLigne(client, stockageAsync);
@@ -90,13 +133,13 @@ function lireStats() {
   try { return normaliserStats(JSON.parse(memoire.lire('thaayam:stats') || 'null')); } catch { return statsVides(); }
 }
 function afficherStats() {
-  const lignes = resumeStats(lireStats());
+  const lignes = resumeStatsTraduit(lireStats(), t);
   $('mes-stats').hidden = lignes.length === 0;
   $('liste-stats').innerHTML = '';
   lignes.forEach((l) => $('liste-stats').append(el('li', {}, l)));
 }
 $('btn-stats-zero').addEventListener('click', () => {
-  if (!window.confirm('Remettre tes statistiques à zéro ?')) return;
+  if (!window.confirm(t('statsZeroConfirmer'))) return;
   memoire.ecrire('thaayam:stats', JSON.stringify(statsVides()));
   afficherStats();
 });
@@ -120,12 +163,12 @@ async function afficherMesParties() {
     const zone = $('liste-mes-parties');
     zone.innerHTML = '';
     parties.forEach((p) => {
-      const noms = p.joueurs.map((j) => j.nom).join(', ');
-      const etat = p.statut === 'attente' ? 'En attente des joueurs' : p.aMoi ? 'À toi de jouer !' : 'En cours';
+      const noms = p.joueurs.map((j) => nomAffiche(j.nom)).join(', ');
+      const etat = p.statut === 'attente' ? t('partieAttente') : p.aMoi ? t('partieAMoi') : t('partieEnCours');
       const b = el('button', { class: p.aMoi ? 'principal' : '' },
         el('span', { class: 'code-partie' }, p.code), ' ', el('span', { class: 'petit' }, `${etat} · ${noms}`));
       b.addEventListener('click', async () => {
-        try { await ouvrirPartieEnLigne(p.code, p.place, p.jeton); } catch (e) { message('message-accueil', e.message, true); }
+        try { await ouvrirPartieEnLigne(p.code, p.place, p.jeton); } catch (e) { message('message-accueil', traduireErreur(e.message, t), true); }
       });
       zone.append(b);
     });
@@ -138,23 +181,23 @@ async function afficherMesParties() {
 $('pseudo').value = memoire.lire('thaayam:pseudo') || '';
 
 $('btn-creer').addEventListener('click', () => {
-  if (!pseudo()) return message('message-accueil', "Écris d'abord ton pseudo.", true);
+  if (!pseudo()) return message('message-accueil', t('errPseudo'), true);
   ouvrirReglages('ligne');
 });
 $('btn-local').addEventListener('click', () => { ordiLocal = [false, false, false, false]; ouvrirReglages('local'); });
 $('btn-ordi').addEventListener('click', () => { nbLocal = 2; ordiLocal = [false, true, true, true]; ouvrirReglages('local'); });
 $('btn-rejoindre').addEventListener('click', async () => {
   const code = $('code-rejoindre').value.trim().toUpperCase();
-  if (!pseudo()) return message('message-accueil', "Écris d'abord ton pseudo.", true);
-  if (code.length !== 5) return message('message-accueil', 'Le code fait 5 caractères.', true);
-  message('message-accueil', 'Connexion…');
+  if (!pseudo()) return message('message-accueil', t('errPseudo'), true);
+  if (code.length !== 5) return message('message-accueil', t('errCode'), true);
+  message('message-accueil', t('connexion'));
   try {
     const api = await obtenirEnLigne();
     const r = await api.rejoindre(code, pseudo());
     await ouvrirPartieEnLigne(r.code, r.place, r.jeton);
     message('message-accueil', '');
   } catch (e) {
-    message('message-accueil', e.message, true);
+    message('message-accueil', traduireErreur(e.message, t), true);
   }
 });
 
@@ -172,8 +215,8 @@ function ouvrirReglages(mode) {
   } catch {
     edition = copieRegles();
   }
-  $('titre-reglages').textContent = mode === 'local' ? 'Partie sur cet appareil' : 'Nouvelle partie en ligne';
-  $('btn-valider-regles').textContent = mode === 'local' ? 'Commencer' : 'Créer la partie';
+  $('titre-reglages').textContent = mode === 'local' ? t('titreLocal') : t('titreLigne');
+  $('btn-valider-regles').textContent = mode === 'local' ? t('commencer') : t('creerLaPartie');
   construireFormulaire();
   aller('reglages');
 }
@@ -220,23 +263,23 @@ function construireFormulaire() {
     const dessinerNoms = () => {
       noms.innerHTML = '';
       for (let i = 0; i < nbLocal; i++) {
-        const nomParDefaut = ordiLocal[i] ? `Ordi ${COULEURS[i].nom.toLowerCase()}` : i === 0 ? ($('pseudo').value.trim() || COULEURS[i].nom) : COULEURS[i].nom;
+        const nomParDefaut = ordiLocal[i] ? t('ordiCouleur', { couleur: nomAffiche(COULEURS[i].nom).toLowerCase() }) : i === 0 ? ($('pseudo').value.trim() || nomAffiche(COULEURS[i].nom)) : nomAffiche(COULEURS[i].nom);
         noms.append(el('div', { class: 'ligne-joueur' },
           el('label', {},
-            el('span', {}, el('span', { class: 'pastille', style: `display:inline-block;background:${COULEURS[i].code};vertical-align:middle;margin-right:6px` }), `Joueur ${i + 1}`),
+            el('span', {}, el('span', { class: 'pastille', style: `display:inline-block;background:${COULEURS[i].code};vertical-align:middle;margin-right:6px` }), t('joueurN', { n: i + 1 })),
             el('input', { id: `nom-${i}`, maxlength: 20, value: nomParDefaut })),
           el('label', { class: 'case' },
             el('input', { type: 'checkbox', id: `ordi-${i}`, checked: ordiLocal[i],
               onchange: (e) => { ordiLocal[i] = e.target.checked; dessinerNoms(); } }),
-            el('span', {}, 'Ordinateur'))));
+            el('span', {}, t('ordinateur')))));
       }
     };
     dessinerNoms();
-    f.append(el('fieldset', {}, el('legend', {}, 'Joueurs'),
-      choix([[2, '2 joueurs'], [3, '3 joueurs'], [4, '4 joueurs']], nbLocal, (v) => { nbLocal = v; dessinerNoms(); }),
+    f.append(el('fieldset', {}, el('legend', {}, t('joueurs')),
+      choix([2, 3, 4].map((n) => [n, t('nJoueurs', { n })]), nbLocal, (v) => { nbLocal = v; dessinerNoms(); }),
       noms,
-      el('label', {}, "Niveau de l'ordinateur",
-        choix([['facile', 'Facile'], ['normal', 'Normal'], ['fort', 'Fort']], niveauOrdi, (v) => {
+      el('label', {}, t('niveauOrdi'),
+        choix(['facile', 'normal', 'fort'].map((n) => [n, t(n)]), niveauOrdi, (v) => {
           niveauOrdi = v;
           try { localStorage.setItem('thaayam:niveau', v); } catch { /* ignoré */ }
         }))));
@@ -248,10 +291,10 @@ function construireFormulaire() {
   const tailles = el('div', {}, choix(TAILLES.map((t) => [t, `${t} × ${t}`]), r.taille, (v) => { r.taille = v; verifierReglages(); }));
   seulementCarre.push(tailles);
 
-  f.append(el('fieldset', {}, el('legend', {}, 'Plateau'),
-    choix([['croix', 'En croix (thaayam kattai)'], ['carre', 'Carré']], r.forme, (v) => { r.forme = v; montrerForme(); verifierReglages(); }),
+  f.append(el('fieldset', {}, el('legend', {}, t('plateau')),
+    choix([['croix', t('enCroix')], ['carre', t('carre')]], r.forme, (v) => { r.forme = v; montrerForme(); verifierReglages(); }),
     tailles,
-    el('label', {}, 'Pions par joueur',
+    el('label', {}, t('pionsParJoueur'),
       (() => {
         const s = el('select', { onchange: (e) => { r.nbPions = Number(e.target.value); verifierReglages(); } });
         for (let i = 1; i <= 12; i++) s.append(el('option', { value: i, selected: i === r.nbPions }, String(i)));
@@ -259,34 +302,34 @@ function construireFormulaire() {
       })())));
 
   const blocCauris = el('div', { class: 'formulaire' },
-    el('label', {}, 'Nombre de cauris',
+    el('label', {}, t('nbCauris'),
       (() => {
         const s = el('select', { onchange: (e) => { r.des.nbCauris = Number(e.target.value); verifierReglages(); } });
         for (let i = 2; i <= 7; i++) s.append(el('option', { value: i, selected: i === r.des.nbCauris }, String(i)));
         return s;
       })()),
-    el('label', {}, 'Valeur quand aucun cauri ne tombe ouvert',
+    el('label', {}, t('valeurZeroCauri'),
       el('input', { type: 'number', min: 1, max: 24, value: r.des.valeurZero, inputmode: 'numeric',
         oninput: (e) => { r.des.valeurZero = Number(e.target.value); verifierReglages(); } }),
       el('span', { class: 'aide' }, 'Souvent 8 avec 4 cauris, 12 avec 6 cauris.')));
   const blocDes = el('div', { class: 'formulaire' },
-    el('label', {}, 'Nombre de dés longs',
+    el('label', {}, t('nbDes'),
       (() => {
         const s = el('select', { onchange: (e) => { r.des.nbDes = Number(e.target.value); verifierReglages(); } });
         for (let i = 1; i <= 3; i++) s.append(el('option', { value: i, selected: i === r.des.nbDes }, String(i)));
         return s;
       })()),
-    el('label', {}, 'Valeurs des faces de chaque dé',
+    el('label', {}, t('faces'),
       el('input', { value: r.des.faces.join(', '), oninput: (e) => { r.des.faces = lireListe(e.target.value); verifierReglages(); } }),
-      el('span', { class: 'aide' }, 'Séparées par des virgules. Dayakattai classique : 0, 1, 2, 3.')),
-    el('label', {}, 'Valeur quand tous les dés montrent 0',
+      el('span', { class: 'aide' }, t('aideFaces'))),
+    el('label', {}, t('toutZero'),
       el('input', { type: 'number', min: 0, max: 24, value: r.des.valeurToutZero, inputmode: 'numeric',
         oninput: (e) => { r.des.valeurToutZero = Number(e.target.value); verifierReglages(); } }),
-      el('span', { class: 'aide' }, 'Classique : 0 = « Kaapal », on passe les dés au joueur suivant.')),
-    el('label', {}, 'On rejoue aussi quand chaque dé montre la face',
+      el('span', { class: 'aide' }, t('aideToutZero'))),
+    el('label', {}, t('doubles'),
       el('input', { id: 'champ-doubles', value: r.doublesRejouer.join(', '),
         oninput: (e) => { r.doublesRejouer = lireListe(e.target.value); verifierReglages(); } }),
-      el('span', { class: 'aide' }, 'Classique : 2 (2 sur chaque dé, mais pas 1 + 3). Laisser vide pour aucun.')));
+      el('span', { class: 'aide' }, t('aideDoubles'))));
   const entree = el('input', { id: 'champ-entree', value: r.valeursEntree.join(', '),
     oninput: (e) => { r.valeursEntree = lireListe(e.target.value); verifierReglages(); } });
   const rejouer = el('input', { id: 'champ-rejouer', value: r.valeursRejouer.join(', '),
@@ -294,8 +337,8 @@ function construireFormulaire() {
   const montrerDes = () => { blocCauris.hidden = r.des.type !== 'cauris'; blocDes.hidden = r.des.type === 'cauris'; };
   montrerDes();
 
-  f.append(el('fieldset', {}, el('legend', {}, 'Lancer'),
-    choix([['desLongs', 'Dés longs'], ['cauris', 'Cauris']], r.des.type, (v) => {
+  f.append(el('fieldset', {}, el('legend', {}, t('lancerLegende')),
+    choix([['desLongs', t('desLongs')], ['cauris', t('cauris')]], r.des.type, (v) => {
       r.des.type = v;
       r.valeursEntree = [...PRESETS_DES[v].valeursEntree];
       r.valeursRejouer = [...PRESETS_DES[v].valeursRejouer];
@@ -308,30 +351,30 @@ function construireFormulaire() {
     }),
     blocCauris, blocDes,
     el('div', { id: 'valeurs-possibles', class: 'aide' }),
-    el('label', {}, 'Valeurs qui font entrer un pion (« thaayam »)', entree),
-    el('label', {}, 'Valeurs qui font rejouer', rejouer),
-    caseACocher('On rejoue aussi après une capture', r.rejouerApresCapture, (v) => { r.rejouerApresCapture = v; })));
+    el('label', {}, t('valeursEntree'), entree),
+    el('label', {}, t('valeursRejouer'), rejouer),
+    caseACocher(t('rejouerCapture'), r.rejouerApresCapture, (v) => { r.rejouerApresCapture = v; })));
 
-  f.append(el('fieldset', {}, el('legend', {}, 'Déplacements'),
-    caseACocher("Il faut avoir capturé un pion pour entrer à l'intérieur", r.captureAvantInterieur,
-      (v) => { r.captureAvantInterieur = v; }, 'Sinon, les pions refont le tour du plateau.'),
-    caseACocher('Il faut tomber pile sur le centre', r.arriveeExacte, (v) => { r.arriveeExacte = v; }),
-    caseACocher('Un seul pion par case (sauf au centre)', r.unPionParCase, (v) => { r.unPionParCase = v; },
-      'Décoché : on peut empiler ses pions, et un adversaire qui tombe dessus mange tout le groupe.'),
-    caseACocher('Un groupe mangé d’un coup rentre d’un coup', r.groupeRentreEnsemble, (v) => { r.groupeRentreEnsemble = v; },
-      'Avec une valeur qui fait rejouer (1, 5, 6, 2 + 2), les pions mangés ensemble peuvent rentrer ensemble.'),
-    el('label', {}, 'Sens du tour',
+  f.append(el('fieldset', {}, el('legend', {}, t('deplacements')),
+    caseACocher(t('captureObligatoire'), r.captureAvantInterieur,
+      (v) => { r.captureAvantInterieur = v; }, t('aideCapture')),
+    caseACocher(t('arriveeExacte'), r.arriveeExacte, (v) => { r.arriveeExacte = v; }),
+    caseACocher(t('unPion'), r.unPionParCase, (v) => { r.unPionParCase = v; },
+      t('aideUnPion')),
+    caseACocher(t('groupe'), r.groupeRentreEnsemble, (v) => { r.groupeRentreEnsemble = v; },
+      t('aideGroupe')),
+    el('label', {}, t('sensTour'),
       (() => {
         const s = el('select', { onchange: (e) => { r.sens = e.target.value; } });
-        s.append(el('option', { value: 'anti-horaire', selected: r.sens === 'anti-horaire' }, 'Inverse des aiguilles d’une montre'));
-        s.append(el('option', { value: 'horaire', selected: r.sens === 'horaire' }, 'Sens des aiguilles d’une montre'));
+        s.append(el('option', { value: 'anti-horaire', selected: r.sens === 'anti-horaire' }, t('antiHoraire')));
+        s.append(el('option', { value: 'horaire', selected: r.sens === 'horaire' }, t('horaire')));
         return s;
       })()),
     (() => {
-      const l = el('label', {}, 'Sens des anneaux intérieurs (plateau carré)',
+      const l = el('label', {}, t('sensInterieurs'),
         (() => {
           const s = el('select', { onchange: (e) => { r.sensInterieurs = e.target.value; } });
-          [['inverse', "Tous dans l'autre sens (classique)"], ['meme', 'Même sens que l’extérieur'], ['alterne', 'Un sens sur deux']]
+          [['inverse', t('inverse')], ['meme', t('meme')], ['alterne', t('alterne')]]
             .forEach(([v, t]) => s.append(el('option', { value: v, selected: r.sensInterieurs === v }, t)));
           return s;
         })());
@@ -339,10 +382,10 @@ function construireFormulaire() {
       return l;
     })()));
 
-  const refugesCarre = el('fieldset', {}, el('legend', {}, 'Cases refuges (croix)'),
-    el('div', { class: 'aide' }, 'Les cases de départ et le centre sont toujours des refuges.'),
-    caseACocher('Coins du 2e anneau (classique)', r.refuges.coinsDeuxiemeAnneau, (v) => { r.refuges.coinsDeuxiemeAnneau = v; }),
-    caseACocher('Milieux des anneaux intérieurs', r.refuges.milieuxInterieurs, (v) => { r.refuges.milieuxInterieurs = v; }));
+  const refugesCarre = el('fieldset', {}, el('legend', {}, t('refuges')),
+    el('div', { class: 'aide' }, t('aideRefuges')),
+    caseACocher(t('coins2'), r.refuges.coinsDeuxiemeAnneau, (v) => { r.refuges.coinsDeuxiemeAnneau = v; }),
+    caseACocher(t('milieux'), r.refuges.milieuxInterieurs, (v) => { r.refuges.milieuxInterieurs = v; }));
   seulementCarre.push(refugesCarre);
   f.append(refugesCarre);
   montrerForme();
@@ -353,8 +396,8 @@ function construireFormulaire() {
 function verifierReglages() {
   const { erreurs } = normaliserRegles(edition);
   const vp = $('valeurs-possibles');
-  if (vp) vp.textContent = `Valeurs possibles avec ces dés : ${valeursPossibles(edition).join(', ')}`;
-  message('erreurs-regles', erreurs.join(' '), true);
+  if (vp) vp.textContent = t('valeursPossibles', { v: valeursPossibles(edition).join(', ') });
+  message('erreurs-regles', erreurs.map((e) => traduireErreur(e, t)).join(' '), true);
   $('btn-valider-regles').disabled = erreurs.length > 0;
   return erreurs.length === 0;
 }
@@ -365,7 +408,13 @@ $('btn-valider-regles').addEventListener('click', async () => {
   const { regles } = normaliserRegles(edition);
   memoire.ecrire('thaayam:regles:v5', JSON.stringify(regles));
   if (modeReglages === 'local') {
-    const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: $(`nom-${i}`).value.trim() || COULEURS[i].nom, ordi: ordiLocal[i] ? niveauOrdi : false }));
+    // Les noms par défaut sont gardés en français (« Rouge », « Ordi vert ») pour être traduits à l'affichage
+    const nomCanonique = (i) => {
+      const brut = $(`nom-${i}`).value.trim();
+      const defauts = [COULEURS[i].nom, `Ordi ${COULEURS[i].nom.toLowerCase()}`];
+      return defauts.find((d) => nomAffiche(d) === brut) || brut || COULEURS[i].nom;
+    };
+    const joueurs = Array.from({ length: nbLocal }, (_, i) => ({ nom: nomCanonique(i), ordi: ordiLocal[i] ? niveauOrdi : false }));
     session = { mode: 'local', etat: nouvellePartie(regles, joueurs) };
     aller('jeu');
     dessinerJeu();
@@ -373,14 +422,14 @@ $('btn-valider-regles').addEventListener('click', async () => {
   }
   const b = $('btn-valider-regles');
   b.disabled = true;
-  message('erreurs-regles', 'Création de la partie…');
+  message('erreurs-regles', t('creation'));
   try {
     const api = await obtenirEnLigne();
     const r = await api.creer(regles, pseudo());
     message('erreurs-regles', '');
     await ouvrirPartieEnLigne(r.code, r.place, r.jeton);
   } catch (e) {
-    message('erreurs-regles', e.message, true);
+    message('erreurs-regles', traduireErreur(e.message, t), true);
   } finally {
     b.disabled = false;
   }
@@ -437,15 +486,15 @@ function afficherPartieEnLigne() {
     $('salon-joueurs').innerHTML = '';
     p.joueurs.forEach((j, i) =>
       $('salon-joueurs').append(el('li', {}, el('span', { class: 'pastille', style: `background:${COULEURS[i].code}` }),
-        j.nom, i === session.place ? ' (toi)' : '', i === 0 ? ' — créateur' : '')));
+        nomAffiche(j.nom), i === session.place ? t('toi') : '', i === 0 ? t('createur') : '')));
     $('salon-regles').innerHTML = '';
-    resumeRegles(p.regles).forEach((l) => $('salon-regles').append(el('li', {}, l)));
+    resumeReglesTraduit(p.regles, t).forEach((l) => $('salon-regles').append(el('li', {}, l)));
     const createur = session.place === 0;
     $('btn-demarrer').hidden = !createur;
     $('btn-demarrer').disabled = p.joueurs.length < 2;
     message('salon-message', createur
-      ? (p.joueurs.length < 2 ? 'Envoie le code à tes amis. Il faut au moins 2 joueurs.' : `${p.joueurs.length} joueurs prêts (4 au maximum).`)
-      : 'En attente du créateur de la partie…');
+      ? (p.joueurs.length < 2 ? t('salonPeu') : t('salonPrets', { n: p.joueurs.length }))
+      : t('salonAttente'));
     return;
   }
   dessinerJeu();
@@ -454,13 +503,13 @@ function afficherPartieEnLigne() {
 $('btn-copier').addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(lienPartie());
-    message('salon-message', 'Lien copié !');
+    message('salon-message', t('lienCopie'));
   } catch {
     message('salon-message', lienPartie());
   }
 });
 $('btn-partager').addEventListener('click', async () => {
-  const texte = `Viens jouer au Thaayam avec moi ! Code : ${session.partie.code}`;
+  const texte = t('invitation', { code: session.partie.code });
   if (navigator.share) {
     try { await navigator.share({ title: 'Thaayam', text: texte, url: lienPartie() }); } catch { /* annulé */ }
   } else {
@@ -477,7 +526,7 @@ $('btn-demarrer').addEventListener('click', async () => {
     session.etat = session.partie.etat;
     afficherPartieEnLigne();
   } catch (e) {
-    message('salon-message', e.message, true);
+    message('salon-message', traduireErreur(e.message, t), true);
     $('btn-demarrer').disabled = false;
   }
 });
@@ -585,7 +634,7 @@ async function appliquer(nouvelEtat) {
     }
     message('jeu-message', '');
   } catch (e) {
-    message('jeu-message', e.message, true);
+    message('jeu-message', traduireErreur(e.message, t), true);
     try {
       const api = await obtenirEnLigne();
       session.partie = await api.lire(ancien.code);
@@ -637,21 +686,23 @@ $('btn-rejouer').addEventListener('click', () => {
 $('btn-son').addEventListener('click', () => { basculerSon(); majBoutonSon(); });
 $('btn-trajet').addEventListener('click', () => {
   voirTrajet = !voirTrajet;
-  $('btn-trajet').textContent = voirTrajet ? 'Cacher le trajet' : 'Voir le trajet';
+  majBoutonTrajet();
   dessinerJeu();
 });
-function majBoutonSon() { $('btn-son').textContent = sonActif() ? '🔊 Son' : '🔇 Muet'; }
+function majBoutonTrajet() { $('btn-trajet').textContent = voirTrajet ? t('cacherTrajet') : t('voirTrajet'); }
+function majBoutonSon() { $('btn-son').textContent = sonActif() ? t('son') : t('muet'); }
 majBoutonSon();
+majBoutonTrajet();
 
 function dessinerDes(etat) {
   const zone = $('des');
   zone.innerHTML = '';
   const l = etat.lancer || etat.dernierLancer;
   if (!l) {
-    zone.append(el('span', { class: 'attenue' }, 'Lance les dés'));
+    zone.append(el('span', { class: 'attenue' }, t('lanceLesDes')));
     return;
   }
-  if (!etat.lancer) zone.append(el('span', { class: 'attenue petit' }, `Dernier lancer (${etat.joueurs[l.joueur].nom}) :`));
+  if (!etat.lancer) zone.append(el('span', { class: 'attenue petit' }, t('dernierLancer', { nom: nomAffiche(etat.joueurs[l.joueur].nom) })));
   if (etat.regles.des.type === 'cauris') {
     l.detail.forEach((ouvert) => zone.append(cauri(ouvert)));
   } else {
@@ -662,7 +713,7 @@ function dessinerDes(etat) {
 
 /** Dé long (dayakattai) vu de dessus : une face avec 0 à 3 points. */
 function deLong(points) {
-  const d = el('div', { class: 'de-long', 'aria-label': `dé long : ${points}` });
+  const d = el('div', { class: 'de-long', 'aria-label': String(points) });
   if (points > 3) d.append(String(points));
   else for (let i = 0; i < points; i++) d.append(el('span', { class: 'point' }));
   return d;
@@ -700,7 +751,7 @@ function dessinerJeu() {
     bandeau.append(el('div', { class: `joueur${i === etat.tour && etat.phase !== 'fini' ? ' actif' : ''}` },
       el('span', { class: 'pastille', style: `background:${j.couleur}` }),
       el('div', { style: 'min-width:0' },
-        el('div', { class: 'nom' }, j.nom + (i === moi ? ' (toi)' : '')),
+        el('div', { class: 'nom' }, nomAffiche(j.nom) + (i === moi ? t('toi') : '')),
         el('div', { class: 'stats' }, `🏠 ${maison} · 🎯 ${arrives}/${j.pions.length} · ⚔️ ${j.captures}`))));
   });
 
@@ -709,12 +760,13 @@ function dessinerJeu() {
 
   // Consigne
   let consigne;
-  if (etat.phase === 'fini') consigne = `🏆 ${etat.joueurs[etat.gagnant].nom} a gagné !`;
-  else if (session.mode === 'ligne' && etat.tour !== moi) consigne = `C'est au tour de ${actif.nom}…`;
-  else if (animation) consigne = 'Le pion avance…';
-  else if (actif.ordi) consigne = `${actif.nom} réfléchit…`;
-  else if (etat.phase === 'lancer') consigne = `${session.mode === 'local' ? actif.nom + ', à toi' : 'À toi'} : lance les dés.`;
-  else consigne = 'Touche un pion qui clignote pour le déplacer.';
+  const nomActif = nomAffiche(actif.nom);
+  if (etat.phase === 'fini') consigne = t('gagne', { nom: nomAffiche(etat.joueurs[etat.gagnant].nom) });
+  else if (session.mode === 'ligne' && etat.tour !== moi) consigne = t('tourDe', { nom: nomActif });
+  else if (animation) consigne = t('pionAvance');
+  else if (actif.ordi) consigne = t('reflechit', { nom: nomActif });
+  else if (etat.phase === 'lancer') consigne = session.mode === 'local' ? t('aToiLocal', { nom: nomActif }) : t('aToi');
+  else consigne = t('touchePion');
   $('jeu-consigne').textContent = consigne;
   $('jeu-consigne').style.color = etat.phase === 'fini' ? '' : actif.couleur;
 
@@ -723,20 +775,20 @@ function dessinerJeu() {
   $('btn-rejouer').hidden = !(etat.phase === 'fini' && session.mode === 'local');
   const enLigneFinie = etat.phase === 'fini' && session.mode === 'ligne';
   $('btn-revanche').hidden = !enLigneFinie;
-  $('btn-revanche').textContent = session.partie && session.partie.revanche ? 'Rejoindre la revanche' : 'Revanche !';
+  $('btn-revanche').textContent = session.partie && session.partie.revanche ? t('rejoindreRevanche') : t('revanche');
   $('reactions').hidden = session.mode !== 'ligne';
   noterStats(etat);
   const entree = coups.find((c) => c.depuis === -1 && !c.groupe);
   $('btn-entrer').hidden = !entree;
   const groupe = coups.find((c) => c.groupe);
   $('btn-entrer-groupe').hidden = !groupe;
-  if (groupe) $('btn-entrer-groupe').textContent = `Faire entrer les ${groupe.groupe.length} pions mangés`;
+  if (groupe) $('btn-entrer-groupe').textContent = t('entrerGroupe', { n: groupe.groupe.length });
 
   const journal = $('journal');
   journal.innerHTML = '';
-  etat.journal.forEach((l) => journal.append(el('li', {}, l)));
+  etat.journal.forEach((l) => journal.append(el('li', {}, traduireJournal(l, t))));
   $('jeu-regles').innerHTML = '';
-  resumeRegles(etat.regles).forEach((l) => $('jeu-regles').append(el('li', {}, l)));
+  resumeReglesTraduit(etat.regles, t).forEach((l) => $('jeu-regles').append(el('li', {}, l)));
   faireJouerOrdi();
 }
 
@@ -749,20 +801,20 @@ $('btn-revanche').addEventListener('click', async () => {
     const code = await api.revanche(session.partie.code, session.jeton);
     await ouvrirPartieEnLigne(code, session.place, session.jeton);
   } catch (e) {
-    message('jeu-message', e.message, true);
+    message('jeu-message', traduireErreur(e.message, t), true);
   } finally {
     $('btn-revanche').disabled = false;
   }
 });
 
 REACTIONS.forEach((texte) => {
-  const b = el('button', { class: 'reaction' }, texte);
+  const b = el('button', { class: 'reaction', 'data-reaction': texte }, traduireReaction(texte, t));
   b.addEventListener('click', async () => {
     if (!session || session.mode !== 'ligne') return;
     try {
       await (await obtenirEnLigne()).reagir(session.partie.code, session.jeton, texte);
     } catch (e) {
-      message('jeu-message', e.message, true);
+      message('jeu-message', traduireErreur(e.message, t), true);
     }
   });
   $('reactions').append(b);
@@ -772,9 +824,9 @@ let minuteurBulle = null;
 /** Affiche un message rapide reçu (ou envoyé) pendant 3 secondes. */
 function montrerReaction(reaction) {
   const j = session && session.etat && session.etat.joueurs[reaction.place];
-  const nom = j ? j.nom : (session.partie.joueurs[reaction.place] || {}).nom || '?';
+  const nom = nomAffiche(j ? j.nom : (session.partie.joueurs[reaction.place] || {}).nom || '?');
   const bulle = $('bulle-reaction');
-  bulle.textContent = `${nom}${reaction.place === session.place ? ' (toi)' : ''} : ${reaction.texte}`;
+  bulle.textContent = `${nom}${reaction.place === session.place ? t('toi') : ''} : ${traduireReaction(reaction.texte, t)}`;
   bulle.style.borderColor = COULEURS[reaction.place] ? COULEURS[reaction.place].code : '';
   bulle.hidden = false;
   clearTimeout(minuteurBulle);
@@ -966,7 +1018,8 @@ async function demarrage() {
   try {
     await ouvrirPartieEnLigne(code.toUpperCase(), place.place, place.jeton);
   } catch (e) {
-    message('message-accueil', e.message, true);
+    message('message-accueil', traduireErreur(e.message, t), true);
   }
 }
+appliquerLangue();
 demarrage();

@@ -22,56 +22,61 @@
       <header class="titre">
         <div class="tamoul">தாயம்</div>
         <h1>Thaayam</h1>
-        <p class="attenue">Le jeu de plateau traditionnel tamoul</p>
+        <p class="attenue" data-i18n="sousTitre">Le jeu de plateau traditionnel tamoul</p>
       </header>
 
-      <label class="champ">Ton pseudo
-        <input id="pseudo" maxlength="20" autocomplete="nickname" placeholder="Ex. Kamal" />
+      <label class="champ"><span data-i18n="pseudo">Ton pseudo</span>
+        <input id="pseudo" maxlength="20" autocomplete="nickname" placeholder="Ex. Kamal" data-i18n-placeholder="pseudoExemple" />
       </label>
 
       <div class="carte">
-        <h2>Apparence</h2>
+        <h2 data-i18n="langue">Langue</h2>
+        <div id="choix-langue" class="choix-langue"></div>
+      </div>
+
+      <div class="carte">
+        <h2 data-i18n="apparence">Apparence</h2>
         <div class="choix-theme">
-          <button type="button" data-theme-choix="cristal">💎 Cristal</button>
-          <button type="button" data-theme-choix="bois">🪵 Bois</button>
+          <button type="button" data-theme-choix="cristal">💎 <span data-i18n="cristal">Cristal</span></button>
+          <button type="button" data-theme-choix="bois">🪵 <span data-i18n="bois">Bois</span></button>
         </div>
       </div>
 
       <div id="mes-stats" class="carte" hidden>
-        <h2>Mes statistiques</h2>
+        <h2 data-i18n="mesStats">Mes statistiques</h2>
         <ul id="liste-stats" class="liste-stats"></ul>
-        <button id="btn-stats-zero" class="discret petit">Remettre à zéro</button>
+        <button id="btn-stats-zero" class="discret petit" data-i18n="statsZero">Remettre à zéro</button>
       </div>
 
       <div id="mes-parties" class="carte" hidden>
-        <h2>Mes parties en ligne</h2>
+        <h2 data-i18n="mesParties">Mes parties en ligne</h2>
         <div id="liste-mes-parties" class="liste-parties"></div>
       </div>
 
       <div class="carte">
-        <h2>Jouer en ligne</h2>
-        <button id="btn-creer" class="principal">Créer une partie</button>
+        <h2 data-i18n="jouerEnLigne">Jouer en ligne</h2>
+        <button id="btn-creer" class="principal" data-i18n="creerPartie">Créer une partie</button>
         <div class="ligne">
-          <input id="code-rejoindre" maxlength="5" placeholder="CODE" autocapitalize="characters" />
-          <button id="btn-rejoindre">Rejoindre</button>
+          <input id="code-rejoindre" maxlength="5" placeholder="CODE" autocapitalize="characters" data-i18n-placeholder="code" />
+          <button id="btn-rejoindre" data-i18n="rejoindre">Rejoindre</button>
         </div>
         <p id="info-en-ligne" class="attenue petit"></p>
       </div>
 
       <div class="carte">
-        <h2>Jouer sur ce téléphone</h2>
-        <button id="btn-ordi" class="principal">Contre l'ordinateur</button>
-        <button id="btn-local">À plusieurs, chacun son tour</button>
+        <h2 data-i18n="jouerIci">Jouer sur ce téléphone</h2>
+        <button id="btn-ordi" class="principal" data-i18n="contreOrdi">Contre l'ordinateur</button>
+        <button id="btn-local" data-i18n="plusieurs">À plusieurs, chacun son tour</button>
       </div>
 
-      <a class="bouton-lien principal" href="regles.html">📖 Règles du jeu (avec dessins)</a>
+      <a class="bouton-lien principal" href="regles.html" data-i18n="reglesDessins">📖 Règles du jeu (avec dessins)</a>
       <p id="message-accueil" class="message"></p>
     </section>
 
     <!-- Réglages -->
     <section id="ecran-reglages" class="ecran" hidden>
-      <button class="retour" data-aller="accueil">← Retour</button>
-      <h2 id="titre-reglages">Règles de la partie</h2>
+      <button class="retour" data-aller="accueil" data-i18n="retour">← Retour</button>
+      <h2 id="titre-reglages" data-i18n="reglesPartie">Règles de la partie</h2>
       <form id="form-regles" class="formulaire"></form>
       <p id="erreurs-regles" class="message erreur"></p>
       <button id="btn-valider-regles" class="principal">Créer la partie</button>
@@ -79,18 +84,18 @@
 
     <!-- Salon d'attente -->
     <section id="ecran-salon" class="ecran" hidden>
-      <button class="retour" data-aller="accueil">← Accueil</button>
-      <p class="attenue">Code de la partie</p>
+      <button class="retour" data-aller="accueil" data-i18n="accueil">← Accueil</button>
+      <p class="attenue" data-i18n="codePartie">Code de la partie</p>
       <div id="salon-code" class="code-geant"></div>
       <div class="ligne">
-        <button id="btn-partager">Partager le lien</button>
-        <button id="btn-copier">Copier le lien</button>
+        <button id="btn-partager" data-i18n="partagerLien">Partager le lien</button>
+        <button id="btn-copier" data-i18n="copierLien">Copier le lien</button>
       </div>
-      <h3>Joueurs</h3>
+      <h3 data-i18n="joueurs">Joueurs</h3>
       <ul id="salon-joueurs" class="liste-joueurs"></ul>
-      <h3>Règles</h3>
+      <h3 data-i18n="regles">Règles</h3>
       <ul id="salon-regles" class="petit"></ul>
-      <button id="btn-demarrer" class="principal">Commencer la partie</button>
+      <button id="btn-demarrer" class="principal" data-i18n="commencerPartie">Commencer la partie</button>
       <p id="salon-message" class="message"></p>
     </section>
 
@@ -102,10 +107,10 @@
         <div id="des" class="des"></div>
         <div id="jeu-consigne" class="consigne"></div>
         <div class="ligne">
-          <button id="btn-lancer" class="principal">Lancer</button>
-          <button id="btn-entrer" hidden>Faire entrer un pion</button>
+          <button id="btn-lancer" class="principal" data-i18n="lancer">Lancer</button>
+          <button id="btn-entrer" hidden data-i18n="entrerPion">Faire entrer un pion</button>
           <button id="btn-entrer-groupe" hidden>Faire entrer les pions mangés</button>
-          <button id="btn-rejouer" class="principal" hidden>Rejouer</button>
+          <button id="btn-rejouer" class="principal" hidden data-i18n="rejouer">Rejouer</button>
           <button id="btn-revanche" class="principal" hidden>Revanche !</button>
         </div>
       </div>
@@ -113,7 +118,7 @@
       <div id="bulle-reaction" class="bulle-reaction" role="status" aria-live="polite" hidden></div>
       <p id="jeu-message" class="message"></p>
       <details class="carte" open>
-        <summary>Journal</summary>
+        <summary data-i18n="journal">Journal</summary>
         <ul id="journal" class="journal"></ul>
       </details>
       <div class="ligne">
@@ -121,11 +126,11 @@
         <button id="btn-son" class="discret">🔊 Son</button>
       </div>
       <div class="ligne">
-        <button id="btn-quitter" class="discret">Quitter la partie</button>
-        <button id="btn-regles-jeu" class="discret">Voir les règles de la partie</button>
+        <button id="btn-quitter" class="discret" data-i18n="quitter">Quitter la partie</button>
+        <button id="btn-regles-jeu" class="discret" data-i18n="voirRegles">Voir les règles de la partie</button>
       </div>
       <ul id="jeu-regles" class="petit" hidden></ul>
-      <a class="bouton-lien discret-lien" href="regles.html" target="_blank" rel="noopener">📖 Règles du jeu avec dessins</a>
+      <a class="bouton-lien discret-lien" href="regles.html" target="_blank" rel="noopener" data-i18n="reglesDessins2">📖 Règles du jeu avec dessins</a>
     </section>
   </main>
 

@@ -311,3 +311,14 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
   :root[data-skin="cristal"] .carte::after, :root[data-skin="cristal"] .zone-des::after,
   :root[data-skin="cristal"] .zone-plateau { animation: none; }
 }
+
+/* Choix de la langue */
+.choix-langue { display: flex; flex-wrap: wrap; gap: 8px; }
+.choix-langue button { flex: 1 1 30%; min-width: 0; padding: 10px 6px; }
+.choix-langue button.actif { background: var(--accent); color: var(--accent-texte); border-color: var(--accent); }
+:root[data-skin="cristal"] .choix-langue button.actif {
+  background: linear-gradient(180deg, #e9f8ff, #8fdcff 45%, #2f9fd6); color: var(--accent-texte); border-color: #bfeeff;
+}
+:root[data-skin="cristal"] .choix-theme button.actif {
+  background: linear-gradient(180deg, #e9f8ff, #8fdcff 45%, #2f9fd6); color: var(--accent-texte); border-color: #bfeeff;
+}

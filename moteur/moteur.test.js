@@ -386,6 +386,48 @@ test('statistiques : victoires, défaites, une seule fois par partie en ligne', 
   assert.equal(normaliserStats(JSON.parse(JSON.stringify(s))).ordi.fort.d, 2);
 });
 
+test('traductions : 5 langues complètes, journal, règles et statistiques', async () => {
+  const { TEXTES, LANGUES, traducteur, traduireJournal, traduireErreur, resumeReglesTraduit, resumeStatsTraduit, traduireNom } = await import('./i18n.js');
+  const { resumeRegles } = await import('./regles.js');
+  const { resumeStats, noterFin, statsVides } = await import('./stats.js');
+  assert.deepEqual(LANGUES.map((l) => l.code), ['fr', 'en', 'ta', 'hi', 'si']);
+  const cles = Object.keys(TEXTES.fr);
+  for (const { code } of LANGUES) {
+    assert.deepEqual(cles.filter((k) => !(k in TEXTES[code])), [], `clés manquantes en ${code}`);
+    assert.deepEqual(Object.keys(TEXTES[code]).filter((k) => !(k in TEXTES.fr)), [], `clés en trop en ${code}`);
+  }
+  // En français, les textes traduits sont identiques à ceux du moteur
+  const fr = traducteur('fr');
+  assert.deepEqual(resumeReglesTraduit(REGLES_PAR_DEFAUT, fr), resumeRegles(REGLES_PAR_DEFAUT));
+  let s = statsVides();
+  s = noterFin(s, { phase: 'fini', gagnant: 0, joueurs: [{ nom: 'A' }, { nom: 'O', ordi: 'fort' }] }, { mode: 'local' });
+  s = noterFin(s, { phase: 'fini', gagnant: 1, joueurs: [{ nom: 'A' }, { nom: 'B' }] }, { mode: 'ligne', place: 0, code: 'X' });
+  assert.deepEqual(resumeStatsTraduit(s, fr), resumeStats(s));
+  // Le journal d'une vraie partie se traduit entièrement (aucune ligne laissée en français)
+  const en = traducteur('en');
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'Rouge' }, { nom: 'Ordi vert', ordi: true }]);
+  let graine = 3;
+  const rng = () => ((graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const lignes = new Set();
+  for (let i = 0; i < 4000 && e.phase !== 'fini'; i++) {
+    if (e.phase === 'lancer') e = lancer(e, rng);
+    else { const c = coupsPossibles(e)[0]; e = jouer(e, c.pion, !!c.groupe); }
+    e.journal.forEach((l) => lignes.add(l));
+  }
+  for (const l of lignes) {
+    const tr = traduireJournal(l, en);
+    assert.notEqual(tr, l, `non traduit : ${l}`);
+    assert.ok(!/ fait | rejoue|pion/.test(tr), `reste du français : ${tr}`);
+  }
+  assert.equal(traduireJournal('Ordi vert fait 5.', en), 'Computer green throws 5.');
+  assert.equal(traduireJournal('Rouge capture 2 pions de Vert et Bleu !', en), 'Red captures 2 pieces from Green and Blue!');
+  assert.equal(traduireNom('Kamal', en), 'Kamal');
+  assert.equal(traduireErreur("Ce n'est pas ton tour", en), "It's not your turn.");
+  assert.equal(traduireErreur("Aucune valeur d'entrée ne peut sortir avec ces dés (valeurs possibles : 2, 3).", en),
+    'No entry value can come up with these dice (possible values: 2, 3).');
+  assert.equal(traducteur('ta')('joueurN', { n: 2 }), 'வீரர் 2');
+});
+
 test('étapes d’un déplacement (animation)', async () => {
   const { etapesCoup } = await import('./partie.js');
   const g = geometrie(REGLES_PAR_DEFAUT, 2);
