@@ -150,15 +150,15 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 
 /* ===================================================================== */
 /* Thème « Cristal » : tableau de bord haut de gamme — verre fumé noir,   */
-/* lueurs cyan, chiffres dorés, fins anneaux chromés.                     */
+/* lueurs cyan, chiffres blancs, fins anneaux chromés.                     */
 /* ===================================================================== */
 :root[data-skin="cristal"] {
   --fond: #04070b;
   --surface: rgba(14, 24, 34, 0.72);
   --texte: #e9f3fb;
   --attenue: #8ea7b9;
-  --accent: #f5b72a;
-  --accent-texte: #120c02;
+  --accent: #7fdcff;
+  --accent-texte: #03121c;
   --trait: rgba(95, 212, 255, 0.28);
   --erreur: #ff5a5a;
   --succes: #4ee08f;
@@ -177,7 +177,7 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 }
 :root[data-skin="cristal"] .titre h1 {
   font-family: var(--police-titre); font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase;
-  color: var(--accent); text-shadow: 0 0 18px rgba(245, 183, 42, 0.45);
+  color: #f2f8fc; text-shadow: 0 0 18px rgba(95, 212, 255, 0.55);
 }
 :root[data-skin="cristal"] .tamoul { color: var(--cyan); text-shadow: 0 0 14px rgba(95, 212, 255, 0.55); }
 :root[data-skin="cristal"] h2 { font-family: var(--police-titre); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; font-size: 1rem; color: var(--cyan); }
@@ -201,8 +201,8 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 :root[data-skin="cristal"] button.principal,
 :root[data-skin="cristal"] a.bouton-lien.principal,
 :root[data-skin="cristal"] .choix button.actif {
-  background: linear-gradient(180deg, #ffd56a, #f5b72a 55%, #c98d10); color: var(--accent-texte);
-  border: 1px solid #ffd56a; box-shadow: 0 0 18px rgba(245, 183, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: linear-gradient(180deg, #e9f8ff, #8fdcff 45%, #2f9fd6); color: var(--accent-texte);
+  border: 1px solid #bfeeff; box-shadow: 0 0 18px rgba(95, 212, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 :root[data-skin="cristal"] button.discret { background: transparent; border-color: transparent; color: var(--cyan); }
 :root[data-skin="cristal"] input,
@@ -219,7 +219,7 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 }
 :root[data-skin="cristal"] #plateau,
 :root[data-skin="cristal"] .dessin-plateau svg { border-radius: 15px; }
-/* Dés : barres de verre, points cyan lumineux, valeur dorée façon compteur */
+/* Dés : barres de verre, points cyan lumineux, grande valeur blanche façon compteur */
 :root[data-skin="cristal"] .de-long {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02)), #0d1a25;
   border: 1px solid rgba(95, 212, 255, 0.55); box-shadow: 0 0 12px rgba(95, 212, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -228,13 +228,13 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 :root[data-skin="cristal"] .de-long .point { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
 :root[data-skin="cristal"] .des .valeur {
   font-family: var(--police-titre); font-weight: 500; font-style: italic; font-size: 2.6rem;
-  color: var(--accent); text-shadow: 0 0 16px rgba(245, 183, 42, 0.5);
+  color: #f2f8fc; text-shadow: 0 0 16px rgba(95, 212, 255, 0.6);
 }
 :root[data-skin="cristal"] .joueur.actif { border-color: var(--cyan); box-shadow: 0 0 16px rgba(95, 212, 255, 0.35); }
-:root[data-skin="cristal"] .code-geant { font-family: var(--police-titre); color: var(--accent); text-shadow: 0 0 18px rgba(245, 183, 42, 0.5); }
+:root[data-skin="cristal"] .code-geant { font-family: var(--police-titre); color: #f2f8fc; text-shadow: 0 0 18px rgba(95, 212, 255, 0.6); }
 :root[data-skin="cristal"] .bulle-reaction { background: rgba(8, 16, 24, 0.92); color: var(--texte); border-color: var(--cyan); box-shadow: 0 0 24px rgba(95, 212, 255, 0.35); }
 :root[data-skin="cristal"] .tableau-des td { background: rgba(8, 16, 24, 0.6); }
-:root[data-skin="cristal"] .entree { background: rgba(245, 183, 42, 0.85); color: #120c02; }
+:root[data-skin="cristal"] .entree { background: rgba(127, 220, 255, 0.8); color: #03121c; }
 :root[data-skin="cristal"] .rejoue { background: rgba(78, 224, 143, 0.75); color: #04140b; }
 :root[data-skin="cristal"] .kaapal { background: rgba(142, 167, 185, 0.45); color: var(--texte); }
 :root[data-skin="cristal"] .journal li { border-bottom-color: rgba(95, 212, 255, 0.15); }

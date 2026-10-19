@@ -36,7 +36,7 @@ Tout est réglable avant la partie : plateau en croix ou carré (5/7/9), 1 à 12
 relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pion par case ou empilement.
 
 ## Apparence
-- Thème **Cristal** (par défaut) : style tableau de bord haut de gamme, verre fumé, lueurs cyan, chiffres dorés.
+- Thème **Cristal** (par défaut) : style tableau de bord haut de gamme, verre fumé, lueurs cyan, chiffres blancs.
 - Thème **Bois** : plateau traditionnel. Le choix se fait sur l'accueil (« Apparence ») et reste mémorisé.
 
 ## Confort de jeu (page web)

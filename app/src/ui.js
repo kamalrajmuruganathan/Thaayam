@@ -10,10 +10,10 @@ const SOMBRE = {
   accent: '#e0a15c', accentTexte: '#1d1611', trait: '#4a3a2c', erreur: '#ff8a80',
 };
 
-// Thème « Cristal » : tableau de bord haut de gamme (verre fumé, cyan, doré)
+// Thème « Cristal » : tableau de bord haut de gamme (verre fumé, cyan, blanc)
 const CRISTAL = {
   fond: '#04070b', surface: '#0e1822', texte: '#e9f3fb', attenue: '#8ea7b9',
-  accent: '#f5b72a', accentTexte: '#120c02', trait: '#1f4a63', erreur: '#ff5a5a', cyan: '#5fd4ff',
+  accent: '#7fdcff', accentTexte: '#03121c', trait: '#1f4a63', erreur: '#ff5a5a', cyan: '#5fd4ff',
 };
 
 /** Thème choisi ('cristal' ou 'bois'), fourni par App.js. */

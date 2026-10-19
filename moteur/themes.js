@@ -1,6 +1,6 @@
 /**
  * Thèmes visuels du plateau (données pures, partagées par la page web et l'appli).
- * « cristal » : tableau de bord haut de gamme (verre fumé, lueurs cyan, chiffres dorés).
+ * « cristal » : tableau de bord haut de gamme (verre fumé, lueurs cyan, chiffres blancs).
  * « bois » : plateau traditionnel en bois.
  */
 export const THEMES_PLATEAU = {
@@ -13,7 +13,7 @@ export const THEMES_PLATEAU = {
     diagonaleLueur: '#5fd4ff',
     arc: '#123247',
     arcLueur: '#7fe0ff',
-    ecriture: '#f5b72a',
+    ecriture: '#bfeeff',
     caseFond: '#0f1b26',
     caseTrait: '#2c6f93',
     teinteOpacite: 0.42,
@@ -24,9 +24,9 @@ export const THEMES_PLATEAU = {
     pionTrait: '#e8f6ff',
     pionReflet: '#ffffff',
     jouable: '#ffffff',
-    arrive: '#f5b72a',
-    arriveTrait: '#7a5418',
-    dernierCoup: '#f5b72a',
+    arrive: '#e6f7ff',
+    arriveTrait: '#5fd4ff',
+    dernierCoup: '#7fdcff',
     trajetOpacite: 0.9,
     lueur: true, // halo lumineux autour des pions et des lignes
   },
