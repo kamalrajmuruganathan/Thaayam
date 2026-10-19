@@ -8,6 +8,7 @@ import { choisirCoup } from './moteur/ia.js';
 import { sons, sonActif, basculerSon } from './sons.js';
 import { creerEnLigne, REACTIONS } from './moteur/en-ligne.js';
 import { noterFin, resumeStats, normaliserStats, statsVides } from './moteur/stats.js';
+import { themePlateau, THEME_PAR_DEFAUT } from './moteur/themes.js';
 import { SUPABASE_URL, SUPABASE_CLE_PUBLIQUE } from './config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -18,6 +19,24 @@ const memoire = {
   lire(k) { try { return localStorage.getItem(k); } catch { return null; } },
   ecrire(k, v) { try { localStorage.setItem(k, v); } catch { /* navigation privée */ } },
 };
+
+// ---------------------------------------------------------------- thème (Cristal ou Bois)
+function themeChoisi() {
+  const t = memoire.lire('thaayam:theme');
+  return t === 'bois' || t === 'cristal' ? t : THEME_PAR_DEFAUT;
+}
+function appliquerTheme() {
+  document.documentElement.dataset.skin = themeChoisi();
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', themeChoisi() === 'cristal' ? '#05080c' : '#7a3e12');
+  document.querySelectorAll('[data-theme-choix]').forEach((b) => b.classList.toggle('actif', b.dataset.themeChoix === themeChoisi()));
+}
+document.querySelectorAll('[data-theme-choix]').forEach((b) => b.addEventListener('click', () => {
+  memoire.ecrire('thaayam:theme', b.dataset.themeChoix);
+  appliquerTheme();
+  if (session && session.etat && !$('ecran-jeu').hidden) dessinerJeu();
+}));
+appliquerTheme();
 const stockageAsync = {
   lire: async (k) => memoire.lire(k),
   ecrire: async (k, v) => memoire.ecrire(k, v),
@@ -776,6 +795,26 @@ function dessinerPlateau(etat, g, coups) {
   plateau.innerHTML = '';
   plateau.setAttribute('viewBox', `0 0 ${n * S} ${n * S}`);
   const zone = zoneCase(g, S);
+  const T = themePlateau(themeChoisi());
+
+  // Dégradés et halo lumineux du thème
+  const defs = svg('defs', {}, plateau);
+  if (T.fondLueur) {
+    const rg = svg('radialGradient', { id: 'fond-lueur', cx: '50%', cy: '50%', r: '60%' }, defs);
+    svg('stop', { offset: '0%', 'stop-color': T.fondLueur }, rg);
+    svg('stop', { offset: '100%', 'stop-color': T.fond }, rg);
+    const lg = svg('linearGradient', { id: 'verre', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    svg('stop', { offset: '0%', 'stop-color': '#ffffff', 'stop-opacity': 0.10 }, lg);
+    svg('stop', { offset: '55%', 'stop-color': '#ffffff', 'stop-opacity': 0 }, lg);
+  }
+  if (T.lueur) {
+    const f = svg('filter', { id: 'lueur', x: '-50%', y: '-50%', width: '200%', height: '200%' }, defs);
+    svg('feGaussianBlur', { stdDeviation: 4, result: 'flou' }, f);
+    const m = svg('feMerge', {}, f);
+    svg('feMergeNode', { in: 'flou' }, m);
+    svg('feMergeNode', { in: 'SourceGraphic' }, m);
+  }
+  const avecLueur = T.lueur ? { filter: 'url(#lueur)' } : {};
 
   // Couleur de chaque joueur : sa case de départ, sa colonne d'arrivée (croix) et ses croix
   const teintes = new Map();
@@ -786,23 +825,23 @@ function dessinerPlateau(etat, g, coups) {
   });
 
   if (g.forme === 'croix') {
-    svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: '#b8653a' }, plateau);
+    svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: T.fondLueur ? 'url(#fond-lueur)' : T.fond }, plateau);
     // Diagonales : des coins du plateau jusqu'au centre, à travers les cases de coin
     const { r: r0, c: c0, taille: t } = g.centre;
     const coins = [[0, 0, c0, r0], [n, 0, c0 + t, r0], [0, n, c0, r0 + t], [n, n, c0 + t, r0 + t]];
     coins.forEach(([x1, y1, x2, y2]) => {
-      svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#5a2e10', 'stroke-width': 10, 'stroke-linecap': 'round' }, plateau);
-      svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#e9b77f', 'stroke-width': 3, opacity: 0.7 }, plateau);
+      svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: T.diagonale, 'stroke-width': 10, 'stroke-linecap': 'round' }, plateau);
+      svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: T.diagonaleLueur, 'stroke-width': 3, opacity: 0.7, ...avecLueur }, plateau);
     });
     // 3 arcs à chaque coin du centre : passage d'un bras au suivant
     arcsCroix(g, S).forEach((d) => {
-      svg('path', { d, fill: 'none', stroke: '#5a2e10', 'stroke-width': 7, 'stroke-linecap': 'round' }, plateau);
-      svg('path', { d, fill: 'none', stroke: '#f3d9b0', 'stroke-width': 2.5, opacity: 0.8 }, plateau);
+      svg('path', { d, fill: 'none', stroke: T.arc, 'stroke-width': 7, 'stroke-linecap': 'round' }, plateau);
+      svg('path', { d, fill: 'none', stroke: T.arcLueur, 'stroke-width': 2.5, opacity: 0.85, ...avecLueur }, plateau);
     });
     // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
     [['தாயம்', 2.4], ['விளையாட்டு', n - 2.4]].forEach(([texte, cx]) => {
       const t = svg('text', { x: cx * S, y: 0.62 * S, 'text-anchor': 'middle', 'font-size': 0.48 * S, 'font-weight': 700,
-        fill: '#fbe9cf', opacity: 0.9, 'font-family': "'Noto Sans Tamil', 'Latha', sans-serif" }, plateau);
+        fill: T.ecriture, opacity: 0.9, 'font-family': "'Noto Sans Tamil', 'Latha', sans-serif", ...avecLueur }, plateau);
       t.textContent = texte;
     });
   }
@@ -811,22 +850,23 @@ function dessinerPlateau(etat, g, coups) {
     if (g.forme === 'carre' && r === g.centre.r && c === g.centre.c) return;
     const x = c * S, y = r * S;
     const teinte = teintes.get(k);
-    svg('rect', { x: x + 2, y: y + 2, width: S - 4, height: S - 4, rx: 6, fill: '#f8e9c8', stroke: '#4a2a12', 'stroke-width': 3 }, plateau);
-    if (teinte) svg('rect', { x: x + 2, y: y + 2, width: S - 4, height: S - 4, rx: 6, fill: teinte, 'fill-opacity': 0.3 }, plateau);
+    svg('rect', { x: x + 2, y: y + 2, width: S - 4, height: S - 4, rx: 6, fill: T.caseFond, stroke: T.caseTrait, 'stroke-width': 3 }, plateau);
+    if (teinte) svg('rect', { x: x + 2, y: y + 2, width: S - 4, height: S - 4, rx: 6, fill: teinte, 'fill-opacity': T.teinteOpacite }, plateau);
+    if (T.fondLueur) svg('rect', { x: x + 4, y: y + 4, width: S - 8, height: S - 8, rx: 5, fill: 'url(#verre)' }, plateau);
     if (g.refuges.has(k)) {
       svg('path', { d: `M${x + 14} ${y + 14}L${x + S - 14} ${y + S - 14}M${x + S - 14} ${y + 14}L${x + 14} ${y + S - 14}`,
-        stroke: teinte || '#6b3a14', 'stroke-width': 7, 'stroke-linecap': 'round', opacity: teinte ? 0.95 : 0.6 }, plateau);
+        stroke: teinte || T.croixRefuge, 'stroke-width': 7, 'stroke-linecap': 'round', opacity: teinte ? 0.95 : 0.6 }, plateau);
     }
   });
 
   // Centre (pazham)
   const ct = zone(cle([g.chemins[0][g.arrivee][0], g.chemins[0][g.arrivee][1]]));
-  svg('rect', { x: ct.x + 2, y: ct.y + 2, width: ct.w - 4, height: ct.w - 4, rx: 8, fill: g.forme === 'croix' ? '#fbf3e2' : '#c98b3c',
-    stroke: '#4a2a12', 'stroke-width': 3 }, plateau);
+  svg('rect', { x: ct.x + 2, y: ct.y + 2, width: ct.w - 4, height: ct.w - 4, rx: 8, fill: g.forme === 'croix' ? T.centreFond : '#c98b3c',
+    stroke: T.centreTrait, 'stroke-width': 3, ...(g.forme === 'croix' ? avecLueur : {}) }, plateau);
   svg('path', { d: g.forme === 'croix'
     ? `M${ct.x + 6} ${ct.y + 6}L${ct.x + ct.w - 6} ${ct.y + ct.w - 6}M${ct.x + ct.w - 6} ${ct.y + 6}L${ct.x + 6} ${ct.y + ct.w - 6}`
     : `M${ct.x + 50} ${ct.y + 14}L${ct.x + 86} ${ct.y + 50}L${ct.x + 50} ${ct.y + 86}L${ct.x + 14} ${ct.y + 50}Z`,
-  fill: 'none', stroke: g.forme === 'croix' ? '#4a2a12' : '#fff3da', 'stroke-width': g.forme === 'croix' ? 3 : 4, opacity: 0.8 }, plateau);
+  fill: 'none', stroke: g.forme === 'croix' ? T.centreCroix : '#fff3da', 'stroke-width': g.forme === 'croix' ? 3 : 4, opacity: 0.8 }, plateau);
 
   // Trajet d'un joueur (aide) : ligne pointillée avec des flèches
   if (voirTrajet) {
@@ -836,8 +876,6 @@ function dessinerPlateau(etat, g, coups) {
     const centre = (p) => { const z = zone(cle(p)); return `${z.x + z.w / 2},${z.y + z.w / 2}`; };
     const ch = g.chemins[qui];
     const couleur = etat.joueurs[qui].couleur;
-    let defs = plateau.querySelector('defs');
-    if (!defs) defs = svg('defs', {}, plateau);
     const marqueur = svg('marker', { id: 'fleche', viewBox: '0 0 10 10', refX: 5, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto' }, defs);
     svg('path', { d: 'M0 0L10 5L0 10Z', fill: couleur }, marqueur);
     svg('polyline', { points: ch.map(centre).join(' '), fill: 'none', stroke: couleur, 'stroke-width': 8,
@@ -852,7 +890,7 @@ function dessinerPlateau(etat, g, coups) {
   if (etat.dernierCoup) {
     const z = zone(cle(g.chemins[etat.dernierCoup.joueur][etat.dernierCoup.vers]));
     svg('rect', { x: z.x + 6, y: z.y + 6, width: z.w - 12, height: z.w - 12, rx: 8, fill: 'none',
-      stroke: etat.joueurs[etat.dernierCoup.joueur].couleur, 'stroke-width': 5, opacity: 0.8 }, plateau);
+      stroke: T.dernierCoup || etat.joueurs[etat.dernierCoup.joueur].couleur, 'stroke-width': 5, opacity: 0.8, ...avecLueur }, plateau);
   }
 
   // Destinations possibles
@@ -872,9 +910,9 @@ function dessinerPlateau(etat, g, coups) {
     const j = etat.joueurs[p.joueur];
     const jouable = !p.arrive && !!entree && p.joueur === etat.tour;
     const grp = svg('g', { class: jouable ? 'pion-jouable' : '' }, plateau);
-    if (p.arrive) svg('circle', { cx: p.cx, cy: p.cy, r: p.r + 6, fill: '#f5c518', stroke: '#7a5418', 'stroke-width': 2 }, grp);
-    svg('circle', { cx: p.cx, cy: p.cy, r: p.r, fill: j.couleur, stroke: jouable ? '#fff' : '#2b1d10', 'stroke-width': jouable ? 5 : 2.5 }, grp);
-    svg('circle', { cx: p.cx - p.r * 0.3, cy: p.cy - p.r * 0.3, r: p.r * 0.3, fill: '#fff', opacity: 0.35 }, grp);
+    if (p.arrive) svg('circle', { cx: p.cx, cy: p.cy, r: p.r + 6, fill: T.arrive, stroke: T.arriveTrait, 'stroke-width': 2, ...avecLueur }, grp);
+    svg('circle', { cx: p.cx, cy: p.cy, r: p.r, fill: j.couleur, stroke: jouable ? T.jouable : T.pionTrait, 'stroke-width': jouable ? 5 : 2.5, ...avecLueur }, grp);
+    svg('circle', { cx: p.cx - p.r * 0.3, cy: p.cy - p.r * 0.3, r: p.r * 0.3, fill: T.pionReflet, opacity: 0.35 }, grp);
     if (jouable) {
       const cible = svg('circle', { cx: p.cx, cy: p.cy, r: Math.max(p.r, 40), fill: 'transparent' }, grp);
       cible.style.cursor = 'pointer';
@@ -893,8 +931,8 @@ function dessinerPlateau(etat, g, coups) {
       const j = etat.joueurs[p.joueur];
       const jouable = jouables.has(`${p.joueur}:${p.pion}`);
       const grp = svg('g', { class: jouable ? 'pion-jouable' : '' }, plateau);
-      svg('circle', { cx, cy, r: rayon, fill: j.couleur, stroke: jouable ? '#fff' : '#2b1d10', 'stroke-width': jouable ? 6 : 3 }, grp);
-      svg('circle', { cx: cx - rayon * 0.3, cy: cy - rayon * 0.3, r: rayon * 0.3, fill: '#fff', opacity: 0.35 }, grp);
+      svg('circle', { cx, cy, r: rayon, fill: j.couleur, stroke: jouable ? T.jouable : T.pionTrait, 'stroke-width': jouable ? 6 : 3, ...avecLueur }, grp);
+      svg('circle', { cx: cx - rayon * 0.3, cy: cy - rayon * 0.3, r: rayon * 0.3, fill: T.pionReflet, opacity: 0.35 }, grp);
       if (jouable) {
         // zone de toucher plus large que le pion
         const cible = svg('circle', { cx, cy, r: Math.max(rayon, 60), fill: 'transparent' }, grp);

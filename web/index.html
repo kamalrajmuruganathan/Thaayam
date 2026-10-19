@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-skin="cristal">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -11,6 +11,8 @@
   <link rel="apple-touch-icon" href="icone-180.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Thaayam" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,400;0,500;0,600;1,500&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -26,6 +28,14 @@
       <label class="champ">Ton pseudo
         <input id="pseudo" maxlength="20" autocomplete="nickname" placeholder="Ex. Kamal" />
       </label>
+
+      <div class="carte">
+        <h2>Apparence</h2>
+        <div class="choix-theme">
+          <button type="button" data-theme-choix="cristal">💎 Cristal</button>
+          <button type="button" data-theme-choix="bois">🪵 Bois</button>
+        </div>
+      </div>
 
       <div id="mes-stats" class="carte" hidden>
         <h2>Mes statistiques</h2>

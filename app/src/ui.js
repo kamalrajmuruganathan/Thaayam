@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import { Pressable, Text, TextInput, View, StyleSheet, useColorScheme } from 'react-native';
 
 const CLAIR = {
@@ -10,8 +10,23 @@ const SOMBRE = {
   accent: '#e0a15c', accentTexte: '#1d1611', trait: '#4a3a2c', erreur: '#ff8a80',
 };
 
+// Thème « Cristal » : tableau de bord haut de gamme (verre fumé, cyan, doré)
+const CRISTAL = {
+  fond: '#04070b', surface: '#0e1822', texte: '#e9f3fb', attenue: '#8ea7b9',
+  accent: '#f5b72a', accentTexte: '#120c02', trait: '#1f4a63', erreur: '#ff5a5a', cyan: '#5fd4ff',
+};
+
+/** Thème choisi ('cristal' ou 'bois'), fourni par App.js. */
+export const ThemeContexte = createContext('cristal');
+export function useTheme() {
+  return useContext(ThemeContexte);
+}
+
 export function useCouleurs() {
-  return useColorScheme() === 'dark' ? SOMBRE : CLAIR;
+  const theme = useTheme();
+  const schema = useColorScheme();
+  if (theme === 'cristal') return CRISTAL;
+  return schema === 'dark' ? SOMBRE : CLAIR;
 }
 
 export function Bouton({ titre, onPress, principal, desactive, style }) {

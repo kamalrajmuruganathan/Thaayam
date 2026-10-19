@@ -35,6 +35,10 @@ Par défaut : le **Thaayam / Dayakattai classique** du Tamil Nadu.
 Tout est réglable avant la partie : plateau en croix ou carré (5/7/9), 1 à 12 pions, dés longs ou cauris, valeurs d'entrée et de
 relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pion par case ou empilement.
 
+## Apparence
+- Thème **Cristal** (par défaut) : style tableau de bord haut de gamme, verre fumé, lueurs cyan, chiffres dorés.
+- Thème **Bois** : plateau traditionnel. Le choix se fait sur l'accueil (« Apparence ») et reste mémorisé.
+
 ## Confort de jeu (page web)
 - Les pions avancent case par case ; sons des dés, des captures, de l'arrivée et de la victoire
   (bouton 🔊 pour couper), vibration du téléphone quand un pion est mangé.

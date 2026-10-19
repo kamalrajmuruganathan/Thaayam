@@ -2,6 +2,12 @@
 import { geometrie, zoneCase, arcsCroix } from './moteur/partie.js';
 import { REGLES_PAR_DEFAUT, COULEURS, valeurDesLongs, faitRejouer } from './moteur/regles.js';
 import { cle } from './moteur/plateau.js';
+import { themePlateau, THEME_PAR_DEFAUT } from './moteur/themes.js';
+
+// Même thème que le jeu (Cristal ou Bois), mémorisé sur l'appareil
+const nomTheme = (() => { try { const t = localStorage.getItem('thaayam:theme'); return t === 'bois' || t === 'cristal' ? t : THEME_PAR_DEFAUT; } catch { return THEME_PAR_DEFAUT; } })();
+document.documentElement.dataset.skin = nomTheme;
+const T = themePlateau(nomTheme);
 
 const SVGNS = 'http://www.w3.org/2000/svg';
 const S = 100;
@@ -36,29 +42,29 @@ function plateau(idSvg, legende) {
     teintes.set(cle(ch[0]), COULEURS[i].code);
     ch.slice(0, g.debutBoucle + 1).forEach((q) => teintes.set(cle(q), COULEURS[i].code));
   }
-  svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: '#b8653a' }, p);
+  svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: T.fond }, p);
   const { r: r0, c: c0, taille: t } = g.centre;
   [[0, 0, c0, r0], [n, 0, c0 + t, r0], [0, n, c0, r0 + t], [n, n, c0 + t, r0 + t]].forEach(([x1, y1, x2, y2]) => {
-    svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: '#5a2e10', 'stroke-width': 10, 'stroke-linecap': 'round' }, p);
+    svg('line', { x1: x1 * S, y1: y1 * S, x2: x2 * S, y2: y2 * S, stroke: T.diagonale, 'stroke-width': 10, 'stroke-linecap': 'round' }, p);
   });
-  arcsCroix(g, S).forEach((d) => svg('path', { d, fill: 'none', stroke: '#5a2e10', 'stroke-width': 7, 'stroke-linecap': 'round' }, p));
+  arcsCroix(g, S).forEach((d) => { svg('path', { d, fill: 'none', stroke: T.arc, 'stroke-width': 7, 'stroke-linecap': 'round' }, p); svg('path', { d, fill: 'none', stroke: T.arcLueur, 'stroke-width': 2.5, opacity: 0.85 }, p); });
   g.cases.forEach((k) => {
     const [r, c] = k.split(',').map(Number);
-    svg('rect', { x: c * S + 2, y: r * S + 2, width: S - 4, height: S - 4, rx: 6, fill: '#f8e9c8', stroke: '#4a2a12', 'stroke-width': 3 }, p);
-    if (teintes.has(k)) svg('rect', { x: c * S + 2, y: r * S + 2, width: S - 4, height: S - 4, rx: 6, fill: teintes.get(k), 'fill-opacity': 0.3 }, p);
+    svg('rect', { x: c * S + 2, y: r * S + 2, width: S - 4, height: S - 4, rx: 6, fill: T.caseFond, stroke: T.caseTrait, 'stroke-width': 3 }, p);
+    if (teintes.has(k)) svg('rect', { x: c * S + 2, y: r * S + 2, width: S - 4, height: S - 4, rx: 6, fill: teintes.get(k), 'fill-opacity': T.teinteOpacite }, p);
   });
   const ct = zone(cle(g.chemins[0][g.arrivee]));
-  svg('rect', { x: ct.x + 2, y: ct.y + 2, width: ct.w - 4, height: ct.w - 4, rx: 8, fill: '#fbf3e2', stroke: '#4a2a12', 'stroke-width': 3 }, p);
+  svg('rect', { x: ct.x + 2, y: ct.y + 2, width: ct.w - 4, height: ct.w - 4, rx: 8, fill: T.centreFond, stroke: T.centreTrait, 'stroke-width': 3 }, p);
   svg('path', { d: `M${ct.x + 6} ${ct.y + 6}L${ct.x + ct.w - 6} ${ct.y + ct.w - 6}M${ct.x + ct.w - 6} ${ct.y + 6}L${ct.x + 6} ${ct.y + ct.w - 6}`,
-    stroke: '#4a2a12', 'stroke-width': 3, opacity: 0.5 }, p);
+    stroke: T.centreCroix, 'stroke-width': 3, opacity: 0.5 }, p);
   return p;
 }
 
 function pion(p, joueur, pos, nombre = 1, decalage = [0, 0]) {
   const [x, y] = milieu(g.chemins[joueur][pos]);
   const cx = x + decalage[0], cy = y + decalage[1];
-  if (nombre > 1) svg('circle', { cx: cx + 8, cy: cy - 8, r: 34, fill: COULEURS[joueur].code, stroke: '#2b1d10', 'stroke-width': 4 }, p);
-  svg('circle', { cx, cy, r: 34, fill: COULEURS[joueur].code, stroke: '#2b1d10', 'stroke-width': 4 }, p);
+  if (nombre > 1) svg('circle', { cx: cx + 8, cy: cy - 8, r: 34, fill: COULEURS[joueur].code, stroke: T.pionTrait, 'stroke-width': 4 }, p);
+  svg('circle', { cx, cy, r: 34, fill: COULEURS[joueur].code, stroke: T.pionTrait, 'stroke-width': 4 }, p);
   if (nombre > 1) texte(p, cx, cy, `×${nombre}`, { 'font-size': 30, fill: '#fff' });
 }
 
@@ -93,8 +99,8 @@ function fleche(p, de, a, couleur, id) {
     const [x, y] = milieu(k.split(',').map(Number));
     const colonne = liste[0] <= g.debutBoucle || liste[0] >= g.longueurExterieur;
     const etiquette = liste.join('/');
-    svg('circle', { cx: x, cy: y, r: liste[0] === g.arrivee ? 40 : 32, fill: colonne ? COULEURS[0].code : '#fffaf1', stroke: COULEURS[0].code, 'stroke-width': 4 }, p);
-    texte(p, x, y, etiquette, { 'font-size': etiquette.length > 3 ? 21 : 30, fill: colonne ? '#fff' : '#2b1d10' });
+    svg('circle', { cx: x, cy: y, r: liste[0] === g.arrivee ? 40 : 32, fill: colonne ? COULEURS[0].code : (T.lueur ? '#0f1b26' : '#fffaf1'), stroke: COULEURS[0].code, 'stroke-width': 4 }, p);
+    texte(p, x, y, etiquette, { 'font-size': etiquette.length > 3 ? 21 : 30, fill: colonne ? '#fff' : (T.lueur ? '#e9f3fb' : '#2b1d10') });
   });
 }
 

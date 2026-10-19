@@ -147,3 +147,99 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
   padding: 10px 18px; font-weight: 700; font-size: 1.05rem; box-shadow: 0 6px 20px rgba(0,0,0,0.25); z-index: 10; }
 .liste-stats { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 #btn-stats-zero { align-self: flex-start; min-height: 0; padding: 4px 0; border: none; color: var(--attenue); }
+
+/* ===================================================================== */
+/* Thème « Cristal » : tableau de bord haut de gamme — verre fumé noir,   */
+/* lueurs cyan, chiffres dorés, fins anneaux chromés.                     */
+/* ===================================================================== */
+:root[data-skin="cristal"] {
+  --fond: #04070b;
+  --surface: rgba(14, 24, 34, 0.72);
+  --texte: #e9f3fb;
+  --attenue: #8ea7b9;
+  --accent: #f5b72a;
+  --accent-texte: #120c02;
+  --trait: rgba(95, 212, 255, 0.28);
+  --erreur: #ff5a5a;
+  --succes: #4ee08f;
+  --cyan: #5fd4ff;
+  --chrome: linear-gradient(135deg, #f2f7fb 0%, #8796a3 40%, #e6edf3 60%, #6c7a86 100%);
+  --police-titre: 'Saira', 'Rajdhani', system-ui, sans-serif;
+  color-scheme: dark;
+}
+:root[data-skin="cristal"] body {
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 0%, rgba(40, 140, 200, 0.28), transparent 70%),
+    radial-gradient(ellipse 70% 40% at 50% 100%, rgba(30, 90, 140, 0.22), transparent 70%),
+    var(--fond);
+  background-attachment: fixed;
+  color: var(--texte);
+}
+:root[data-skin="cristal"] .titre h1 {
+  font-family: var(--police-titre); font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--accent); text-shadow: 0 0 18px rgba(245, 183, 42, 0.45);
+}
+:root[data-skin="cristal"] .tamoul { color: var(--cyan); text-shadow: 0 0 14px rgba(95, 212, 255, 0.55); }
+:root[data-skin="cristal"] h2 { font-family: var(--police-titre); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; font-size: 1rem; color: var(--cyan); }
+:root[data-skin="cristal"] .carte,
+:root[data-skin="cristal"] .zone-des,
+:root[data-skin="cristal"] .formulaire fieldset,
+:root[data-skin="cristal"] .joueur,
+:root[data-skin="cristal"] .liste-joueurs li {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 45%), var(--surface);
+  border: 1px solid var(--trait);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+:root[data-skin="cristal"] button,
+:root[data-skin="cristal"] a.bouton-lien:not(.principal) {
+  background: rgba(10, 20, 30, 0.75); color: var(--texte);
+  border: 1px solid rgba(95, 212, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+:root[data-skin="cristal"] button:hover { border-color: var(--cyan); box-shadow: 0 0 14px rgba(95, 212, 255, 0.35); }
+:root[data-skin="cristal"] button.principal,
+:root[data-skin="cristal"] a.bouton-lien.principal,
+:root[data-skin="cristal"] .choix button.actif {
+  background: linear-gradient(180deg, #ffd56a, #f5b72a 55%, #c98d10); color: var(--accent-texte);
+  border: 1px solid #ffd56a; box-shadow: 0 0 18px rgba(245, 183, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+:root[data-skin="cristal"] button.discret { background: transparent; border-color: transparent; color: var(--cyan); }
+:root[data-skin="cristal"] input,
+:root[data-skin="cristal"] select {
+  background: rgba(4, 10, 16, 0.8); color: var(--texte); border: 1px solid var(--trait);
+}
+:root[data-skin="cristal"] input:focus,
+:root[data-skin="cristal"] select:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(95, 212, 255, 0.25); }
+/* Plateau : cadre chromé, comme les anneaux des compteurs */
+:root[data-skin="cristal"] .zone-plateau,
+:root[data-skin="cristal"] .dessin-plateau {
+  background: var(--chrome); padding: 3px; border-radius: 18px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 40px rgba(95, 212, 255, 0.18), 0 18px 40px rgba(0, 0, 0, 0.6);
+}
+:root[data-skin="cristal"] #plateau,
+:root[data-skin="cristal"] .dessin-plateau svg { border-radius: 15px; }
+/* Dés : barres de verre, points cyan lumineux, valeur dorée façon compteur */
+:root[data-skin="cristal"] .de-long {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02)), #0d1a25;
+  border: 1px solid rgba(95, 212, 255, 0.55); box-shadow: 0 0 12px rgba(95, 212, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: var(--cyan);
+}
+:root[data-skin="cristal"] .de-long .point { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+:root[data-skin="cristal"] .des .valeur {
+  font-family: var(--police-titre); font-weight: 500; font-style: italic; font-size: 2.6rem;
+  color: var(--accent); text-shadow: 0 0 16px rgba(245, 183, 42, 0.5);
+}
+:root[data-skin="cristal"] .joueur.actif { border-color: var(--cyan); box-shadow: 0 0 16px rgba(95, 212, 255, 0.35); }
+:root[data-skin="cristal"] .code-geant { font-family: var(--police-titre); color: var(--accent); text-shadow: 0 0 18px rgba(245, 183, 42, 0.5); }
+:root[data-skin="cristal"] .bulle-reaction { background: rgba(8, 16, 24, 0.92); color: var(--texte); border-color: var(--cyan); box-shadow: 0 0 24px rgba(95, 212, 255, 0.35); }
+:root[data-skin="cristal"] .tableau-des td { background: rgba(8, 16, 24, 0.6); }
+:root[data-skin="cristal"] .entree { background: rgba(245, 183, 42, 0.85); color: #120c02; }
+:root[data-skin="cristal"] .rejoue { background: rgba(78, 224, 143, 0.75); color: #04140b; }
+:root[data-skin="cristal"] .kaapal { background: rgba(142, 167, 185, 0.45); color: var(--texte); }
+:root[data-skin="cristal"] .journal li { border-bottom-color: rgba(95, 212, 255, 0.15); }
+
+/* Choix du thème */
+.choix-theme { display: flex; gap: 8px; }
+.choix-theme button { flex: 1 1 0; }
+.choix-theme button.actif { background: var(--accent); color: var(--accent-texte); border-color: var(--accent); }

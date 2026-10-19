@@ -1,13 +1,16 @@
 import React from 'react';
 import { View } from 'react-native';
-import Svg, { Rect, Path, Circle, G, Ellipse, Line, Polyline, Text as SvgText } from 'react-native-svg';
+import Svg, { Rect, Path, Circle, G, Ellipse, Line, Polyline, Defs, RadialGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { geometrie, pionsParCase, pionsAuCentre, zoneCase, arcsCroix } from '../../moteur/partie.js';
 import { cle } from '../../moteur/plateau.js';
+import { themePlateau } from '../../moteur/themes.js';
+import { useTheme } from './ui';
 
 const S = 100;
 
 /** Plateau (croix ou carré) ; `coups` = coups jouables, `surPion(pion)` quand on touche un pion jouable. */
 export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
+  const T = themePlateau(useTheme());
   const g = geometrie(etat.regles, etat.joueurs.length);
   const n = g.n;
   const zone = zoneCase(g, S);
@@ -29,12 +32,12 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
     const x = c * S;
     const y = r * S;
     const teinte = teintes.get(k);
-    cases.push(<Rect key={`c${k}`} x={x + 2} y={y + 2} width={S - 4} height={S - 4} rx={6} fill="#f8e9c8" stroke="#4a2a12" strokeWidth={3} />);
-    if (teinte) cases.push(<Rect key={`t${k}`} x={x + 2} y={y + 2} width={S - 4} height={S - 4} rx={6} fill={teinte} fillOpacity={0.3} />);
+    cases.push(<Rect key={`c${k}`} x={x + 2} y={y + 2} width={S - 4} height={S - 4} rx={6} fill={T.caseFond} stroke={T.caseTrait} strokeWidth={3} />);
+    if (teinte) cases.push(<Rect key={`t${k}`} x={x + 2} y={y + 2} width={S - 4} height={S - 4} rx={6} fill={teinte} fillOpacity={T.teinteOpacite} />);
     if (g.refuges.has(k)) {
       cases.push(
         <Path key={`x${k}`} d={`M${x + 14} ${y + 14}L${x + S - 14} ${y + S - 14}M${x + S - 14} ${y + 14}L${x + 14} ${y + S - 14}`}
-          stroke={teinte || '#6b3a14'} strokeWidth={7} strokeLinecap="round" opacity={teinte ? 0.95 : 0.6} />
+          stroke={teinte || T.croixRefuge} strokeWidth={7} strokeLinecap="round" opacity={teinte ? 0.95 : 0.6} />
       );
     }
   });
@@ -42,19 +45,19 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
   const ct = zone(cle(g.chemins[0][g.arrivee]));
   const centre = (
     <G>
-      <Rect x={ct.x + 2} y={ct.y + 2} width={ct.w - 4} height={ct.w - 4} rx={8} fill={croix ? '#fbf3e2' : '#c98b3c'} stroke="#4a2a12" strokeWidth={3} />
+      <Rect x={ct.x + 2} y={ct.y + 2} width={ct.w - 4} height={ct.w - 4} rx={8} fill={croix ? T.centreFond : '#c98b3c'} stroke={T.centreTrait} strokeWidth={3} />
       <Path
         d={croix
           ? `M${ct.x + 6} ${ct.y + 6}L${ct.x + ct.w - 6} ${ct.y + ct.w - 6}M${ct.x + ct.w - 6} ${ct.y + 6}L${ct.x + 6} ${ct.y + ct.w - 6}`
           : `M${ct.x + 50} ${ct.y + 14}L${ct.x + 86} ${ct.y + 50}L${ct.x + 50} ${ct.y + 86}L${ct.x + 14} ${ct.y + 50}Z`}
-        fill="none" stroke={croix ? '#4a2a12' : '#fff3da'} strokeWidth={croix ? 3 : 4} opacity={0.8} />
+        fill="none" stroke={croix ? T.centreCroix : '#fff3da'} strokeWidth={croix ? 3 : 4} opacity={0.8} />
     </G>
   );
 
   const dernier = etat.dernierCoup ? (() => {
     const z = zone(cle(g.chemins[etat.dernierCoup.joueur][etat.dernierCoup.vers]));
     return <Rect x={z.x + 6} y={z.y + 6} width={z.w - 12} height={z.w - 12} rx={8} fill="none"
-      stroke={etat.joueurs[etat.dernierCoup.joueur].couleur} strokeWidth={5} opacity={0.8} />;
+      stroke={T.dernierCoup || etat.joueurs[etat.dernierCoup.joueur].couleur} strokeWidth={5} opacity={0.8} />;
   })() : null;
 
   // Trajet d'un joueur (aide) : ligne pointillée
@@ -82,9 +85,9 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
     pions.push(
       <G key={`m${p.joueur}-${p.pion}`} onPress={jouable ? () => surPion(entree.pion) : undefined}>
         {jouable ? <Circle cx={p.cx} cy={p.cy} r={Math.max(p.r + 8, 40)} fill="#ffffff" fillOpacity={0.45} /> : null}
-        {p.arrive ? <Circle cx={p.cx} cy={p.cy} r={p.r + 6} fill="#f5c518" stroke="#7a5418" strokeWidth={2} /> : null}
+        {p.arrive ? <Circle cx={p.cx} cy={p.cy} r={p.r + 6} fill={T.arrive} stroke={T.arriveTrait} strokeWidth={2} /> : null}
         <Circle cx={p.cx} cy={p.cy} r={p.r} fill={etat.joueurs[p.joueur].couleur}
-          stroke={jouable ? '#ffffff' : '#2b1d10'} strokeWidth={jouable ? 5 : 2.5} />
+          stroke={jouable ? T.jouable : T.pionTrait} strokeWidth={jouable ? 5 : 2.5} />
         <Circle cx={p.cx - p.r * 0.3} cy={p.cy - p.r * 0.3} r={p.r * 0.3} fill="#ffffff" opacity={0.35} />
       </G>
     );
@@ -103,7 +106,7 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
         <G key={`p${p.joueur}-${p.pion}`} onPress={jouable ? () => surPion(p.pion) : undefined}>
           {jouable ? <Circle cx={cx} cy={cy} r={Math.max(rayon + 10, 60)} fill="#ffffff" fillOpacity={0.45} /> : null}
           <Circle cx={cx} cy={cy} r={rayon} fill={etat.joueurs[p.joueur].couleur}
-            stroke={jouable ? '#ffffff' : '#2b1d10'} strokeWidth={jouable ? 6 : 3} />
+            stroke={jouable ? T.jouable : T.pionTrait} strokeWidth={jouable ? 6 : 3} />
           <Circle cx={cx - rayon * 0.3} cy={cy - rayon * 0.3} r={rayon * 0.3} fill="#ffffff" opacity={0.35} />
         </G>
       );
@@ -111,10 +114,19 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
   });
 
   return (
-    <View style={{ backgroundColor: '#6b3a14', padding: 8, borderRadius: 14 }}>
-      <Svg width={largeur - 16} height={largeur - 16} viewBox={`0 0 ${n * S} ${n * S}`}>
-        {croix ? <Rect x={0} y={0} width={n * S} height={n * S} rx={24} fill="#b8653a" /> : null}
-        {croix ? diagonales(g, n) : null}
+    <View style={{ backgroundColor: T.lueur ? '#aab6c0' : T.cadre, padding: T.lueur ? 3 : 8, borderRadius: 16,
+      shadowColor: '#5fd4ff', shadowOpacity: T.lueur ? 0.35 : 0, shadowRadius: 16 }}>
+      <Svg width={largeur - (T.lueur ? 6 : 16)} height={largeur - (T.lueur ? 6 : 16)} viewBox={`0 0 ${n * S} ${n * S}`}>
+        {T.fondLueur ? (
+          <Defs>
+            <RadialGradient id="fondLueur" cx="50%" cy="50%" r="60%">
+              <Stop offset="0%" stopColor={T.fondLueur} />
+              <Stop offset="100%" stopColor={T.fond} />
+            </RadialGradient>
+          </Defs>
+        ) : null}
+        {croix ? <Rect x={0} y={0} width={n * S} height={n * S} rx={24} fill={T.fondLueur ? 'url(#fondLueur)' : T.fond} /> : null}
+        {croix ? diagonales(g, n, T) : null}
         {cases}
         {centre}
         {trajet}
@@ -127,26 +139,26 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
 }
 
 /** Diagonales : des coins du plateau jusqu'au centre, à travers les cases de coin. */
-function diagonales(g, n) {
+function diagonales(g, n, T) {
   const { r: r0, c: c0, taille: t } = g.centre;
   const coins = [[0, 0, c0, r0], [n, 0, c0 + t, r0], [0, n, c0, r0 + t], [n, n, c0 + t, r0 + t]];
   return [
     ...coins.map(([x1, y1, x2, y2], i) => (
       <G key={`diag${i}`}>
-        <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#5a2e10" strokeWidth={10} strokeLinecap="round" />
-        <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke="#e9b77f" strokeWidth={3} opacity={0.7} />
+        <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke={T.diagonale} strokeWidth={10} strokeLinecap="round" />
+        <Line x1={x1 * S} y1={y1 * S} x2={x2 * S} y2={y2 * S} stroke={T.diagonaleLueur} strokeWidth={3} opacity={0.7} />
       </G>
     )),
     // 3 arcs à chaque coin du centre : passage d'un bras au suivant
     ...arcsCroix(g, S).map((d, i) => (
       <G key={`arc${i}`}>
-        <Path d={d} fill="none" stroke="#5a2e10" strokeWidth={7} strokeLinecap="round" />
-        <Path d={d} fill="none" stroke="#f3d9b0" strokeWidth={2.5} opacity={0.8} />
+        <Path d={d} fill="none" stroke={T.arc} strokeWidth={7} strokeLinecap="round" />
+        <Path d={d} fill="none" stroke={T.arcLueur} strokeWidth={2.5} opacity={0.85} />
       </G>
     )),
     // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
     ...[['தாயம்', 2.4], ['விளையாட்டு', n - 2.4]].map(([texte, cx]) => (
-      <SvgText key={texte} x={cx * S} y={0.62 * S} textAnchor="middle" fontSize={0.48 * S} fontWeight="700" fill="#fbe9cf" opacity={0.9}>
+      <SvgText key={texte} x={cx * S} y={0.62 * S} textAnchor="middle" fontSize={0.48 * S} fontWeight="700" fill={T.ecriture} opacity={0.9}>
         {texte}
       </SvgText>
     )),

@@ -11,6 +11,8 @@
   `thaayam_menage` (`supabase/thaayam.sql`). Statistiques locales : `moteur/stats.js`.
   L'état complet du jeu (JSON) est stocké dans `thaayam_parties.etat` ; `version` évite les coups en double.
 
+- Thèmes : `moteur/themes.js` (couleurs du plateau, « cristal » par défaut et « bois ») ; site : `data-skin` sur
+  `<html>` + règles CSS `:root[data-skin="cristal"]` dans `web/style.css` ; appli : `ThemeContexte` dans `app/src/ui.js`.
 - Ordinateur : `moteur/ia.js` (`choisirCoup`), niveaux `facile`, `normal`, `fort` (évaluation + un lancer d'avance).
 - Règles validées par Kamal (par défaut) : croix 3 × 4, pions au départ dans le centre, sortie sur la case de sa
   colonne collée au centre → descente → tour anti-horaire → retour au bout du bras → remontée sur les 3 arcs du coin

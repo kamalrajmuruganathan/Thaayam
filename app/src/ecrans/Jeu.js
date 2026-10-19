@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, View, useWindowDimensions } from 'react-native';
-import { Bouton, Carte, Texte, useCouleurs } from '../ui';
+import { Bouton, Carte, Texte, useCouleurs, useTheme } from '../ui';
 import { Plateau, Cauri } from '../Plateau';
 import { lancer, jouer, coupsPossibles, geometrie } from '../../../moteur/partie.js';
 import { resumeRegles, nomLancer } from '../../../moteur/regles.js';
@@ -14,6 +14,7 @@ import { REACTIONS } from '../../../moteur/en-ligne.js';
 export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter, surRejouer, surReglesJeu,
   bulle, surReaction, surRevanche, revancheExiste }) {
   const c = useCouleurs();
+  const cristal = useTheme() === 'cristal';
   const { width } = useWindowDimensions();
   const [voirRegles, setVoirRegles] = useState(false);
   const [voirTrajet, setVoirTrajet] = useState(false);
@@ -70,12 +71,12 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
               {etat.regles.des.type === 'cauris'
                 ? l.detail.map((o, i) => <Cauri key={i} ouvert={o} />)
                 : l.detail.map((f, i) => (
-                  <View key={i} accessibilityLabel={`dé long : ${f}`} style={{ width: 92, height: 30, borderRadius: 6, backgroundColor: '#d9a845', borderWidth: 2, borderColor: '#7a5418', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12 }}>
-                    {f > 3 ? <Texte style={{ color: '#3b2410', fontWeight: '800' }}>{f}</Texte>
-                      : Array.from({ length: f }, (_, k) => <View key={k} style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: '#3b2410' }} />)}
+                  <View key={i} accessibilityLabel={`dé long : ${f}`} style={{ width: 92, height: 30, borderRadius: 6, backgroundColor: cristal ? '#0d1a25' : '#d9a845', borderWidth: cristal ? 1 : 2, borderColor: cristal ? '#5fd4ff' : '#7a5418', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12 }}>
+                    {f > 3 ? <Texte style={{ color: cristal ? '#5fd4ff' : '#3b2410', fontWeight: '800' }}>{f}</Texte>
+                      : Array.from({ length: f }, (_, k) => <View key={k} style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: cristal ? '#5fd4ff' : '#3b2410' }} />)}
                   </View>
                 ))}
-              <Texte style={{ fontSize: 30, fontWeight: '800', color: c.accent, marginLeft: 6 }}>{nomLancer(etat.regles, l)}</Texte>
+              <Texte style={{ fontSize: cristal ? 36 : 30, fontWeight: cristal ? '500' : '800', fontStyle: cristal ? 'italic' : 'normal', color: c.accent, marginLeft: 6 }}>{nomLancer(etat.regles, l)}</Texte>
             </>
           )}
         </View>

@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Share, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Bouton, Carte, Champ, Texte, useCouleurs } from './src/ui';
+import { Bouton, Carte, Champ, Choix, Texte, useCouleurs, ThemeContexte } from './src/ui';
+import { THEME_PAR_DEFAUT } from '../moteur/themes.js';
 import Reglages from './src/ecrans/Reglages';
 import Jeu from './src/ecrans/Jeu';
 import ReglesJeu from './src/ecrans/ReglesJeu';
@@ -21,6 +22,20 @@ export default function App() {
 }
 
 function Racine() {
+  // Thème choisi (Cristal ou Bois), mémorisé sur l'appareil
+  const [theme, setTheme] = useState(THEME_PAR_DEFAUT);
+  useEffect(() => {
+    stockage.lire('thaayam:theme').then((t) => (t === 'bois' || t === 'cristal') && setTheme(t)).catch(() => {});
+  }, []);
+  const choisirTheme = (t) => { setTheme(t); stockage.ecrire('thaayam:theme', t).catch(() => {}); };
+  return (
+    <ThemeContexte.Provider value={theme}>
+      <Ecrans theme={theme} choisirTheme={choisirTheme} />
+    </ThemeContexte.Provider>
+  );
+}
+
+function Ecrans({ theme, choisirTheme }) {
   const c = useCouleurs();
   const [ecran, setEcran] = useState('accueil'); // accueil | reglages | salon | jeu | regles
   const [retourRegles, setRetourRegles] = useState('accueil');
@@ -312,6 +327,9 @@ function Racine() {
           <Texte style={{ fontSize: 36, fontWeight: '800', color: c.accent }}>Thaayam</Texte>
           <Texte attenue>Le jeu de plateau traditionnel tamoul</Texte>
         </View>
+        <Carte titre="Apparence">
+          <Choix options={[['cristal', '💎 Cristal'], ['bois', '🪵 Bois']]} valeur={theme} onChange={choisirTheme} />
+        </Carte>
         {resumeStats(stats).length ? (
           <Carte titre="Mes statistiques">
             {resumeStats(stats).map((l) => <Texte key={l}>• {l}</Texte>)}
@@ -352,7 +370,7 @@ function Racine() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.fond }}>
-      <StatusBar style="auto" />
+      <StatusBar style={theme === 'cristal' ? 'light' : 'auto'} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 14, width: '100%', maxWidth: 640, alignSelf: 'center' }}
         keyboardShouldPersistTaps="handled">
         {contenu}
