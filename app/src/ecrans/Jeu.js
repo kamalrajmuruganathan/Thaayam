@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Pressable, View, useWindowDimensions } from 'react-native';
-import { Bouton, Carte, Texte, useCouleurs, useTheme } from '../ui';
+import { Bouton, Carte, Texte, useCouleurs, useTheme, useT } from '../ui';
 import { Plateau, Cauri } from '../Plateau';
 import { lancer, jouer, coupsPossibles, geometrie } from '../../../moteur/partie.js';
-import { resumeRegles, nomLancer } from '../../../moteur/regles.js';
+import { nomLancer } from '../../../moteur/regles.js';
 import { REACTIONS } from '../../../moteur/en-ligne.js';
+import { traduireJournal, traduireNom, traduireReaction, resumeReglesTraduit } from '../../../moteur/i18n.js';
 
 /**
  * Écran de jeu (local ou en ligne).
@@ -15,6 +16,8 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
   bulle, surReaction, surRevanche, revancheExiste }) {
   const c = useCouleurs();
   const cristal = useTheme() === 'cristal';
+  const t = useT();
+  const N = (nom) => traduireNom(nom, t);
   const { width } = useWindowDimensions();
   const [voirRegles, setVoirRegles] = useState(false);
   const [voirTrajet, setVoirTrajet] = useState(false);
@@ -27,12 +30,12 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
   const groupe = coups.find((x) => x.groupe);
 
   let consigne;
-  if (etat.phase === 'fini') consigne = `🏆 ${etat.joueurs[etat.gagnant].nom} a gagné !`;
-  else if (moi !== null && etat.tour !== moi) consigne = `C'est au tour de ${actif.nom}…`;
-  else if (actif.ordi) consigne = `${actif.nom} réfléchit…`;
-  else if (occupe) consigne = 'Le pion avance…';
-  else if (etat.phase === 'lancer') consigne = moi === null ? `${actif.nom}, à toi : lance les dés.` : 'À toi : lance les dés.';
-  else consigne = 'Touche un pion entouré de blanc pour le déplacer.';
+  if (etat.phase === 'fini') consigne = t('gagne', { nom: N(etat.joueurs[etat.gagnant].nom) });
+  else if (moi !== null && etat.tour !== moi) consigne = t('tourDe', { nom: N(actif.nom) });
+  else if (actif.ordi) consigne = t('reflechit', { nom: N(actif.nom) });
+  else if (occupe) consigne = t('pionAvance');
+  else if (etat.phase === 'lancer') consigne = moi === null ? t('aToiLocal', { nom: N(actif.nom) }) : t('aToi');
+  else consigne = t('touchePionBlanc');
 
   const l = etat.lancer || etat.dernierLancer;
 
@@ -50,7 +53,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
             }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: j.couleur }} />
               <View style={{ flex: 1 }}>
-                <Texte numberOfLines={1} style={{ fontWeight: '700' }}>{j.nom}{i === moi ? ' (toi)' : ''}</Texte>
+                <Texte numberOfLines={1} style={{ fontWeight: '700' }}>{N(j.nom)}{i === moi ? t('toi') : ''}</Texte>
                 <Texte attenue style={{ fontSize: 12 }}>🏠 {maison} · 🎯 {arrives}/{j.pions.length} · ⚔️ {j.captures}</Texte>
               </View>
             </View>
@@ -65,9 +68,9 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
 
       <Carte>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', alignItems: 'center', minHeight: 44 }}>
-          {!l ? <Texte attenue>Lance les dés</Texte> : (
+          {!l ? <Texte attenue>{t('lanceLesDes')}</Texte> : (
             <>
-              {!etat.lancer ? <Texte attenue style={{ width: '100%', textAlign: 'center', fontSize: 12 }}>Dernier lancer ({etat.joueurs[l.joueur].nom}) :</Texte> : null}
+              {!etat.lancer ? <Texte attenue style={{ width: '100%', textAlign: 'center', fontSize: 12 }}>{t('dernierLancer', { nom: N(etat.joueurs[l.joueur].nom) })}</Texte> : null}
               {etat.regles.des.type === 'cauris'
                 ? l.detail.map((o, i) => <Cauri key={i} ouvert={o} />)
                 : l.detail.map((f, i) => (
@@ -83,14 +86,14 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
         <Texte style={{ textAlign: 'center', fontWeight: '700', color: etat.phase === 'fini' ? c.texte : actif.couleur }}>{consigne}</Texte>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {etat.phase !== 'fini' ? (
-            <Bouton style={{ flex: 1 }} principal titre="Lancer" desactive={!(peut && etat.phase === 'lancer')}
+            <Bouton style={{ flex: 1 }} principal titre={t('lancer')} desactive={!(peut && etat.phase === 'lancer')}
               onPress={() => surAction(lancer(etat))} />
           ) : null}
-          {entree ? <Bouton style={{ flex: 1 }} titre="Faire entrer un pion" onPress={() => surAction(jouer(etat, entree.pion))} /> : null}
-          {groupe ? <Bouton style={{ flex: 1 }} titre={`Faire entrer les ${groupe.groupe.length} pions mangés`} onPress={() => surAction(jouer(etat, groupe.pion, true))} /> : null}
-          {etat.phase === 'fini' && moi === null ? <Bouton style={{ flex: 1 }} principal titre="Rejouer" onPress={surRejouer} /> : null}
+          {entree ? <Bouton style={{ flex: 1 }} titre={t('entrerPion')} onPress={() => surAction(jouer(etat, entree.pion))} /> : null}
+          {groupe ? <Bouton style={{ flex: 1 }} titre={t('entrerGroupe', { n: groupe.groupe.length })} onPress={() => surAction(jouer(etat, groupe.pion, true))} /> : null}
+          {etat.phase === 'fini' && moi === null ? <Bouton style={{ flex: 1 }} principal titre={t('rejouer')} onPress={surRejouer} /> : null}
           {etat.phase === 'fini' && surRevanche ? (
-            <Bouton style={{ flex: 1 }} principal desactive={occupe} titre={revancheExiste ? 'Rejoindre la revanche' : 'Revanche !'} onPress={surRevanche} />
+            <Bouton style={{ flex: 1 }} principal desactive={occupe} titre={revancheExiste ? t('rejoindreRevanche') : t('revanche')} onPress={surRevanche} />
           ) : null}
         </View>
       </Carte>
@@ -106,26 +109,26 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
           {REACTIONS.map((r) => (
             <Pressable key={r} onPress={() => surReaction(r)} accessibilityRole="button"
               style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: c.trait, backgroundColor: c.surface }}>
-              <Texte style={{ fontSize: 15 }}>{r}</Texte>
+              <Texte style={{ fontSize: 15 }}>{traduireReaction(r, t)}</Texte>
             </Pressable>
           ))}
         </View>
       ) : null}
       {message ? <Texte erreur>{message}</Texte> : null}
 
-      <Carte titre="Journal">
+      <Carte titre={t('journal')}>
         {[...etat.journal].reverse().slice(0, 12).map((ligne, i) => (
-          <Texte key={i} style={{ fontSize: 14 }}>{ligne}</Texte>
+          <Texte key={i} style={{ fontSize: 14 }}>{traduireJournal(ligne, t)}</Texte>
         ))}
       </Carte>
 
-      <Bouton titre={voirTrajet ? 'Cacher le trajet' : 'Voir le trajet'} onPress={() => setVoirTrajet(!voirTrajet)} />
+      <Bouton titre={voirTrajet ? t('cacherTrajet') : t('voirTrajet')} onPress={() => setVoirTrajet(!voirTrajet)} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Bouton style={{ flex: 1 }} titre="Quitter" onPress={surQuitter} />
-        <Bouton style={{ flex: 1 }} titre={voirRegles ? 'Masquer les règles' : 'Voir les règles'} onPress={() => setVoirRegles(!voirRegles)} />
+        <Bouton style={{ flex: 1 }} titre={t('quitter')} onPress={surQuitter} />
+        <Bouton style={{ flex: 1 }} titre={voirRegles ? t('masquerRegles') : t('voirReglesCourt')} onPress={() => setVoirRegles(!voirRegles)} />
       </View>
-      {voirRegles ? resumeRegles(etat.regles).map((x, i) => <Texte key={i} attenue>• {x}</Texte>) : null}
-      {surReglesJeu ? <Bouton titre="📖 Règles du jeu avec dessins" onPress={surReglesJeu} /> : null}
+      {voirRegles ? resumeReglesTraduit(etat.regles, t).map((x, i) => <Texte key={i} attenue>• {x}</Texte>) : null}
+      {surReglesJeu ? <Bouton titre={t('reglesDessins2')} onPress={surReglesJeu} /> : null}
     </View>
   );
 }

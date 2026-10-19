@@ -3,7 +3,7 @@ import { geometrie, zoneCase, arcsCroix } from './moteur/partie.js';
 import { REGLES_PAR_DEFAUT, COULEURS, valeurDesLongs, faitRejouer } from './moteur/regles.js';
 import { cle } from './moteur/plateau.js';
 import { themePlateau, THEME_PAR_DEFAUT } from './moteur/themes.js';
-import { TEXTES_REGLES, LIBELLES_FR } from './regles-textes.js';
+import { TEXTES_REGLES, LIBELLES_FR } from './moteur/textes-regles.js';
 
 // Même langue que le jeu, mémorisée sur l'appareil (le français est écrit dans la page)
 const langue = (() => {

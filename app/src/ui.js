@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import { Pressable, Text, TextInput, View, StyleSheet, useColorScheme } from 'react-native';
+import { traducteur } from '../../moteur/i18n.js';
 
 const CLAIR = {
   fond: '#f6efe3', surface: '#fffaf1', texte: '#2b1d10', attenue: '#7a6650',
@@ -15,6 +16,12 @@ const CRISTAL = {
   fond: '#04070b', surface: '#0e1822', texte: '#e9f3fb', attenue: '#8ea7b9',
   accent: '#7fdcff', accentTexte: '#03121c', trait: '#1f4a63', erreur: '#ff5a5a', cyan: '#5fd4ff',
 };
+
+/** Langue choisie ('fr', 'en', 'ta', 'hi', 'si'), fournie par App.js : useT() renvoie t(cle, params). */
+export const LangueContexte = createContext(traducteur('fr'));
+export function useT() {
+  return useContext(LangueContexte);
+}
 
 /** Thème choisi ('cristal' ou 'bois'), fourni par App.js. */
 export const ThemeContexte = createContext('cristal');

@@ -17,6 +17,15 @@ export const LANGUES = [
 export const LANGUE_PAR_DEFAUT = 'fr';
 
 const FR = {
+  jouePar: "Joué par l'ordinateur",
+  joueurCouleur: 'Joueur {n} ({couleur})',
+  aideCauri: 'Souvent 8 avec 4 cauris, 12 avec 6 cauris.',
+  patiente: 'Patiente…',
+  masquerRegles: 'Masquer les règles',
+  voirReglesCourt: 'Voir les règles',
+  partagerCode: 'Partager le code',
+  jouerAppareil: 'Jouer sur cet appareil',
+  touchePionBlanc: 'Touche un pion entouré de blanc pour le déplacer.',
   // Accueil
   sousTitre: 'Le jeu de plateau traditionnel tamoul',
   pseudo: 'Ton pseudo',
@@ -214,6 +223,15 @@ const FR = {
 };
 
 const EN = {
+  jouePar: 'Played by the computer',
+  joueurCouleur: 'Player {n} ({couleur})',
+  aideCauri: 'Often 8 with 4 cowries, 12 with 6 cowries.',
+  patiente: 'Please wait…',
+  masquerRegles: 'Hide the rules',
+  voirReglesCourt: 'Show the rules',
+  partagerCode: 'Share the code',
+  jouerAppareil: 'Play on this device',
+  touchePionBlanc: 'Tap a piece circled in white to move it.',
   sousTitre: 'The traditional Tamil board game',
   pseudo: 'Your name',
   pseudoExemple: 'e.g. Kamal',
@@ -400,6 +418,15 @@ const EN = {
 };
 
 const TA = {
+  jouePar: 'கணினி விளையாடும்',
+  joueurCouleur: 'வீரர் {n} ({couleur})',
+  aideCauri: 'பொதுவாக 4 சோழிகளுக்கு 8, 6 சோழிகளுக்கு 12.',
+  patiente: 'காத்திருங்கள்…',
+  masquerRegles: 'விதிகளை மறை',
+  voirReglesCourt: 'விதிகளைக் காட்டு',
+  partagerCode: 'குறியீட்டைப் பகிர்',
+  jouerAppareil: 'இந்தச் சாதனத்தில் விளையாடு',
+  touchePionBlanc: 'நகர்த்த, வெள்ளை வட்டமிட்ட காயைத் தொடுங்கள்.',
   sousTitre: 'பாரம்பரியத் தமிழ் பலகை விளையாட்டு',
   pseudo: 'உங்கள் பெயர்',
   pseudoExemple: 'எ.கா. கமல்',
@@ -586,6 +613,15 @@ const TA = {
 };
 
 const HI = {
+  jouePar: 'कंप्यूटर खेलेगा',
+  joueurCouleur: 'खिलाड़ी {n} ({couleur})',
+  aideCauri: 'अक्सर 4 कौड़ियों पर 8, 6 कौड़ियों पर 12।',
+  patiente: 'कृपया प्रतीक्षा करें…',
+  masquerRegles: 'नियम छिपाएँ',
+  voirReglesCourt: 'नियम देखें',
+  partagerCode: 'कोड साझा करें',
+  jouerAppareil: 'इस डिवाइस पर खेलें',
+  touchePionBlanc: 'चलाने के लिए सफ़ेद घेरे वाली गोटी को छुएँ।',
   sousTitre: 'पारंपरिक तमिल बोर्ड खेल',
   pseudo: 'आपका नाम',
   pseudoExemple: 'जैसे कमल',
@@ -772,6 +808,15 @@ const HI = {
 };
 
 const SI = {
+  jouePar: 'පරිගණකය ක්‍රීඩා කරයි',
+  joueurCouleur: 'ක්‍රීඩක {n} ({couleur})',
+  aideCauri: 'බොහෝවිට බෙලි කටු 4කට 8, බෙලි කටු 6කට 12.',
+  patiente: 'රැඳී සිටින්න…',
+  masquerRegles: 'නීති සඟවන්න',
+  voirReglesCourt: 'නීති බලන්න',
+  partagerCode: 'කේතය බෙදාගන්න',
+  jouerAppareil: 'මෙම උපාංගයෙන් ක්‍රීඩා කරන්න',
+  touchePionBlanc: 'ගෙන යාමට සුදු කවයක් ඇති ඉත්තෙකු ස්පර්ශ කරන්න.',
   sousTitre: 'සම්ප්‍රදායික දමිළ පුවරු ක්‍රීඩාව',
   pseudo: 'ඔබගේ නම',
   pseudoExemple: 'උදා. කමල්',
@@ -962,12 +1007,14 @@ export const TEXTES = { fr: FR, en: EN, ta: TA, hi: HI, si: SI };
 /** Fonction de traduction pour une langue : t(cle, params). */
 export function traducteur(langue) {
   const dico = TEXTES[langue] || FR;
-  return (cle, params = {}) => {
+  const t = (cle, params = {}) => {
     const v = dico[cle] !== undefined ? dico[cle] : FR[cle];
     if (v === undefined) return cle;
     if (typeof v === 'function') return v(params);
     return v.replace(/\{(\w+)\}/g, (m, k) => (params[k] !== undefined ? String(params[k]) : m));
   };
+  t.langue = TEXTES[langue] ? langue : 'fr';
+  return t;
 }
 
 // --------------------------------------------------------------------------- textes produits en français

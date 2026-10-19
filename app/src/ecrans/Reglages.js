@@ -1,18 +1,27 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Bouton, Carte, Champ, Choix, Interrupteur, Texte } from '../ui';
+import { Bouton, Carte, Champ, Choix, Interrupteur, Texte, useT } from '../ui';
+import { traduireErreur, traduireNom } from '../../../moteur/i18n.js';
 import {
   COULEURS, PRESETS_DES, TAILLES, lireListe, normaliserRegles, valeursPossibles,
 } from '../../../moteur/regles.js';
 
 /** Formulaire de toutes les règles. mode : 'local' ou 'ligne'. */
 export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, surValider, occupe, erreurServeur }) {
+  const t = useT();
+  const N = (nom) => traduireNom(nom, t);
   const [r, setR] = useState(reglesInitiales);
   const [nb, setNb] = useState(2);
   const [ordi, setOrdi] = useState(ordiInitial || [false, false, false, false]);
   const [niveau, setNiveau] = useState('normal');
   const [noms, setNoms] = useState(COULEURS.map((c, i) =>
-    (ordi[i] ? `Ordi ${c.nom.toLowerCase()}` : i === 0 && pseudo ? pseudo : c.nom)));
+    N(ordi[i] ? `Ordi ${c.nom.toLowerCase()}` : i === 0 && pseudo ? pseudo : c.nom)));
+  // Les noms par défaut sont gardés en français (« Rouge », « Ordi vert ») pour être traduits à l'affichage
+  const nomCanonique = (x, i) => {
+    const brut = x.trim();
+    const defauts = [COULEURS[i].nom, `Ordi ${COULEURS[i].nom.toLowerCase()}`];
+    return defauts.find((d) => N(d) === brut) || brut || COULEURS[i].nom;
+  };
   // Textes bruts des listes (pour pouvoir taper « 1, » sans que ça saute)
   const [txtEntree, setTxtEntree] = useState(r.valeursEntree.join(', '));
   const [txtRejouer, setTxtRejouer] = useState(r.valeursRejouer.join(', '));
@@ -27,33 +36,33 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
   return (
     <View style={{ gap: 14 }}>
       {mode === 'local' ? (
-        <Carte titre="Joueurs">
+        <Carte titre={t('joueurs')}>
           <Choix options={[[2, '2'], [3, '3'], [4, '4']]} valeur={nb} onChange={setNb} />
           {Array.from({ length: nb }, (_, i) => (
             <View key={i} style={{ gap: 6 }}>
-              <Champ libelle={`Joueur ${i + 1} (${COULEURS[i].nom.toLowerCase()})`} value={noms[i]} maxLength={20}
+              <Champ libelle={t('joueurCouleur', { n: i + 1, couleur: traduireNom(COULEURS[i].nom, t).toLowerCase() })} value={noms[i]} maxLength={20}
                 onChangeText={(t) => setNoms((l) => l.map((x, k) => (k === i ? t : x)))} />
-              <Interrupteur libelle="Joué par l'ordinateur" valeur={ordi[i]}
+              <Interrupteur libelle={t('jouePar')} valeur={ordi[i]}
                 onChange={(v) => setOrdi((l) => l.map((x, k) => (k === i ? v : x)))} />
             </View>
           ))}
-          <Texte style={{ fontWeight: '600' }}>Niveau de l'ordinateur</Texte>
-          <Choix options={[['facile', 'Facile'], ['normal', 'Normal'], ['fort', 'Fort']]} valeur={niveau} onChange={setNiveau} />
+          <Texte style={{ fontWeight: '600' }}>{t('niveauOrdi')}</Texte>
+          <Choix options={['facile', 'normal', 'fort'].map((n) => [n, t(n)])} valeur={niveau} onChange={setNiveau} />
         </Carte>
       ) : null}
 
-      <Carte titre="Plateau">
-        <Choix options={[['croix', 'En croix'], ['carre', 'Carré']]} valeur={r.forme} onChange={(v) => maj((x) => { x.forme = v; })} />
+      <Carte titre={t('plateau')}>
+        <Choix options={[['croix', t('enCroix')], ['carre', t('carre')]]} valeur={r.forme} onChange={(v) => maj((x) => { x.forme = v; })} />
         {r.forme === 'carre' ? (
           <Choix options={TAILLES.map((t) => [t, `${t} × ${t}`])} valeur={r.taille} onChange={(v) => maj((x) => { x.taille = v; })} />
         ) : null}
-        <Texte style={{ fontWeight: '600' }}>Pions par joueur</Texte>
+        <Texte style={{ fontWeight: '600' }}>{t('pionsParJoueur')}</Texte>
         <Choix options={[1, 2, 3, 4, 5, 6, 8, 10, 12].map((v) => [v, String(v)])} valeur={r.nbPions} onChange={(v) => maj((x) => { x.nbPions = v; })} />
       </Carte>
 
-      <Carte titre="Lancer">
+      <Carte titre={t('lancerLegende')}>
         <Choix
-          options={[['desLongs', 'Dés longs'], ['cauris', 'Cauris']]}
+          options={[['desLongs', t('desLongs')], ['cauris', t('cauris')]]}
           valeur={r.des.type}
           onChange={(v) => {
             maj((x) => {
@@ -69,79 +78,79 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
         />
         {r.des.type === 'cauris' ? (
           <>
-            <Texte style={{ fontWeight: '600' }}>Nombre de cauris</Texte>
+            <Texte style={{ fontWeight: '600' }}>{t('nbCauris')}</Texte>
             <Choix options={[2, 3, 4, 5, 6, 7].map((v) => [v, String(v)])} valeur={r.des.nbCauris}
               onChange={(v) => maj((x) => { x.des.nbCauris = v; })} />
-            <Champ libelle="Valeur quand aucun cauri ne tombe ouvert" keyboardType="number-pad" value={txtZero}
-              aide="Souvent 8 avec 4 cauris, 12 avec 6 cauris."
+            <Champ libelle={t('valeurZeroCauri')} keyboardType="number-pad" value={txtZero}
+              aide={t('aideCauri')}
               onChangeText={(t) => { setTxtZero(t); maj((x) => { x.des.valeurZero = Number(t); }); }} />
           </>
         ) : (
           <>
-            <Texte style={{ fontWeight: '600' }}>Nombre de dés longs</Texte>
+            <Texte style={{ fontWeight: '600' }}>{t('nbDes')}</Texte>
             <Choix options={[[1, '1'], [2, '2'], [3, '3']]} valeur={r.des.nbDes} onChange={(v) => maj((x) => { x.des.nbDes = v; })} />
-            <Champ libelle="Valeurs des faces de chaque dé" value={txtFaces} aide="Séparées par des virgules. Dayakattai classique : 0, 1, 2, 3."
+            <Champ libelle={t('faces')} value={txtFaces} aide={t('aideFaces')}
               onChangeText={(t) => { setTxtFaces(t); maj((x) => { x.des.faces = lireListe(t); }); }} />
-            <Champ libelle="Valeur quand tous les dés montrent 0" keyboardType="number-pad" value={txtToutZero} aide="Classique : 0 = « Kaapal », on passe les dés au joueur suivant."
+            <Champ libelle={t('toutZero')} keyboardType="number-pad" value={txtToutZero} aide={t('aideToutZero')}
               onChangeText={(t) => { setTxtToutZero(t); maj((x) => { x.des.valeurToutZero = Number(t); }); }} />
-            <Champ libelle="On rejoue aussi quand chaque dé montre la face" value={txtDoubles}
-              aide="Classique : 2 (2 sur chaque dé, mais pas 1 + 3). Laisser vide pour aucun."
+            <Champ libelle={t('doubles')} value={txtDoubles}
+              aide={t('aideDoubles')}
               onChangeText={(t) => { setTxtDoubles(t); maj((x) => { x.doublesRejouer = lireListe(t); }); }} />
           </>
         )}
-        <Texte attenue style={{ fontSize: 12 }}>Valeurs possibles avec ces dés : {valeursPossibles(r).join(', ')}</Texte>
-        <Champ libelle="Valeurs qui font entrer un pion (« thaayam »)" value={txtEntree}
+        <Texte attenue style={{ fontSize: 12 }}>{t('valeursPossibles', { v: valeursPossibles(r).join(', ') })}</Texte>
+        <Champ libelle={t('valeursEntree')} value={txtEntree}
           onChangeText={(t) => { setTxtEntree(t); maj((x) => { x.valeursEntree = lireListe(t); }); }} />
-        <Champ libelle="Valeurs qui font rejouer" value={txtRejouer}
+        <Champ libelle={t('valeursRejouer')} value={txtRejouer}
           onChangeText={(t) => { setTxtRejouer(t); maj((x) => { x.valeursRejouer = lireListe(t); }); }} />
-        <Interrupteur libelle="On rejoue aussi après une capture" valeur={r.rejouerApresCapture}
+        <Interrupteur libelle={t('rejouerCapture')} valeur={r.rejouerApresCapture}
           onChange={(v) => maj((x) => { x.rejouerApresCapture = v; })} />
       </Carte>
 
-      <Carte titre="Déplacements">
-        <Interrupteur libelle="Il faut avoir capturé un pion pour entrer à l'intérieur"
-          aide="Sinon, les pions refont le tour du plateau."
+      <Carte titre={t('deplacements')}>
+        <Interrupteur libelle={t('captureObligatoire')}
+          aide={t('aideCapture')}
           valeur={r.captureAvantInterieur} onChange={(v) => maj((x) => { x.captureAvantInterieur = v; })} />
-        <Interrupteur libelle="Il faut tomber pile sur le centre" valeur={r.arriveeExacte}
+        <Interrupteur libelle={t('arriveeExacte')} valeur={r.arriveeExacte}
           onChange={(v) => maj((x) => { x.arriveeExacte = v; })} />
-        <Interrupteur libelle="Un seul pion par case (sauf au centre)" valeur={r.unPionParCase}
-          aide="Décoché : on peut empiler ses pions, et un adversaire qui tombe dessus mange tout le groupe."
+        <Interrupteur libelle={t('unPion')} valeur={r.unPionParCase}
+          aide={t('aideUnPion')}
           onChange={(v) => maj((x) => { x.unPionParCase = v; })} />
-        <Interrupteur libelle="Un groupe mangé d’un coup rentre d’un coup" valeur={r.groupeRentreEnsemble}
-          aide="Avec une valeur qui fait rejouer (1, 5, 6, 2 + 2), les pions mangés ensemble peuvent rentrer ensemble."
+        <Interrupteur libelle={t('groupe')} valeur={r.groupeRentreEnsemble}
+          aide={t('aideGroupe')}
           onChange={(v) => maj((x) => { x.groupeRentreEnsemble = v; })} />
-        <Texte style={{ fontWeight: '600' }}>Sens du tour</Texte>
-        <Choix options={[['anti-horaire', '↺ Anti-horaire'], ['horaire', '↻ Horaire']]} valeur={r.sens}
+        <Texte style={{ fontWeight: '600' }}>{t('sensTour')}</Texte>
+        <Choix options={[['anti-horaire', `↺ ${t('antiHoraire')}`], ['horaire', `↻ ${t('horaire')}`]]} valeur={r.sens}
           onChange={(v) => maj((x) => { x.sens = v; })} />
         {r.forme === 'carre' ? (
           <>
-            <Texte style={{ fontWeight: '600' }}>Sens des anneaux intérieurs</Texte>
-            <Choix options={[['inverse', 'Inverse (classique)'], ['meme', 'Même sens'], ['alterne', 'Alterné']]} valeur={r.sensInterieurs}
+            <Texte style={{ fontWeight: '600' }}>{t('sensInterieurs')}</Texte>
+            <Choix options={[['inverse', t('inverse')], ['meme', t('meme')], ['alterne', t('alterne')]]} valeur={r.sensInterieurs}
               onChange={(v) => maj((x) => { x.sensInterieurs = v; })} />
           </>
         ) : null}
       </Carte>
 
       {r.forme === 'carre' ? (
-        <Carte titre="Cases refuges (croix)">
-          <Texte attenue style={{ fontSize: 12 }}>Les cases de départ et le centre sont toujours des refuges.</Texte>
-          <Interrupteur libelle="Coins du 2e anneau (classique)" valeur={r.refuges.coinsDeuxiemeAnneau}
+        <Carte titre={t('refuges')}>
+          <Texte attenue style={{ fontSize: 12 }}>{t('aideRefuges')}</Texte>
+          <Interrupteur libelle={t('coins2')} valeur={r.refuges.coinsDeuxiemeAnneau}
             onChange={(v) => maj((x) => { x.refuges.coinsDeuxiemeAnneau = v; })} />
-          <Interrupteur libelle="Milieux des anneaux intérieurs" valeur={r.refuges.milieuxInterieurs}
+          <Interrupteur libelle={t('milieux')} valeur={r.refuges.milieuxInterieurs}
             onChange={(v) => maj((x) => { x.refuges.milieuxInterieurs = v; })} />
         </Carte>
       ) : null}
 
-      {erreurs.length ? <Texte erreur>{erreurs.join(' ')}</Texte> : null}
+      {erreurs.length ? <Texte erreur>{erreurs.map((e) => traduireErreur(e, t)).join(' ')}</Texte> : null}
       {erreurServeur ? <Texte erreur>{erreurServeur}</Texte> : null}
       <Bouton
         principal
-        titre={occupe ? 'Patiente…' : mode === 'local' ? 'Commencer' : 'Créer la partie'}
+        titre={occupe ? t('patiente') : mode === 'local' ? t('commencer') : t('creerLaPartie')}
         desactive={erreurs.length > 0 || occupe}
         onPress={() =>
           surValider(
             normaliserRegles(r).regles,
-            noms.slice(0, nb).map((x, i) => ({ nom: x.trim() || COULEURS[i].nom, ordi: ordi[i] ? niveau : false }))
+            noms.slice(0, nb).map((x, i) => ({ nom: nomCanonique(x, i), ordi: ordi[i] ? niveau : false }))
           )
         }
       />

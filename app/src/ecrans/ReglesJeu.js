@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, useWindowDimensions } from 'react-native';
-import { Carte, Texte, useCouleurs } from '../ui';
+import { Carte, Texte, useCouleurs, useT } from '../ui';
+import { TEXTES_REGLES } from '../../../moteur/textes-regles.js';
 import { Plateau } from '../Plateau';
 import { nouvellePartie, geometrie } from '../../../moteur/partie.js';
 import { REGLES_PAR_DEFAUT, COULEURS, valeurDesLongs, faitRejouer } from '../../../moteur/regles.js';
@@ -35,16 +36,26 @@ function DeLong({ points, petit }) {
   );
 }
 
-function Puce({ children }) {
-  return <Texte style={{ lineHeight: 22 }}>• {children}</Texte>;
-}
-
 function Gras({ children }) {
   return <Texte style={{ fontWeight: '800' }}>{children}</Texte>;
 }
 
+/** Texte des règles avec <strong>…</strong> rendu en gras. */
+function Riche({ html, style }) {
+  const morceaux = html.split(/(<strong>.*?<\/strong>)/g).filter(Boolean);
+  return (
+    <Texte style={style}>
+      {morceaux.map((m, i) => (m.startsWith('<strong>') ? <Gras key={i}>{m.slice(8, -9)}</Gras> : m))}
+    </Texte>
+  );
+}
+
 export default function ReglesJeu() {
   const c = useCouleurs();
+  const t = useT();
+  const TX = TEXTES_REGLES[t.langue] || TEXTES_REGLES.fr;
+  // Dans l'appli, le dessin du trajet n'est pas numéroté : on retire « (0) », « (1 à 3) »…
+  const R = (cle) => (TX[cle] || TEXTES_REGLES.fr[cle]).replace(/\s*\(\d+(\s+\S+\s+\d+)?\)/g, '');
   const { width } = useWindowDimensions();
   const largeur = Math.min(width - 60, 520);
   const F = REGLES_PAR_DEFAUT.des.faces;
@@ -58,36 +69,33 @@ export default function ReglesJeu() {
     <View style={{ gap: 14 }}>
       <View style={{ alignItems: 'center' }}>
         <Texte attenue style={{ fontSize: 22 }}>தாயம்</Texte>
-        <Texte style={{ fontSize: 28, fontWeight: '800', color: c.accent }}>Règles du Thaayam</Texte>
-        <Texte attenue>Le jeu de plateau traditionnel tamoul, de 2 à 4 joueurs</Texte>
+        <Texte style={{ fontSize: 28, fontWeight: '800', color: c.accent }}>{R('titre')}</Texte>
+        <Texte attenue>{R('sousTitre')}</Texte>
       </View>
 
-      <Carte titre="1. Le but">
-        <Texte>Chaque joueur a <Gras>4 pions</Gras>. Il faut leur faire faire le tour de la croix, puis les amener au <Gras>centre</Gras>. Le premier qui amène ses 4 pions au centre <Gras>gagne</Gras>.</Texte>
+      <Carte titre={R('h1')}>
+        <Riche html={R('but')} />
       </Carte>
 
-      <Carte titre="2. Le plateau">
+      <Carte titre={R('h2')}>
         {dessin(etatPlateau, false)}
-        <Puce>Une <Gras>croix</Gras> de 4 bras ; chaque bras a 3 colonnes de 4 cases.</Puce>
-        <Puce>Chaque joueur a son bras et sa couleur. Au début, ses pions attendent <Gras>au centre</Gras>, du côté de son bras. La colonne du milieu de son bras est à sa couleur.</Puce>
-        <Puce>Entre deux bras, il n'y a pas de case : on passe en <Gras>diagonale</Gras>, là où sont dessinés les 3 arcs.</Puce>
-        <Puce>Au milieu, le grand carré barré est le <Gras>centre</Gras> : l'arrivée.</Puce>
+        {['pl1', 'pl2', 'pl3', 'pl4'].map((k) => <Riche key={k} html={`• ${R(k)}`} style={{ lineHeight: 22 }} />)}
       </Carte>
 
-      <Carte titre="3. Les dés">
-        <Texte>On lance <Gras>2 dés longs</Gras> (dayakattai). Chaque dé a 4 faces :</Texte>
+      <Carte titre={R('h3')}>
+        <Riche html={R('des1')} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
           {F.map((f) => (
             <View key={f} style={{ alignItems: 'center', gap: 4 }}>
               <DeLong points={f} />
-              <Texte attenue style={{ fontSize: 12 }}>{f === 0 ? 'vide' : `${f} point${f > 1 ? 's' : ''}`}</Texte>
+              <Texte attenue style={{ fontSize: 12 }}>{f === 0 ? R('vide') : f === 1 ? R('point') : R('points').replace('{n}', f)}</Texte>
             </View>
           ))}
         </View>
-        <Texte>On <Gras>additionne</Gras> les points des deux dés. Les 16 lancers possibles :</Texte>
+        <Riche html={R('des2')} />
         <View style={{ alignSelf: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Texte attenue style={{ width: 68, fontSize: 10, textAlign: 'center' }}>dé 1 ↓ dé 2 →</Texte>
+            <Texte attenue style={{ width: 68, fontSize: 10, textAlign: 'center' }}>{R('entete')}</Texte>
             {F.map((b) => <View key={b} style={{ width: 54, alignItems: 'center', paddingVertical: 4 }}><View style={{ transform: [{ scale: 0.8 }] }}><DeLong points={b} petit /></View></View>)}
           </View>
           {F.map((a) => (
@@ -111,45 +119,32 @@ export default function ReglesJeu() {
             </View>
           ))}
         </View>
-        <Texte><Texte style={{ color: '#c47a2c', fontWeight: '800' }}>■</Texte> <Gras>1 (thaayam)</Gras> : fait entrer un pion, et on rejoue.</Texte>
-        <Texte><Texte style={{ color: '#4f9a66', fontWeight: '800' }}>■</Texte> <Gras>5, 6 et 2 + 2</Gras> : on rejoue. Attention : 1 + 3 fait aussi 4, mais ne fait pas rejouer.</Texte>
-        <Texte><Texte style={{ color: '#9b9083', fontWeight: '800' }}>■</Texte> <Gras>Kaapal</Gras> (deux faces vides) : on ne bouge pas, on passe les dés au joueur suivant.</Texte>
+        <Texte><Texte style={{ color: '#c47a2c', fontWeight: '800' }}>■</Texte> <Riche html={R('legEntree')} /></Texte>
+        <Texte><Texte style={{ color: '#4f9a66', fontWeight: '800' }}>■</Texte> <Riche html={R('legRejoue')} /></Texte>
+        <Texte><Texte style={{ color: '#9b9083', fontWeight: '800' }}>■</Texte> <Riche html={R('legKaapal')} /></Texte>
       </Carte>
 
-      <Carte titre="4. Un tour de jeu">
-        <Texte>1. On lance les dés.</Texte>
-        <Texte>2. On choisit <Gras>un seul pion</Gras> et on l'avance du total. On ne partage pas un lancer entre deux pions.</Texte>
-        <Texte>3. Si on peut bouger un pion, on est obligé de le faire.</Texte>
-        <Texte>4. Si on ne peut rien bouger, le tour passe (sauf si le lancer fait rejouer).</Texte>
-        <Texte>5. On rejoue avec 1, 5, 6, 2 + 2, et après avoir mangé un pion.</Texte>
+      <Carte titre={R('h4')}>
+        {['t1', 't2', 't3', 't4', 't5'].map((k, n) => <Riche key={k} html={`${n + 1}. ${R(k)}`} />)}
       </Carte>
 
-      <Carte titre="5. Le trajet d'un pion">
+      <Carte titre={R('h5')}>
         {dessin(etatTrajet, true)}
-        <Texte>1. Avec un 1, le pion sort du centre sur la <Gras>première case de sa colonne</Gras>, collée au centre.</Texte>
-        <Texte>2. Il <Gras>descend sa colonne</Gras> jusqu'au bout de son bras.</Texte>
-        <Texte>3. Il fait <Gras>tout le tour de la croix</Gras> dans le sens inverse des aiguilles d'une montre, par les colonnes extérieures des bras (d'un bras à l'autre, il passe directement en diagonale, là où sont les arcs).</Texte>
-        <Texte>4. Il revient au bout de son bras, puis <Gras>remonte par les 3 arcs</Gras> du coin à gauche de son bras : le grand arc, le moyen, puis le petit. Personne d'autre n'y passe.</Texte>
-        <Texte>5. Il rentre au <Gras>centre</Gras>. Il faut tomber <Gras>pile</Gras> dessus.</Texte>
+        {['tr1', 'tr2', 'tr3', 'tr4', 'tr5'].map((k, n) => <Riche key={k} html={`${n + 1}. ${R(k)}`} />)}
       </Carte>
 
-      <Carte titre="6. Manger">
+      <Carte titre={R('h6')}>
         {dessin(etatGroupe, false)}
-        <Puce>Si ton pion s'arrête sur une case où il y a des pions adverses, tu les <Gras>manges</Gras> : ils retournent à la maison. Et tu <Gras>rejoues</Gras>.</Puce>
-        <Puce>Tu peux <Gras>empiler</Gras> tes propres pions sur une même case. Mais si un adversaire tombe dessus, il mange <Gras>tout le groupe</Gras> d'un coup (sur le dessin, si Vert fait 4, il mange les 2 pions rouges).</Puce>
-        <Puce><Gras>Revanche</Gras> : des pions mangés ensemble peuvent <Gras>rentrer ensemble</Gras>. Avec 1, 5, 6 ou 2 + 2, tu peux faire entrer tout le groupe d'un coup. C'est toi qui choisis.</Puce>
-        <Puce>Un pion arrivé au centre ne peut plus être mangé.</Puce>
+        {['m1', 'm2', 'm3', 'm4'].map((k) => <Riche key={k} html={`• ${R(k)}`} style={{ lineHeight: 22 }} />)}
       </Carte>
 
-      <Carte titre="7. Capture obligatoire">
-        <Texte>Tant que tu n'as mangé <Gras>aucun</Gras> pion adverse, tes pions ne peuvent pas monter vers le centre : revenus au bout de leur bras, ils <Gras>refont un tour</Gras>. Dès que tu as mangé un pion, tous tes pions peuvent monter.</Texte>
+      <Carte titre={R('h7')}>
+        <Riche html={R('cap')} />
       </Carte>
 
-      <Carte titre="8. Jouer">
-        <Puce><Gras>En ligne entre amis</Gras> : un joueur crée la partie et envoie le code de 5 lettres aux autres.</Puce>
-        <Puce><Gras>Contre l'ordinateur</Gras> : facile, normal ou fort.</Puce>
-        <Puce><Gras>À plusieurs sur un même téléphone</Gras>, chacun son tour.</Puce>
-        <Texte attenue style={{ fontSize: 13 }}>Les règles changent d'une famille à l'autre : avant chaque partie, tout est réglable (nombre de pions, valeurs qui font rejouer, Kaapal, empilement…).</Texte>
+      <Carte titre={R('h8')}>
+        {['j1', 'j2', 'j3'].map((k) => <Riche key={k} html={`• ${R(k)}`} style={{ lineHeight: 22 }} />)}
+        <Texte attenue style={{ fontSize: 13 }}>{R('note')}</Texte>
       </Carte>
     </View>
   );

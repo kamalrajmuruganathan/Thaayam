@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Share, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Bouton, Carte, Champ, Choix, Texte, useCouleurs, ThemeContexte } from './src/ui';
+import { Bouton, Carte, Champ, Choix, Texte, useCouleurs, ThemeContexte, LangueContexte } from './src/ui';
 import { THEME_PAR_DEFAUT } from '../moteur/themes.js';
+import { LANGUES, traducteur, traduireErreur, traduireNom, traduireReaction, resumeReglesTraduit, resumeStatsTraduit } from '../moteur/i18n.js';
 import Reglages from './src/ecrans/Reglages';
 import Jeu from './src/ecrans/Jeu';
 import ReglesJeu from './src/ecrans/ReglesJeu';
@@ -28,14 +29,24 @@ function Racine() {
     stockage.lire('thaayam:theme').then((t) => (t === 'bois' || t === 'cristal') && setTheme(t)).catch(() => {});
   }, []);
   const choisirTheme = (t) => { setTheme(t); stockage.ecrire('thaayam:theme', t).catch(() => {}); };
+  // Langue choisie, mémorisée sur l'appareil
+  const [langue, setLangue] = useState('fr');
+  useEffect(() => {
+    stockage.lire('thaayam:langue').then((l) => LANGUES.some((x) => x.code === l) && setLangue(l)).catch(() => {});
+  }, []);
+  const choisirLangue = (l) => { setLangue(l); stockage.ecrire('thaayam:langue', l).catch(() => {}); };
+  const t = traducteur(langue);
   return (
-    <ThemeContexte.Provider value={theme}>
-      <Ecrans theme={theme} choisirTheme={choisirTheme} />
-    </ThemeContexte.Provider>
+    <LangueContexte.Provider value={t}>
+      <ThemeContexte.Provider value={theme}>
+        <Ecrans theme={theme} choisirTheme={choisirTheme} langue={langue} choisirLangue={choisirLangue} t={t} />
+      </ThemeContexte.Provider>
+    </LangueContexte.Provider>
   );
 }
 
-function Ecrans({ theme, choisirTheme }) {
+function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
+  const N = (nom) => traduireNom(nom, t);
   const c = useCouleurs();
   const [ecran, setEcran] = useState('accueil'); // accueil | reglages | salon | jeu | regles
   const [retourRegles, setRetourRegles] = useState('accueil');
@@ -104,13 +115,13 @@ function Ecrans({ theme, choisirTheme }) {
   const minuteurBulle = useRef(null);
   function montrerReaction(r, s) {
     const nom = (s.etat && s.etat.joueurs[r.place] && s.etat.joueurs[r.place].nom) || (s.partie.joueurs[r.place] || {}).nom || '?';
-    setBulle({ texte: `${nom}${r.place === s.place ? ' (toi)' : ''} : ${r.texte}`, place: r.place });
+    setBulle({ texte: `${N(nom)}${r.place === s.place ? t('toi') : ''} : ${traduireReaction(r.texte, t)}`, place: r.place });
     clearTimeout(minuteurBulle.current);
     minuteurBulle.current = setTimeout(() => setBulle(null), 3000);
   }
   async function reagir(texte) {
     const s = sessionRef.current;
-    try { await enLigne.reagir(s.partie.code, s.jeton, texte); } catch (e) { setMessage(e.message); }
+    try { await enLigne.reagir(s.partie.code, s.jeton, texte); } catch (e) { setMessage(traduireErreur(e.message, t)); }
   }
   async function revanche() {
     const s = sessionRef.current;
@@ -120,7 +131,7 @@ function Ecrans({ theme, choisirTheme }) {
       await ouvrirEnLigne(nouveau, s.place, s.jeton);
       setMessage('');
     } catch (e) {
-      setMessage(e.message);
+      setMessage(traduireErreur(e.message, t));
     } finally {
       setOccupe(false);
     }
@@ -158,15 +169,15 @@ function Ecrans({ theme, choisirTheme }) {
   }
 
   async function rejoindre() {
-    if (!pseudo.trim()) return setMessage("Écris d'abord ton pseudo.");
-    if (code.trim().length !== 5) return setMessage('Le code fait 5 caractères.');
+    if (!pseudo.trim()) return setMessage(t('errPseudo'));
+    if (code.trim().length !== 5) return setMessage(t('errCode'));
     setOccupe(true);
     setMessage('');
     try {
       const r = await enLigne.rejoindre(code, pseudo.trim());
       await ouvrirEnLigne(r.code, r.place, r.jeton);
     } catch (e) {
-      setMessage(e.message);
+      setMessage(traduireErreur(e.message, t));
     } finally {
       setOccupe(false);
     }
@@ -186,7 +197,7 @@ function Ecrans({ theme, choisirTheme }) {
       const r = await enLigne.creer(reglesChoisies, pseudo.trim());
       await ouvrirEnLigne(r.code, r.place, r.jeton);
     } catch (e) {
-      setMessage(e.message);
+      setMessage(traduireErreur(e.message, t));
     } finally {
       setOccupe(false);
     }
@@ -202,7 +213,7 @@ function Ecrans({ theme, choisirTheme }) {
       setSession((s) => ({ ...s, partie: maj, etat: maj.etat }));
       setEcran('jeu');
     } catch (e) {
-      setMessage(e.message);
+      setMessage(traduireErreur(e.message, t));
     } finally {
       setOccupe(false);
     }
@@ -244,7 +255,7 @@ function Ecrans({ theme, choisirTheme }) {
       }));
       setMessage('');
     } catch (e) {
-      setMessage(e.message);
+      setMessage(traduireErreur(e.message, t));
       try {
         const p = await enLigne.lire(s.partie.code);
         setSession((x) => ({ ...x, partie: p, etat: p.etat }));
@@ -265,16 +276,16 @@ function Ecrans({ theme, choisirTheme }) {
   if (ecran === 'regles') {
     contenu = (
       <>
-        <Bouton titre="← Retour" onPress={() => setEcran(retourRegles)} />
+        <Bouton titre={t('retour')} onPress={() => setEcran(retourRegles)} />
         <ReglesJeu />
-        <Bouton principal titre="← Retour" onPress={() => setEcran(retourRegles)} />
+        <Bouton principal titre={t('retour')} onPress={() => setEcran(retourRegles)} />
       </>
     );
   } else if (ecran === 'reglages') {
     contenu = (
       <>
-        <Bouton titre="← Retour" onPress={() => { setMessage(''); setEcran('accueil'); }} />
-        <Texte style={{ fontSize: 22, fontWeight: '800' }}>{mode === 'local' ? 'Partie sur cet appareil' : 'Nouvelle partie en ligne'}</Texte>
+        <Bouton titre={t('retour')} onPress={() => { setMessage(''); setEcran('accueil'); }} />
+        <Texte style={{ fontSize: 22, fontWeight: '800' }}>{mode === 'local' ? t('titreLocal') : t('titreLigne')}</Texte>
         <Reglages mode={mode} reglesInitiales={regles} ordiInitial={ordiInitial} pseudo={pseudo.trim()} occupe={occupe} erreurServeur={message} surValider={valider} />
       </>
     );
@@ -283,28 +294,28 @@ function Ecrans({ theme, choisirTheme }) {
     const createur = session.place === 0;
     contenu = (
       <>
-        <Bouton titre="← Accueil" onPress={quitter} />
+        <Bouton titre={t('accueil')} onPress={quitter} />
         <Texte attenue style={{ textAlign: 'center' }}>Code de la partie</Texte>
         <Texte selectable style={{ fontSize: 48, fontWeight: '800', letterSpacing: 10, textAlign: 'center', color: c.accent }}>{p.code}</Texte>
-        <Bouton titre="Partager le code" onPress={() => Share.share({ message: `Viens jouer au Thaayam avec moi ! Code : ${p.code}` }).catch(() => {})} />
-        <Carte titre="Joueurs">
+        <Bouton titre={t('partagerCode')} onPress={() => Share.share({ message: t('invitation', { code: p.code }) }).catch(() => {})} />
+        <Carte titre={t('joueurs')}>
           {p.joueurs.map((j, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: COULEURS[i].code }} />
-              <Texte>{j.nom}{i === session.place ? ' (toi)' : ''}{i === 0 ? ' — créateur' : ''}</Texte>
+              <Texte>{N(j.nom)}{i === session.place ? t('toi') : ''}{i === 0 ? t('createur') : ''}</Texte>
             </View>
           ))}
         </Carte>
-        <Carte titre="Règles">
-          {resumeRegles(p.regles).map((x, i) => <Texte key={i} attenue>• {x}</Texte>)}
+        <Carte titre={t('regles')}>
+          {resumeReglesTraduit(p.regles, t).map((x, i) => <Texte key={i} attenue>• {x}</Texte>)}
         </Carte>
         {createur ? (
-          <Bouton principal titre="Commencer la partie" desactive={p.joueurs.length < 2 || occupe} onPress={demarrer} />
+          <Bouton principal titre={t('commencerPartie')} desactive={p.joueurs.length < 2 || occupe} onPress={demarrer} />
         ) : null}
         <Texte attenue={!message} erreur={!!message}>
           {message || (createur
-            ? (p.joueurs.length < 2 ? 'Envoie le code à tes amis. Il faut au moins 2 joueurs.' : `${p.joueurs.length} joueurs prêts (4 au maximum).`)
-            : 'En attente du créateur de la partie…')}
+            ? (p.joueurs.length < 2 ? t('salonPeu') : t('salonPrets', { n: p.joueurs.length }))
+            : t('salonAttente'))}
         </Texte>
       </>
     );
@@ -325,44 +336,47 @@ function Ecrans({ theme, choisirTheme }) {
         <View style={{ alignItems: 'center', marginVertical: 8 }}>
           <Texte attenue style={{ fontSize: 26 }}>தாயம்</Texte>
           <Texte style={{ fontSize: 36, fontWeight: '800', color: c.accent }}>Thaayam</Texte>
-          <Texte attenue>Le jeu de plateau traditionnel tamoul</Texte>
+          <Texte attenue>{t('sousTitre')}</Texte>
         </View>
-        <Carte titre="Apparence">
-          <Choix options={[['cristal', '💎 Cristal'], ['bois', '🪵 Bois']]} valeur={theme} onChange={choisirTheme} />
+        <Carte titre={t('langue')}>
+          <Choix options={LANGUES.map((l) => [l.code, l.nom])} valeur={langue} onChange={choisirLangue} />
         </Carte>
-        {resumeStats(stats).length ? (
-          <Carte titre="Mes statistiques">
-            {resumeStats(stats).map((l) => <Texte key={l}>• {l}</Texte>)}
+        <Carte titre={t('apparence')}>
+          <Choix options={[['cristal', `💎 ${t('cristal')}`], ['bois', `🪵 ${t('bois')}`]]} valeur={theme} onChange={choisirTheme} />
+        </Carte>
+        {resumeStatsTraduit(stats, t).length ? (
+          <Carte titre={t('mesStats')}>
+            {resumeStatsTraduit(stats, t).map((l) => <Texte key={l}>• {l}</Texte>)}
           </Carte>
         ) : null}
         {mesParties.length ? (
-          <Carte titre="Mes parties en ligne">
+          <Carte titre={t('mesParties')}>
             {mesParties.map((p) => (
               <Bouton key={p.code} principal={p.aMoi}
-                titre={`${p.code} · ${p.statut === 'attente' ? 'En attente des joueurs' : p.aMoi ? 'À toi de jouer !' : 'En cours'}`}
-                onPress={() => ouvrirEnLigne(p.code, p.place, p.jeton).catch((e) => setMessage(e.message))} />
+                titre={`${p.code} · ${p.statut === 'attente' ? t('partieAttente') : p.aMoi ? t('partieAMoi') : t('partieEnCours')}`}
+                onPress={() => ouvrirEnLigne(p.code, p.place, p.jeton).catch((e) => setMessage(traduireErreur(e.message, t)))} />
             ))}
           </Carte>
         ) : null}
-        <Champ libelle="Ton pseudo" value={pseudo} onChangeText={memoriserPseudo} maxLength={20} placeholder="Ex. Kamal" />
-        <Carte titre="Jouer en ligne">
-          <Bouton principal titre="Créer une partie" desactive={occupe}
-            onPress={() => { if (!pseudo.trim()) return setMessage("Écris d'abord ton pseudo."); setMessage(''); setMode('ligne'); setEcran('reglages'); }} />
+        <Champ libelle={t('pseudo')} value={pseudo} onChangeText={memoriserPseudo} maxLength={20} placeholder={t('pseudoExemple')} />
+        <Carte titre={t('jouerEnLigne')}>
+          <Bouton principal titre={t('creerPartie')} desactive={occupe}
+            onPress={() => { if (!pseudo.trim()) return setMessage(t('errPseudo')); setMessage(''); setMode('ligne'); setEcran('reglages'); }} />
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Champ value={code} onChangeText={(t) => setCode(t.toUpperCase())} maxLength={5} placeholder="CODE" autoCapitalize="characters"
+              <Champ value={code} onChangeText={(t) => setCode(t.toUpperCase())} maxLength={5} placeholder={t('code')} autoCapitalize="characters"
                 style={{ letterSpacing: 4, fontWeight: '700' }} />
             </View>
-            <Bouton titre={occupe ? '…' : 'Rejoindre'} desactive={occupe} onPress={rejoindre} />
+            <Bouton titre={occupe ? '…' : t('rejoindre')} desactive={occupe} onPress={rejoindre} />
           </View>
         </Carte>
-        <Carte titre="Jouer sur cet appareil">
-          <Bouton principal titre="Contre l'ordinateur"
+        <Carte titre={t('jouerAppareil')}>
+          <Bouton principal titre={t('contreOrdi')}
             onPress={() => { setMessage(''); setOrdiInitial([false, true, true, true]); setMode('local'); setEcran('reglages'); }} />
-          <Bouton titre="À plusieurs, chacun son tour"
+          <Bouton titre={t('plusieurs')}
             onPress={() => { setMessage(''); setOrdiInitial([false, false, false, false]); setMode('local'); setEcran('reglages'); }} />
         </Carte>
-        <Bouton titre="📖 Règles du jeu (avec dessins)" onPress={voirReglesJeu} />
+        <Bouton titre={t('reglesDessins')} onPress={voirReglesJeu} />
         {message ? <Texte erreur>{message}</Texte> : null}
       </>
     );

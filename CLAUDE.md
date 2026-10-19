@@ -11,6 +11,9 @@
   `thaayam_menage` (`supabase/thaayam.sql`). Statistiques locales : `moteur/stats.js`.
   L'état complet du jeu (JSON) est stocké dans `thaayam_parties.etat` ; `version` évite les coups en double.
 
+- Langues : `moteur/i18n.js` (`traducteur(langue)` → `t(cle, params)`, 5 langues, test « toutes les clés ») ; le moteur
+  et le serveur écrivent en français, retraduits à l'affichage (`traduireJournal`, `traduireErreur`, `traduireNom`…) ;
+  page des règles : `moteur/textes-regles.js`. Tout nouveau texte affiché doit passer par une clé, dans les 5 langues.
 - Thèmes : `moteur/themes.js` (couleurs du plateau, « cristal » par défaut et « bois ») ; site : `data-skin` sur
   `<html>` + règles CSS `:root[data-skin="cristal"]` dans `web/style.css` ; appli : `ThemeContexte` dans `app/src/ui.js`.
 - Ordinateur : `moteur/ia.js` (`choisirCoup`), niveaux `facile`, `normal`, `fort` (évaluation + un lancer d'avance).

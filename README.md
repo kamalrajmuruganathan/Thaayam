@@ -35,6 +35,11 @@ Par défaut : le **Thaayam / Dayakattai classique** du Tamil Nadu.
 Tout est réglable avant la partie : plateau en croix ou carré (5/7/9), 1 à 12 pions, dés longs ou cauris, valeurs d'entrée et de
 relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pion par case ou empilement.
 
+## Langues
+- Français, English, தமிழ் (tamoul), हिन्दी (hindi), සිංහල (cinghalais) : choix sur l'accueil, mémorisé ;
+  par défaut, la langue du téléphone. Textes dans `moteur/i18n.js` (interface) et `moteur/textes-regles.js`
+  (page des règles). Les traductions en tamoul, hindi et cinghalais méritent une relecture par un locuteur natif.
+
 ## Apparence
 - Thème **Cristal** (par défaut) : style tableau de bord haut de gamme, verre fumé, lueurs cyan, chiffres blancs.
 - Thème **Bois** : plateau traditionnel. Le choix se fait sur l'accueil (« Apparence ») et reste mémorisé.
