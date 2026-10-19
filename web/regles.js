@@ -3,6 +3,23 @@ import { geometrie, zoneCase, arcsCroix } from './moteur/partie.js';
 import { REGLES_PAR_DEFAUT, COULEURS, valeurDesLongs, faitRejouer } from './moteur/regles.js';
 import { cle } from './moteur/plateau.js';
 import { themePlateau, THEME_PAR_DEFAUT } from './moteur/themes.js';
+import { TEXTES_REGLES, LIBELLES_FR } from './regles-textes.js';
+
+// Même langue que le jeu, mémorisée sur l'appareil (le français est écrit dans la page)
+const langue = (() => {
+  try {
+    const l = localStorage.getItem('thaayam:langue');
+    if (l) return l;
+  } catch { /* stockage indisponible */ }
+  return (navigator.language || 'fr').slice(0, 2);
+})();
+const TX = TEXTES_REGLES[langue] || null;
+const libelle = (cle, n) => ((TX && TX[cle]) || LIBELLES_FR[cle]).replace('{n}', n);
+if (TX) {
+  document.documentElement.lang = langue;
+  document.querySelectorAll('[data-r]').forEach((e) => { if (TX[e.dataset.r]) e.innerHTML = TX[e.dataset.r]; });
+  document.title = `Thaayam : ${TX.titre}`;
+}
 
 // Même thème que le jeu (Cristal ou Bois), mémorisé sur l'appareil
 const nomTheme = (() => { try { const t = localStorage.getItem('thaayam:theme'); return t === 'bois' || t === 'cristal' ? t : THEME_PAR_DEFAUT; } catch { return THEME_PAR_DEFAUT; } })();
@@ -128,7 +145,7 @@ function deLong(points) {
     const fig = document.createElement('figure');
     fig.append(deLong(f));
     const c = document.createElement('figcaption');
-    c.textContent = f === 0 ? 'vide' : `${f} point${f > 1 ? 's' : ''}`;
+    c.textContent = f === 0 ? libelle('vide') : f === 1 ? libelle('point') : libelle('points', f);
     fig.append(c);
     faces.append(fig);
   });

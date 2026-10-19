@@ -322,3 +322,8 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 :root[data-skin="cristal"] .choix-theme button.actif {
   background: linear-gradient(180deg, #e9f8ff, #8fdcff 45%, #2f9fd6); color: var(--accent-texte); border-color: #bfeeff;
 }
+
+/* Écritures tamoule, devanagari et cinghalaise : pas d'espacement entre les lettres (il casse les ligatures) */
+:root:is([lang="ta"], [lang="hi"], [lang="si"]) h1,
+:root:is([lang="ta"], [lang="hi"], [lang="si"]) h2,
+:root:is([lang="ta"], [lang="hi"], [lang="si"]) .code-geant { letter-spacing: normal !important; }

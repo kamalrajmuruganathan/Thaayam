@@ -18,97 +18,97 @@
 <body>
   <main id="racine">
     <article class="ecran regles-page">
-      <a class="retour" href="./">← Retour au jeu</a>
+      <a class="retour" href="./" data-r="retourJeu">← Retour au jeu</a>
       <header class="titre">
         <div class="tamoul">தாயம்</div>
-        <h1>Règles du Thaayam</h1>
-        <p class="attenue">Le jeu de plateau traditionnel tamoul, de 2 à 4 joueurs</p>
+        <h1 data-r="titre">Règles du Thaayam</h1>
+        <p class="attenue" data-r="sousTitre">Le jeu de plateau traditionnel tamoul, de 2 à 4 joueurs</p>
       </header>
 
       <section class="carte">
-        <h2>1. Le but</h2>
-        <p>Chaque joueur a <strong>4 pions</strong>. Il faut leur faire faire le tour de la croix, puis les amener au <strong>centre</strong>. Le premier qui amène ses 4 pions au centre <strong>gagne</strong>.</p>
+        <h2 data-r="h1">1. Le but</h2>
+        <p data-r="but">Chaque joueur a <strong>4 pions</strong>. Il faut leur faire faire le tour de la croix, puis les amener au <strong>centre</strong>. Le premier qui amène ses 4 pions au centre <strong>gagne</strong>.</p>
       </section>
 
       <section class="carte">
-        <h2>2. Le plateau</h2>
+        <h2 data-r="h2">2. Le plateau</h2>
         <div class="dessin-plateau"><svg id="dessin-plateau"></svg></div>
         <ul>
-          <li>Une <strong>croix</strong> de 4 bras ; chaque bras a 3 colonnes de 4 cases.</li>
-          <li>Chaque joueur a son bras et sa couleur. Au début, ses pions attendent <strong>au centre</strong>, du côté de son bras. La colonne du milieu de son bras est à sa couleur : c'est sa colonne.</li>
-          <li>Entre deux bras, il n'y a pas de case : on passe en <strong>diagonale</strong>, là où sont dessinés les 3 arcs.</li>
-          <li>Au milieu, le grand carré barré est le <strong>centre</strong> : l'arrivée.</li>
+          <li data-r="pl1">Une <strong>croix</strong> de 4 bras ; chaque bras a 3 colonnes de 4 cases.</li>
+          <li data-r="pl2">Chaque joueur a son bras et sa couleur. Au début, ses pions attendent <strong>au centre</strong>, du côté de son bras. La colonne du milieu de son bras est à sa couleur : c'est sa colonne.</li>
+          <li data-r="pl3">Entre deux bras, il n'y a pas de case : on passe en <strong>diagonale</strong>, là où sont dessinés les 3 arcs.</li>
+          <li data-r="pl4">Au milieu, le grand carré barré est le <strong>centre</strong> : l'arrivée.</li>
         </ul>
       </section>
 
       <section class="carte">
-        <h2>3. Les dés</h2>
-        <p>On lance <strong>2 dés longs</strong> (dayakattai). Chaque dé a 4 faces :</p>
+        <h2 data-r="h3">3. Les dés</h2>
+        <p data-r="des1">On lance <strong>2 dés longs</strong> (dayakattai). Chaque dé a 4 faces :</p>
         <div id="faces" class="faces"></div>
-        <p>On <strong>additionne</strong> les points des deux dés. Voici les 16 lancers possibles :</p>
+        <p data-r="des2">On <strong>additionne</strong> les points des deux dés. Voici les 16 lancers possibles :</p>
         <div class="tableau-defile">
           <table id="tableau-des" class="tableau-des">
-            <thead><tr><th scope="col">dé 1 ↓ dé 2 →</th><th scope="col">vide</th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th></tr></thead>
+            <thead><tr><th scope="col" data-r="entete">dé 1 ↓ dé 2 →</th><th scope="col" data-r="vide">vide</th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
         <ul class="legende-des">
-          <li><span class="pastille-legende entree"></span><strong>1 (thaayam)</strong> : fait entrer un pion, et on rejoue.</li>
-          <li><span class="pastille-legende rejoue"></span><strong>5, 6 et 2 + 2</strong> : on rejoue. Attention : 1 + 3 fait aussi 4, mais ne fait pas rejouer.</li>
-          <li><span class="pastille-legende kaapal"></span><strong>Kaapal</strong> (deux faces vides) : on ne bouge pas, on passe les dés au joueur suivant.</li>
+          <li><span class="pastille-legende entree"></span><span data-r="legEntree"><strong>1 (thaayam)</strong> : fait entrer un pion, et on rejoue.</span></li>
+          <li><span class="pastille-legende rejoue"></span><span data-r="legRejoue"><strong>5, 6 et 2 + 2</strong> : on rejoue. Attention : 1 + 3 fait aussi 4, mais ne fait pas rejouer.</span></li>
+          <li><span class="pastille-legende kaapal"></span><span data-r="legKaapal"><strong>Kaapal</strong> (deux faces vides) : on ne bouge pas, on passe les dés au joueur suivant.</span></li>
         </ul>
       </section>
 
       <section class="carte">
-        <h2>4. Un tour de jeu</h2>
+        <h2 data-r="h4">4. Un tour de jeu</h2>
         <ol>
-          <li>On lance les dés.</li>
-          <li>On choisit <strong>un seul pion</strong> et on l'avance du total. On ne partage pas un lancer entre deux pions.</li>
-          <li>Si on peut bouger un pion, on est obligé de le faire.</li>
-          <li>Si on ne peut rien bouger, le tour passe (sauf si le lancer fait rejouer).</li>
-          <li>On rejoue avec 1, 5, 6, 2 + 2, et après avoir mangé un pion.</li>
+          <li data-r="t1">On lance les dés.</li>
+          <li data-r="t2">On choisit <strong>un seul pion</strong> et on l'avance du total. On ne partage pas un lancer entre deux pions.</li>
+          <li data-r="t3">Si on peut bouger un pion, on est obligé de le faire.</li>
+          <li data-r="t4">Si on ne peut rien bouger, le tour passe (sauf si le lancer fait rejouer).</li>
+          <li data-r="t5">On rejoue avec 1, 5, 6, 2 + 2, et après avoir mangé un pion.</li>
         </ol>
       </section>
 
       <section class="carte">
-        <h2>5. Le trajet d'un pion</h2>
+        <h2 data-r="h5">5. Le trajet d'un pion</h2>
         <div class="dessin-plateau"><svg id="dessin-trajet"></svg></div>
         <ol>
-          <li>Avec un 1, le pion sort du centre sur la <strong>première case de sa colonne</strong>, collée au centre (0).</li>
-          <li>Il <strong>descend sa colonne</strong> jusqu'au bout de son bras (1 à 3).</li>
-          <li>Il fait <strong>tout le tour de la croix</strong> dans le sens inverse des aiguilles d'une montre (4 à 38), par les colonnes extérieures des bras. D'un bras à l'autre, il passe directement en diagonale, là où sont dessinés les arcs.</li>
-          <li>Il revient au bout de son bras (39), puis <strong>remonte par les 3 arcs</strong> du coin à gauche de son bras (40 à 42) : le grand arc (en face de la 3e case de sa colonne), le moyen, puis le petit. Personne d'autre n'y passe.</li>
-          <li>Il rentre au <strong>centre</strong> (43). Il faut tomber <strong>pile</strong> dessus.</li>
+          <li data-r="tr1">Avec un 1, le pion sort du centre sur la <strong>première case de sa colonne</strong>, collée au centre (0).</li>
+          <li data-r="tr2">Il <strong>descend sa colonne</strong> jusqu'au bout de son bras (1 à 3).</li>
+          <li data-r="tr3">Il fait <strong>tout le tour de la croix</strong> dans le sens inverse des aiguilles d'une montre (4 à 38), par les colonnes extérieures des bras. D'un bras à l'autre, il passe directement en diagonale, là où sont dessinés les arcs.</li>
+          <li data-r="tr4">Il revient au bout de son bras (39), puis <strong>remonte par les 3 arcs</strong> du coin à gauche de son bras (40 à 42) : le grand arc (en face de la 3e case de sa colonne), le moyen, puis le petit. Personne d'autre n'y passe.</li>
+          <li data-r="tr5">Il rentre au <strong>centre</strong> (43). Il faut tomber <strong>pile</strong> dessus.</li>
         </ol>
       </section>
 
       <section class="carte">
-        <h2>6. Manger</h2>
+        <h2 data-r="h6">6. Manger</h2>
         <div class="dessin-plateau"><svg id="dessin-groupe"></svg></div>
         <ul>
-          <li>Si ton pion s'arrête sur une case où il y a des pions adverses, tu les <strong>manges</strong> : ils retournent à la maison. Et tu <strong>rejoues</strong>.</li>
-          <li>Tu peux <strong>empiler</strong> tes propres pions sur une même case. Mais si un adversaire tombe dessus, il mange <strong>tout le groupe</strong> d'un coup (sur le dessin, si Vert fait 4, il mange les 2 pions rouges).</li>
-          <li><strong>Revanche</strong> : des pions mangés ensemble peuvent <strong>rentrer ensemble</strong>. Avec 1, 5, 6 ou 2 + 2, tu peux faire entrer tout le groupe d'un coup. C'est toi qui choisis.</li>
-          <li>Un pion arrivé au centre ne peut plus être mangé.</li>
+          <li data-r="m1">Si ton pion s'arrête sur une case où il y a des pions adverses, tu les <strong>manges</strong> : ils retournent à la maison. Et tu <strong>rejoues</strong>.</li>
+          <li data-r="m2">Tu peux <strong>empiler</strong> tes propres pions sur une même case. Mais si un adversaire tombe dessus, il mange <strong>tout le groupe</strong> d'un coup (sur le dessin, si Vert fait 4, il mange les 2 pions rouges).</li>
+          <li data-r="m3"><strong>Revanche</strong> : des pions mangés ensemble peuvent <strong>rentrer ensemble</strong>. Avec 1, 5, 6 ou 2 + 2, tu peux faire entrer tout le groupe d'un coup. C'est toi qui choisis.</li>
+          <li data-r="m4">Un pion arrivé au centre ne peut plus être mangé.</li>
         </ul>
       </section>
 
       <section class="carte">
-        <h2>7. Capture obligatoire</h2>
-        <p>Tant que tu n'as mangé <strong>aucun</strong> pion adverse, tes pions ne peuvent pas monter vers le centre : revenus au bout de leur bras, ils <strong>refont un tour</strong>. Dès que tu as mangé un pion, tous tes pions peuvent monter.</p>
+        <h2 data-r="h7">7. Capture obligatoire</h2>
+        <p data-r="cap">Tant que tu n'as mangé <strong>aucun</strong> pion adverse, tes pions ne peuvent pas monter vers le centre : revenus au bout de leur bras, ils <strong>refont un tour</strong>. Dès que tu as mangé un pion, tous tes pions peuvent monter.</p>
       </section>
 
       <section class="carte">
-        <h2>8. Jouer</h2>
+        <h2 data-r="h8">8. Jouer</h2>
         <ul>
-          <li><strong>En ligne entre amis</strong> : un joueur crée la partie et envoie le code de 5 lettres aux autres.</li>
-          <li><strong>Contre l'ordinateur</strong> : facile, normal ou fort.</li>
-          <li><strong>À plusieurs sur un même téléphone</strong>, chacun son tour.</li>
+          <li data-r="j1"><strong>En ligne entre amis</strong> : un joueur crée la partie et envoie le code de 5 lettres aux autres.</li>
+          <li data-r="j2"><strong>Contre l'ordinateur</strong> : facile, normal ou fort.</li>
+          <li data-r="j3"><strong>À plusieurs sur un même téléphone</strong>, chacun son tour.</li>
         </ul>
-        <p class="attenue petit">Les règles changent d'une famille à l'autre : avant chaque partie, tout est réglable (nombre de pions, valeurs qui font rejouer, Kaapal, empilement…).</p>
+        <p class="attenue petit" data-r="note">Les règles changent d'une famille à l'autre : avant chaque partie, tout est réglable (nombre de pions, valeurs qui font rejouer, Kaapal, empilement…).</p>
       </section>
 
-      <a class="bouton-lien principal" href="./">Jouer maintenant</a>
+      <a class="bouton-lien principal" href="./" data-r="jouerMaintenant">Jouer maintenant</a>
     </article>
   </main>
   <script type="module" src="regles.js"></script>
