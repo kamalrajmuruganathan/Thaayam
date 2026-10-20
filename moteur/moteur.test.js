@@ -564,3 +564,25 @@ test('sortie obligatoire : rentrer un groupe avec un 5 reste un choix', () => {
   const coups = coupsPossibles(e);
   assert.ok(coups.some((c) => c.groupe) && coups.some((c) => c.depuis === 5), JSON.stringify(coups));
 });
+
+test('dé classique de 1 à 6 : on rejoue avec 1, 5 et 6, le 1 fait entrer', async () => {
+  const { PRESETS_DES, resumeRegles } = await import('./regles.js');
+  const { resumeReglesTraduit, traducteur } = await import('./i18n.js');
+  const { choisirCoup } = await import('./ia.js');
+  const r = normaliserRegles({ ...REGLES_PAR_DEFAUT, des: { type: 'de6', nbDes: 3, faces: [0, 1] }, ...PRESETS_DES.de6 });
+  assert.deepEqual(r.erreurs, []);
+  assert.equal(r.regles.des.nbDes, 1);
+  assert.deepEqual(valeursPossibles(r.regles), [1, 2, 3, 4, 5, 6]);
+  for (const v of [1, 2, 3, 4, 5, 6]) assert.equal(faitRejouer(r.regles, { valeur: v, detail: [v] }), [1, 5, 6].includes(v), `valeur ${v}`);
+  assert.equal(nomLancer(r.regles, { valeur: 6, detail: [6] }), '6');
+  assert.deepEqual(resumeReglesTraduit(r.regles, traducteur('fr')), resumeRegles(r.regles));
+  // Une partie complète avec le dé classique, et on peut la revoir
+  const { revoirPartie } = await import('./partie.js');
+  let e = nouvellePartie(r.regles, [{ nom: 'A', ordi: 'normal' }, { nom: 'B', ordi: 'fort' }]);
+  for (let i = 0; i < 8000 && e.phase !== 'fini'; i++) {
+    if (e.phase === 'lancer') e = lancer(e);
+    else { const c = choisirCoup(e); e = jouer(e, c.pion, !!c.groupe); }
+  }
+  assert.equal(e.phase, 'fini');
+  assert.deepEqual(revoirPartie(e).at(-1), e);
+});

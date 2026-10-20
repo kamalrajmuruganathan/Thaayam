@@ -23,7 +23,7 @@ export const REGLES_PAR_DEFAUT = {
   taille: 7, // côté du plateau carré
   nbPions: 4,
   des: {
-    type: 'desLongs', // 'desLongs' ou 'cauris'
+    type: 'desLongs', // 'desLongs', 'de6' (dé classique de 1 à 6) ou 'cauris' (anciennes parties)
     nbDes: 2,
     faces: [0, 1, 2, 3],
     valeurToutZero: 0, // valeur quand tous les dés longs montrent 0 ; 0 = « Kaapal » : on passe les dés
@@ -70,6 +70,7 @@ export function avecReglesFixes(r) {
 /** Valeurs par défaut proposées quand on change de type de dés. */
 export const PRESETS_DES = {
   desLongs: { valeursEntree: [1], valeursRejouer: [1, 5, 6], doublesRejouer: [2] },
+  de6: { valeursEntree: [1], valeursRejouer: [1, 5, 6], doublesRejouer: [] }, // dé classique : on rejoue avec 1, 5 et 6
   cauris: { valeursEntree: [1], valeursRejouer: [1, 4, 8], doublesRejouer: [] },
 };
 
@@ -150,7 +151,7 @@ export function normaliserRegles(source) {
     taille: TAILLES.includes(s.taille) ? s.taille : d0.taille,
     nbPions: borne(s.nbPions, 1, 12, d0.nbPions),
     des: {
-      type: sd.type === 'cauris' ? 'cauris' : 'desLongs',
+      type: ['cauris', 'de6'].includes(sd.type) ? sd.type : 'desLongs',
       nbCauris: borne(sd.nbCauris, 2, 7, d0.des.nbCauris),
       valeurZero: borne(sd.valeurZero, 1, 24, d0.des.valeurZero),
       nbDes: borne(sd.nbDes, 1, 3, d0.des.nbDes),
@@ -182,6 +183,11 @@ export function normaliserRegles(source) {
     },
   };
 
+  // Dé classique : un seul dé, faces 1 à 6
+  if (r.des.type === 'de6') {
+    r.des.nbDes = 1;
+    r.des.faces = [1, 2, 3, 4, 5, 6];
+  }
   if (r.des.type === 'desLongs' && r.des.faces.length < 2) {
     erreurs.push('Chaque dé long doit avoir au moins 2 faces différentes.');
   }
@@ -209,6 +215,8 @@ export function resumeRegles(r) {
   lignes.push(`${plateau}, ${r.nbPions} pion${r.nbPions > 1 ? 's' : ''} par joueur`);
   if (r.des.type === 'cauris') {
     lignes.push(`${r.des.nbCauris} cauris ; aucun cauri ouvert = ${r.des.valeurZero}`);
+  } else if (r.des.type === 'de6') {
+    lignes.push('Un dé classique (faces 1 à 6)');
   } else {
     lignes.push(
       `${r.des.nbDes} dé${r.des.nbDes > 1 ? 's' : ''} long${r.des.nbDes > 1 ? 's' : ''} (faces ${r.des.faces.join(', ')})` +

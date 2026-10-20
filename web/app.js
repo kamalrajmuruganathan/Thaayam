@@ -599,12 +599,18 @@ function construireFormulaire() {
     oninput: (e) => { r.valeursEntree = lireListe(e.target.value); verifierReglages(); } });
   const rejouer = el('input', { id: 'champ-rejouer', value: r.valeursRejouer.join(', '),
     oninput: (e) => { r.valeursRejouer = lireListe(e.target.value); verifierReglages(); } });
-  const montrerDes = () => { blocCauris.hidden = r.des.type !== 'cauris'; blocDes.hidden = r.des.type === 'cauris'; };
+  // Cauris : plus proposés (remplacés par le dé classique) ; le dé classique n'a rien à régler
+  const montrerDes = () => { blocCauris.hidden = r.des.type !== 'cauris'; blocDes.hidden = r.des.type !== 'desLongs'; };
   montrerDes();
 
   f.append(el('fieldset', {}, el('legend', {}, t('lancerLegende')),
-    choix([['desLongs', t('desLongs')], ['cauris', t('cauris')]], r.des.type, (v) => {
+    choix([['desLongs', t('desLongs')], ['de6', t('de6')]], r.des.type, (v) => {
       r.des.type = v;
+      // Dé classique : 1 dé, faces 1 à 6 ; retour aux dés longs : 2 dés, faces 0 à 3
+      r.des.nbDes = v === 'de6' ? 1 : 2;
+      r.des.faces = v === 'de6' ? [1, 2, 3, 4, 5, 6] : [0, 1, 2, 3];
+      blocDes.querySelector('select').value = String(r.des.nbDes);
+      blocDes.querySelectorAll('input')[0].value = r.des.faces.join(', ');
       r.valeursEntree = [...PRESETS_DES[v].valeursEntree];
       r.valeursRejouer = [...PRESETS_DES[v].valeursRejouer];
       r.doublesRejouer = [...PRESETS_DES[v].doublesRejouer];
@@ -817,6 +823,7 @@ async function roulerDes(etat) {
   for (let k = 0; k < 5; k++) {
     zone.innerHTML = '';
     if (d.type === 'cauris') l.detail.forEach(() => zone.append(cauri(Math.random() < 0.5)));
+    else if (d.type === 'de6') l.detail.forEach(() => zone.append(deCube(1 + Math.floor(Math.random() * 6))));
     else l.detail.forEach(() => zone.append(deLong(d.faces[Math.floor(Math.random() * d.faces.length)])));
     await pause(70);
   }
@@ -988,10 +995,20 @@ function dessinerDes(etat, zone = $('des')) {
   if (!etat.lancer) zone.append(el('span', { class: 'attenue petit' }, t('dernierLancer', { nom: nomAffiche(etat.joueurs[l.joueur].nom) })));
   if (etat.regles.des.type === 'cauris') {
     l.detail.forEach((ouvert) => zone.append(cauri(ouvert)));
+  } else if (etat.regles.des.type === 'de6') {
+    l.detail.forEach((f) => zone.append(deCube(f)));
   } else {
     l.detail.forEach((f) => zone.append(deLong(f)));
   }
   zone.append(el('span', { class: 'valeur' }, nomLancer(etat.regles, l)));
+}
+
+/** Dé classique vu de dessus : 1 à 6 points placés comme sur un vrai dé. */
+const POINTS_DE6 = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+function deCube(valeur) {
+  const d = el('div', { class: 'de-cube', 'aria-label': String(valeur) });
+  for (let i = 0; i < 9; i++) d.append(el('span', { class: (POINTS_DE6[valeur] || []).includes(i) ? 'point' : '' }));
+  return d;
 }
 
 /** Dé long (dayakattai) vu de dessus : une face avec 0 à 3 points. */

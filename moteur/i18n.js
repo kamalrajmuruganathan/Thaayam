@@ -1108,6 +1108,8 @@ export function resumeReglesTraduit(r, t) {
   lignes.push(t('rPions', { plateau, n: r.nbPions }));
   if (r.des.type === 'cauris') {
     lignes.push(t('rCauris', { n: r.des.nbCauris, z: r.des.valeurZero }));
+  } else if (r.des.type === 'de6') {
+    lignes.push(t('rDe6'));
   } else {
     lignes.push(
       t('rDes', { n: r.des.nbDes, faces: r.des.faces.join(', ') }) +

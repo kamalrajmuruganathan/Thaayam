@@ -88,6 +88,8 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
               {!etat.lancer ? <Texte attenue style={{ width: '100%', textAlign: 'center', fontSize: 12 }}>{t('dernierLancer', { nom: N(etat.joueurs[l.joueur].nom) })}</Texte> : null}
               {etat.regles.des.type === 'cauris'
                 ? l.detail.map((o, i) => <Cauri key={i} ouvert={o} />)
+                : etat.regles.des.type === 'de6'
+                ? l.detail.map((f, i) => <DeCube key={i} valeur={f} D={D} lumineux={lumineux} roule={!!desRoulent} />)
                 : l.detail.map((f, i) => (
                   <View key={i} accessibilityLabel={`dé long : ${f}`} style={{ width: 92, height: 30, borderRadius: 6, backgroundColor: D.fond, borderWidth: D.epais, borderColor: D.bord,
                     alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12,
@@ -157,6 +159,23 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
       </View>
       {voirRegles ? resumeReglesTraduit(etat.regles, t).map((x, i) => <Texte key={i} attenue>• {x}</Texte>) : null}
       {surReglesJeu ? <Bouton titre={t('reglesDessins2')} onPress={surReglesJeu} /> : null}
+    </View>
+  );
+}
+
+/** Dé classique vu de dessus : 1 à 6 points placés comme sur un vrai dé. */
+const POINTS_DE6 = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+function DeCube({ valeur, D, lumineux, roule }) {
+  const fond = lumineux || D.fond !== '#d9a845' ? D.fond : '#fbf7ef';
+  return (
+    <View accessibilityLabel={`dé : ${valeur}`} style={{ width: 46, height: 46, borderRadius: 9, backgroundColor: fond, borderWidth: D.epais, borderColor: D.bord,
+      flexDirection: 'row', flexWrap: 'wrap', padding: 5, shadowColor: D.point, shadowOpacity: lumineux ? 0.5 : 0, shadowRadius: 8,
+      transform: roule ? [{ rotate: '-10deg' }, { translateY: -4 }] : [] }}>
+      {Array.from({ length: 9 }, (_, i) => (
+        <View key={i} style={{ width: '33.3%', height: '33.3%', alignItems: 'center', justifyContent: 'center' }}>
+          {(POINTS_DE6[valeur] || []).includes(i) ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: D.point }} /> : null}
+        </View>
+      ))}
     </View>
   );
 }

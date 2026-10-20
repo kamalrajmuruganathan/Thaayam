@@ -58,11 +58,14 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
 
       <Carte titre={t('lancerLegende')}>
         <Choix
-          options={[['desLongs', t('desLongs')], ['cauris', t('cauris')]]}
+          options={[['desLongs', t('desLongs')], ['de6', t('de6')]]}
           valeur={r.des.type}
           onChange={(v) => {
             maj((x) => {
               x.des.type = v;
+              // Dé classique : 1 dé, faces 1 à 6 ; retour aux dés longs : 2 dés, faces 0 à 3
+              x.des.nbDes = v === 'de6' ? 1 : 2;
+              x.des.faces = v === 'de6' ? [1, 2, 3, 4, 5, 6] : [0, 1, 2, 3];
               x.valeursEntree = [...PRESETS_DES[v].valeursEntree];
               x.valeursRejouer = [...PRESETS_DES[v].valeursRejouer];
               x.doublesRejouer = [...PRESETS_DES[v].doublesRejouer];
@@ -70,6 +73,7 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
             setTxtEntree(PRESETS_DES[v].valeursEntree.join(', '));
             setTxtRejouer(PRESETS_DES[v].valeursRejouer.join(', '));
             setTxtDoubles(PRESETS_DES[v].doublesRejouer.join(', '));
+            setTxtFaces(v === 'de6' ? '1, 2, 3, 4, 5, 6' : '0, 1, 2, 3');
           }}
         />
         {r.des.type === 'cauris' ? (
@@ -81,7 +85,7 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
               aide={t('aideCauri')}
               onChangeText={(t) => { setTxtZero(t); maj((x) => { x.des.valeurZero = Number(t); }); }} />
           </>
-        ) : (
+        ) : r.des.type === 'de6' ? null : (
           <>
             <Texte style={{ fontWeight: '600' }}>{t('nbDes')}</Texte>
             <Choix options={[[1, '1'], [2, '2'], [3, '3']]} valeur={r.des.nbDes} onChange={(v) => maj((x) => { x.des.nbDes = v; })} />
