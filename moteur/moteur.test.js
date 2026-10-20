@@ -436,3 +436,79 @@ test('étapes d’un déplacement (animation)', async () => {
   assert.deepEqual(etapesCoup(g, 37, 5), [38, 3, 4, 5]); // refait un tour (sans capture)
   assert.deepEqual(etapesCoup(g, 38, 41), [39, 40, 41]); // remonte sa colonne
 });
+
+test('revoir une partie : l’historique rejoue exactement la partie (dés longs et cauris)', async () => {
+  const { revoirPartie } = await import('./partie.js');
+  const { choisirCoup } = await import('./ia.js');
+  for (const regles of [REGLES_PAR_DEFAUT, CAURIS5]) {
+    let graine = 11;
+    const rng = () => ((graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648);
+    let e = nouvellePartie(regles, [{ nom: 'A', ordi: 'normal' }, { nom: 'B', ordi: 'facile' }, { nom: 'C', ordi: 'normal' }]);
+    for (let i = 0; i < 6000 && e.phase !== 'fini'; i++) {
+      if (e.phase === 'lancer') e = lancer(e, rng);
+      else { const c = choisirCoup(e, rng); e = jouer(e, c.pion, !!c.groupe); }
+    }
+    assert.equal(e.phase, 'fini');
+    const etats = revoirPartie(e);
+    assert.equal(etats.length, e.histo.length + 1);
+    assert.deepEqual(etats.at(-1), e);
+    assert.ok(JSON.stringify(e.histo).length < 12000, 'historique compact');
+  }
+  assert.equal(revoirPartie({ ...nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]), histo: undefined }), null);
+});
+
+test('partie guidée : premiers lancers imposés et conseils traduits', async () => {
+  const { nouvellePartieGuidee, lancerGuide, conseilGuide } = await import('./guide.js');
+  const { TEXTES } = await import('./i18n.js');
+  const { choisirCoup } = await import('./ia.js');
+  let e = nouvellePartieGuidee('Kamal');
+  assert.equal(e.joueurs[1].ordi, 'facile');
+  assert.equal(conseilGuide(e).cle, 'gPremier');
+  e = lancer(e, Math.random, lancerGuide(e));
+  assert.equal(e.lancer.valeur, 1);
+  assert.equal(conseilGuide(e).cle, 'gEntrer');
+  e = jouer(e, 0);
+  assert.equal(conseilGuide(e).cle, 'gRejoue');
+  e = lancer(e, Math.random, lancerGuide(e));
+  assert.equal(e.lancer.valeur, 3);
+  assert.equal(conseilGuide(e).cle, 'gAvancer');
+  assert.equal(lancerGuide(jouer(e, 0)), null);
+  // Une partie entière : chaque conseil existe dans les 5 langues
+  let graine = 5;
+  const rng = () => ((graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const vus = new Set();
+  e = nouvellePartieGuidee();
+  for (let i = 0; i < 6000 && e.phase !== 'fini'; i++) {
+    vus.add(conseilGuide(e).cle);
+    if (e.phase === 'lancer') e = lancer(e, rng, lancerGuide(e));
+    else { const c = choisirCoup(e, rng, e.tour === 0 ? 'normal' : 'facile'); e = jouer(e, c.pion, !!c.groupe); }
+  }
+  vus.add(conseilGuide(e).cle);
+  for (const cle of vus) for (const l of Object.keys(TEXTES)) assert.ok(TEXTES[l][cle], `${cle} manque en ${l}`);
+  assert.ok(vus.size >= 8, [...vus].join(', '));
+});
+
+test('classement : niveaux et tri', async () => {
+  const { niveauJoueur, trierClassement } = await import('./classement.js');
+  assert.deepEqual([0, 2, 3, 9, 10, 25, 50, 80].map((v) => niveauJoueur(v).cle),
+    ['nvDebutant', 'nvDebutant', 'nvApprenti', 'nvApprenti', 'nvConfirme', 'nvExpert', 'nvMaitre', 'nvMaitre']);
+  assert.equal(niveauJoueur(1).prochain, 2);
+  assert.equal(niveauJoueur(60).prochain, null);
+  const c = trierClassement([
+    { pseudo: 'B', victoires: 3, parties: 10 }, { pseudo: 'A', victoires: 3, parties: 4 },
+    { pseudo: 'C', victoires: 0, parties: 0, moi: true }, { pseudo: 'D', victoires: 3, parties: 4 },
+  ]);
+  assert.deepEqual(c.map((x) => `${x.rang}${x.pseudo}`), ['1A', '1D', '3B', '4C']);
+});
+
+test('thèmes : chaque thème a toutes les couleurs', async () => {
+  const { THEMES_PLATEAU, THEMES, themeValide } = await import('./themes.js');
+  const { TEXTES } = await import('./i18n.js');
+  const cles = Object.keys(THEMES_PLATEAU.cristal).sort();
+  for (const { code } of THEMES) {
+    assert.deepEqual(Object.keys(THEMES_PLATEAU[code]).sort(), cles, code);
+    assert.ok(TEXTES.ta[code], `nom du thème ${code}`);
+  }
+  assert.equal(themeValide('nuit'), 'nuit');
+  assert.equal(themeValide('xxx'), 'cristal');
+});

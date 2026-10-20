@@ -1,6 +1,8 @@
 /**
  * Thèmes visuels du plateau (données pures, partagées par la page web et l'appli).
  * « cristal » : tableau de bord haut de gamme (verre fumé, lueurs cyan, chiffres blancs).
+ * « temple » : pierre de temple et dorures, comme les sculptures de Madurai.
+ * « nuit » : néons violets et roses sur fond noir.
  * « bois » : plateau traditionnel en bois.
  */
 export const THEMES_PLATEAU = {
@@ -29,6 +31,58 @@ export const THEMES_PLATEAU = {
     dernierCoup: '#7fdcff',
     trajetOpacite: 0.9,
     lueur: true, // halo lumineux autour des pions et des lignes
+  },
+  temple: {
+    nom: 'Temple',
+    cadre: '#3b2f22',
+    fond: '#8d7556', // grès
+    fondLueur: '#b39468',
+    diagonale: '#4a3923',
+    diagonaleLueur: '#e9c46a', // filet doré
+    arc: '#4a3923',
+    arcLueur: '#f2d488',
+    ecriture: '#fbe7a6',
+    caseFond: '#e6dac3', // pierre claire
+    caseTrait: '#6b5536',
+    teinteOpacite: 0.34,
+    centreFond: '#f3e6c4',
+    centreTrait: '#b8892c',
+    centreCroix: '#8a6420',
+    croixRefuge: '#8a6420',
+    pionTrait: '#2a2118',
+    pionReflet: '#ffffff',
+    jouable: '#ffffff',
+    arrive: '#f2c94c',
+    arriveTrait: '#8a6420',
+    dernierCoup: '#d9a520',
+    trajetOpacite: 0.85,
+    lueur: false,
+  },
+  nuit: {
+    nom: 'Nuit',
+    cadre: '#07030f',
+    fond: '#0c0618',
+    fondLueur: '#2a0f45',
+    diagonale: '#2b1450',
+    diagonaleLueur: '#ff4fd8', // néon rose
+    arc: '#241046',
+    arcLueur: '#b678ff', // néon violet
+    ecriture: '#ffb8f1',
+    caseFond: '#140b26',
+    caseTrait: '#7a3cff',
+    teinteOpacite: 0.45,
+    centreFond: '#120822',
+    centreTrait: '#ff4fd8',
+    centreCroix: '#7a3cff',
+    croixRefuge: '#ff4fd8',
+    pionTrait: '#fde6ff',
+    pionReflet: '#ffffff',
+    jouable: '#ffffff',
+    arrive: '#fde6ff',
+    arriveTrait: '#ff4fd8',
+    dernierCoup: '#ff8ae5',
+    trajetOpacite: 0.9,
+    lueur: true,
   },
   bois: {
     nom: 'Bois',
@@ -59,6 +113,19 @@ export const THEMES_PLATEAU = {
 };
 
 export const THEME_PAR_DEFAUT = 'cristal';
+
+/** Thèmes proposés, dans l'ordre d'affichage, avec leur icône. */
+export const THEMES = [
+  { code: 'cristal', icone: '💎' },
+  { code: 'temple', icone: '🛕' },
+  { code: 'nuit', icone: '🌌' },
+  { code: 'bois', icone: '🪵' },
+];
+
+/** Nom de thème valide (sinon le thème par défaut). */
+export function themeValide(nom) {
+  return THEMES_PLATEAU[nom] ? nom : THEME_PAR_DEFAUT;
+}
 
 export function themePlateau(nom) {
   return THEMES_PLATEAU[nom] || THEMES_PLATEAU[THEME_PAR_DEFAUT];

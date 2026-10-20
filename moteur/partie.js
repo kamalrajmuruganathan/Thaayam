@@ -74,6 +74,7 @@ export function nouvellePartie(reglesSource, joueurs) {
     dernierCoup: null, // { joueur, pion, depuis, vers }
     gagnant: null,
     numero: 0,
+    histo: [], // toutes les actions, pour revoir la partie (voir revoirPartie)
     journal: [`La partie commence. ${joueurs[0].nom || 'Joueur 1'} lance en premier.`],
   };
 }
@@ -89,13 +90,39 @@ function noter(etat, texte) {
 /** Tire les dés. rng() renvoie un nombre dans [0, 1[. */
 export function tirerDes(regles, rng = Math.random) {
   const d = regles.des;
+  if (d.type === 'cauris') return tirageDepuis(regles, Array.from({ length: d.nbCauris }, () => rng() < 0.5));
+  return tirageDepuis(regles, Array.from({ length: d.nbDes }, () => d.faces[Math.floor(rng() * d.faces.length)]));
+}
+
+/** Lancer à partir de ce que montrent les dés (faces des dés longs, ou cauris ouverts : true/false). */
+export function tirageDepuis(regles, detail) {
+  const d = regles.des;
   if (d.type === 'cauris') {
-    const ouverts = Array.from({ length: d.nbCauris }, () => rng() < 0.5);
-    const nb = ouverts.filter(Boolean).length;
-    return { valeur: nb === 0 ? d.valeurZero : nb, detail: ouverts };
+    const nb = detail.filter(Boolean).length;
+    return { valeur: nb === 0 ? d.valeurZero : nb, detail: detail.map(Boolean) };
   }
-  const faces = Array.from({ length: d.nbDes }, () => d.faces[Math.floor(rng() * d.faces.length)]);
-  return { valeur: valeurDesLongs(d, faces), detail: faces };
+  return { valeur: valeurDesLongs(d, detail), detail: [...detail] };
+}
+
+// Historique compact : « d1.0 » (dés longs 1 et 0), « c1010 » (cauris), « p2 » (pion 2), « g2 » (groupe du pion 2).
+const noterLancer = (t) => (typeof t.detail[0] === 'boolean' ? `c${t.detail.map((o) => (o ? 1 : 0)).join('')}` : `d${t.detail.join('.')}`);
+function lireLancer(regles, a) {
+  return tirageDepuis(regles, a[0] === 'c' ? [...a.slice(1)].map((x) => x === '1') : a.slice(1).split('.').map(Number));
+}
+
+/**
+ * Pour revoir une partie : tous les états successifs, du début à la fin.
+ * Renvoie null si la partie n'a pas d'historique (parties créées avant cette fonction).
+ */
+export function revoirPartie(etat) {
+  if (!etat || !Array.isArray(etat.histo)) return null;
+  let e = nouvellePartie(etat.regles, etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
+  const etats = [e];
+  for (const a of etat.histo) {
+    e = a[0] === 'd' || a[0] === 'c' ? lancer(e, undefined, lireLancer(e.regles, a)) : jouer(e, Number(a.slice(1)), a[0] === 'g');
+    etats.push(e);
+  }
+  return etats;
 }
 
 /** Destination d'un pion pour une valeur donnée, ou null si le coup est interdit. */
@@ -180,6 +207,7 @@ export function lancer(etat0, rng = Math.random, tirage = null) {
   const nom = etat.joueurs[etat.tour].nom;
   const fait = nomLancer(etat.regles, t);
   etat.numero += 1;
+  if (Array.isArray(etat.histo)) etat.histo.push(noterLancer(t));
   etat.lancer = t;
   etat.dernierLancer = { ...t, joueur: etat.tour };
   etat.phase = 'deplacer';
@@ -228,6 +256,7 @@ export function jouer(etat0, pion, groupe = false) {
   });
   j.captures += coup.captures.length;
   etat.numero += 1;
+  if (Array.isArray(etat.histo)) etat.histo.push(`${groupe ? 'g' : 'p'}${pion}`);
 
   if (coup.groupe) noter(etat, `${j.nom} fait entrer ${coup.groupe.length} pions d'un coup.`);
   else if (coup.depuis === -1) noter(etat, `${j.nom} fait entrer un pion.`);

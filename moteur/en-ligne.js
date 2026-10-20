@@ -10,6 +10,7 @@ const CLE = (code) => `thaayam:${code}`;
 /** Messages rapides autorisés (la même liste est vérifiée par Supabase). */
 export const REACTIONS = ['👏', '😂', '😮', '😡', '🔥', '🙏',
   'Bien joué !', 'Pas de chance !', 'Vite !', 'Bravo !', 'Oh non !', 'Merci !'];
+const PROFIL = 'thaayam:profil'; // { id, secret, code_ami } : profil de cet appareil (amis, classement)
 const LISTE = 'thaayam:mes-parties'; // [{ code, quand }] : parties de cet appareil, la plus récente d'abord
 
 async function lireListe(stockage) {
@@ -36,12 +37,92 @@ async function rpc(client, nom, params) {
 }
 
 export function creerEnLigne(client, stockage) {
+  const lireProfil = async () => {
+    try { return JSON.parse((await stockage.lire(PROFIL)) || 'null'); } catch { return null; }
+  };
   return {
+    /** Profil de cet appareil, s'il existe déjà : { id, secret, code_ami } ou null. */
+    profilLocal: lireProfil,
+
+    /** Crée le profil (ou met à jour le pseudo) et le mémorise. */
+    async profil(pseudo) {
+      const p = await lireProfil();
+      const r = await rpc(client, 'thaayam_profil', { p_joueur: p ? p.id : null, p_secret: p ? p.secret : null, p_pseudo: pseudo });
+      await stockage.ecrire(PROFIL, JSON.stringify(r));
+      return r;
+    },
+
+    /** Amis, invitations reçues et classement : { profil, amis, invitations, classement }. */
+    async social(pseudo) {
+      let p = await lireProfil();
+      if (!p) p = await this.profil(pseudo);
+      let r;
+      try {
+        r = await rpc(client, 'thaayam_social', { p_joueur: p.id, p_secret: p.secret });
+      } catch (e) {
+        if (!/Profil inconnu/.test(e.message)) throw e;
+        await stockage.ecrire(PROFIL, 'null');
+        p = await this.profil(pseudo);
+        r = await rpc(client, 'thaayam_social', { p_joueur: p.id, p_secret: p.secret });
+      }
+      return { profil: p, ...r };
+    },
+
+    async ajouterAmi(codeAmi) {
+      const p = await lireProfil();
+      if (!p) throw new Error('Profil inconnu');
+      return rpc(client, 'thaayam_ajouter_ami', { p_joueur: p.id, p_secret: p.secret, p_code_ami: codeAmi.trim().toUpperCase() });
+    },
+
+    async retirerAmi(id) {
+      const p = await lireProfil();
+      if (!p) throw new Error('Profil inconnu');
+      await rpc(client, 'thaayam_retirer_ami', { p_joueur: p.id, p_secret: p.secret, p_ami: id });
+    },
+
+    /** Invite un ami dans la partie `code` (en attente). */
+    async inviter(id, code) {
+      const p = await lireProfil();
+      if (!p) throw new Error('Profil inconnu');
+      await rpc(client, 'thaayam_inviter', { p_joueur: p.id, p_secret: p.secret, p_ami: id, p_code: code });
+    },
+
+    /** Relie ma place dans la partie à mon profil (classement, notifications). Sans effet si pas de profil. */
+    async lier(code, jeton) {
+      const p = await lireProfil();
+      if (!p) return;
+      try {
+        await rpc(client, 'thaayam_lier', { p_code: code, p_jeton: jeton, p_joueur: p.id, p_secret: p.secret });
+      } catch { /* serveur pas encore mis à jour : le jeu continue sans classement */ }
+    },
+
+    /** Abonne cet appareil aux notifications (abonnement null = désabonner). type : 'web' ou 'expo'. */
+    async abonner(appareil, type, abonnement, langue) {
+      const p = await lireProfil();
+      if (!p) throw new Error('Profil inconnu');
+      await rpc(client, 'thaayam_abonner', { p_joueur: p.id, p_secret: p.secret, p_appareil: appareil, p_type: type,
+        p_abonnement: abonnement, p_langue: langue });
+    },
+
+    /** Clé publique des notifications web (null tant que le notificateur n'a jamais tourné). */
+    async cleNotifs() {
+      return rpc(client, 'thaayam_cle_notifs', {});
+    },
+
+    /** Crée le profil si besoin, puis relie la place. Ne fait jamais échouer la partie. */
+    async lierAvecProfil(code, jeton, nom) {
+      try {
+        if (!(await lireProfil()) && nom) await this.profil(nom);
+        await this.lier(code, jeton);
+      } catch { /* ignoré */ }
+    },
+
     /** Crée la partie et mémorise le jeton sur l'appareil. */
     async creer(regles, nom) {
       const r = await rpc(client, 'thaayam_creer', { p_regles: regles, p_nom: nom });
       await stockage.ecrire(CLE(r.code), JSON.stringify({ place: r.place, jeton: r.jeton }));
       await retenir(stockage, r.code);
+      await this.lierAvecProfil(r.code, r.jeton, nom);
       return r;
     },
 
@@ -52,6 +133,7 @@ export function creerEnLigne(client, stockage) {
       const r = await rpc(client, 'thaayam_rejoindre', { p_code: c, p_nom: nom });
       await stockage.ecrire(CLE(r.code), JSON.stringify({ place: r.place, jeton: r.jeton }));
       await retenir(stockage, r.code);
+      await this.lierAvecProfil(r.code, r.jeton, nom);
       return r;
     },
 

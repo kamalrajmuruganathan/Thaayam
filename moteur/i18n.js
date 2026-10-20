@@ -6,6 +6,7 @@
  * Si une clé manque dans une langue, le français est utilisé.
  */
 import { normaliserStats, NIVEAUX } from './stats.js';
+import { PLUS, ERREURS_PLUS } from './i18n-plus.js';
 
 export const LANGUES = [
   { code: 'fr', nom: 'Français' },
@@ -1003,6 +1004,8 @@ const SI = {
 };
 
 export const TEXTES = { fr: FR, en: EN, ta: TA, hi: HI, si: SI };
+// Textes des nouveautés, écrits côte à côte dans les 5 langues (i18n-plus.js)
+Object.entries(PLUS).forEach(([cle, v]) => { [FR, EN, TA, HI, SI].forEach((dico, i) => { dico[cle] = v[i]; }); });
 
 /** Fonction de traduction pour une langue : t(cle, params). */
 export function traducteur(langue) {
@@ -1076,6 +1079,7 @@ const ERREURS = [
   ['Pas de connexion internet', 'srvReseau'],
   ["Le jeu en ligne n'est pas encore installé sur Supabase (fichier supabase/thaayam.sql)", 'srvInstalle'],
   ['Impossible de charger le jeu en ligne : vérifie ta connexion internet', 'errInternet'],
+  ...ERREURS_PLUS,
 ];
 
 /** Message d'erreur (réglages ou serveur) dans la langue choisie. */
