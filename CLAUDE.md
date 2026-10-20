@@ -14,8 +14,18 @@
 - Langues : `moteur/i18n.js` (`traducteur(langue)` → `t(cle, params)`, 5 langues, test « toutes les clés ») ; le moteur
   et le serveur écrivent en français, retraduits à l'affichage (`traduireJournal`, `traduireErreur`, `traduireNom`…) ;
   page des règles : `moteur/textes-regles.js`. Tout nouveau texte affiché doit passer par une clé, dans les 5 langues.
-- Thèmes : `moteur/themes.js` (couleurs du plateau, « cristal » par défaut et « bois ») ; site : `data-skin` sur
-  `<html>` + règles CSS `:root[data-skin="cristal"]` dans `web/style.css` ; appli : `ThemeContexte` dans `app/src/ui.js`.
+- Thèmes : `moteur/themes.js` (couleurs du plateau ; `THEMES` = cristal par défaut, temple, nuit, bois ; `themeValide`) ;
+  site : `data-skin` sur `<html>` + règles CSS `:root[data-skin="…"]` dans `web/style.css` ; appli : `ThemeContexte`,
+  palettes et `couleursDes` dans `app/src/ui.js`, ambiance futuriste `app/src/Ambiance.js`.
+- Textes des nouveautés : `moteur/i18n-plus.js` (une ligne = les 5 langues côte à côte), fusionnés dans `i18n.js`.
+- Revoir une partie : `etat.histo` (« d1.0 », « c1010 », « p2 », « g2 ») + `revoirPartie()` (`moteur/partie.js`).
+- Partie guidée : `moteur/guide.js` (`conseilGuide`, `lancerGuide`). Classement : `moteur/classement.js`.
+- Amis / classement / notifications : RPC `thaayam_profil`, `thaayam_lier`, `thaayam_ajouter_ami`, `thaayam_retirer_ami`,
+  `thaayam_inviter`, `thaayam_social`, `thaayam_abonner`, `thaayam_cle_notifs` ; déclencheurs `thaayam_tour` et
+  `thaayam_invitation` → `pg_net` → fonction Edge `supabase/functions/thaayam-notifier` (Web Push + Expo).
+  Profil de l'appareil : `thaayam:profil` ({ id, secret, code_ami }) dans le stockage local.
+- Hors ligne et notifications web : `web/sw.js` (liste `FICHIERS` vérifiée par un test : tout nouveau fichier de
+  `web/` ou `moteur/` doit y être ajouté). Sons de l'appli : `app/assets/sons/*.wav` + `app/src/sons.js`.
 - Ordinateur : `moteur/ia.js` (`choisirCoup`), niveaux `facile`, `normal`, `fort` (évaluation + un lancer d'avance).
 - Règles validées par Kamal (par défaut) : croix 3 × 4, pions au départ dans le centre, sortie sur la case de sa
   colonne collée au centre → descente → tour anti-horaire → retour au bout du bras → remontée sur les 3 arcs du coin
@@ -31,4 +41,5 @@
 
 ## Vérifications
 - `npm test` (moteur) ; `cd app && npx expo export --platform web` (l'appli compile).
+- SQL : testable en local avec Postgres 16 (rôles `anon`/`authenticated`, publication `supabase_realtime`).
 - Si on modifie `supabase/thaayam.sql`, il doit rester ré-exécutable (`create or replace`, `if not exists`).

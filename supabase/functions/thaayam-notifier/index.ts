@@ -44,12 +44,14 @@ Deno.serve(async (req) => {
   let privee = await lireConfig('vapid_prive');
   if (!publique || !privee) {
     const k = webpush.generateVAPIDKeys();
+    // Si deux appels arrivent en même temps, la première paire enregistrée gagne : on la relit.
     await sb.from('thaayam_config').upsert([
       { cle: 'vapid_public', valeur: k.publicKey },
       { cle: 'vapid_prive', valeur: k.privateKey },
-    ]);
-    publique = k.publicKey;
-    privee = k.privateKey;
+    ], { onConflict: 'cle', ignoreDuplicates: true });
+    publique = await lireConfig('vapid_public');
+    privee = await lireConfig('vapid_prive');
+    if (!publique || !privee) return new Response('Clés indisponibles', { status: 500, headers: CORS });
   }
   // GET : le navigateur demande la clé publique pour s'abonner.
   if (req.method === 'GET') {

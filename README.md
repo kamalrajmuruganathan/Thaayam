@@ -15,6 +15,7 @@ Deux versions qui partagent le même moteur de jeu :
 | `web/` | La page web (`index.html`, `app.js`, `style.css`, `config.js`) |
 | `app/` | L'appli Expo (`App.js`, `src/`) |
 | `supabase/thaayam.sql` | Tables et fonctions du jeu en ligne, à exécuter une fois dans Supabase |
+| `supabase/functions/thaayam-notifier/` | Fonction Edge qui envoie les notifications (« C'est ton tour », invitations) |
 
 ## Règles
 
@@ -41,8 +42,27 @@ relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pio
   (page des règles). Les traductions en tamoul, hindi et cinghalais méritent une relecture par un locuteur natif.
 
 ## Apparence
-- Thème **Cristal** (par défaut) : style tableau de bord haut de gamme, verre fumé, lueurs cyan, chiffres blancs.
+- Thème **Cristal** (par défaut) : style tableau de bord haut de gamme, verre fumé, lueurs cyan, chiffres blancs,
+  ambiance « bureau du futur » (bandeau LED, sol brillant quadrillé, reflets).
+- Thème **Temple** : pierre claire et dorures. Thème **Nuit** : néons violets et roses.
 - Thème **Bois** : plateau traditionnel. Le choix se fait sur l'accueil (« Apparence ») et reste mémorisé.
+
+## Nouveautés (site et appli)
+- **Sons et vibrations** : dés, pas, entrée, capture, arrivée, victoire et « à toi » ; boutons 🔊 et 📳 pour couper.
+- **Animations** : les dés roulent, le pion avance case par case en sautillant, éclat rouge quand un pion est
+  mangé, doré quand il arrive. En ligne, les coups des autres sont aussi animés.
+- **Partie guidée** (`moteur/guide.js`) : contre l'ordinateur facile, un encadré explique chaque étape ; les deux
+  premiers lancers sont imposés (1 puis 3) pour montrer l'entrée et le déplacement.
+- **Revoir une partie** : chaque état garde un historique compact (`etat.histo`) ; `revoirPartie()` rejoue la
+  partie coup par coup. Bouton en fin de partie et carte « Mes dernières parties » (5 dernières).
+- **Amis** : chaque appareil a un profil et un « code ami » de 6 caractères ; on ajoute un ami avec son code,
+  on l'invite depuis le salon d'attente, il voit l'invitation sur son accueil.
+- **Classement entre amis** (`moteur/classement.js`) : victoires en ligne, niveaux Débutant (0), Apprenti (3),
+  Confirmé (10), Expert (25), Maître (50 victoires).
+- **Notifications** « C'est ton tour » et invitations, même jeu fermé : notifications web (service worker
+  `web/sw.js`) et Expo (appli). Elles passent par la fonction Edge `thaayam-notifier`.
+- **Sans internet** : le site garde ses fichiers sur le téléphone (`web/sw.js`) ; on peut jouer contre
+  l'ordinateur ou à plusieurs hors ligne. L'appli installée marche aussi hors ligne.
 
 ## Confort de jeu (page web)
 - Les pions avancent case par case ; sons des dés, des captures, de l'arrivée et de la victoire
@@ -57,9 +77,13 @@ relance, sens de rotation, refuges, capture obligatoire, arrivée exacte, un pio
 
 ## Mise en route
 
-### 1. Activer le jeu en ligne (une seule fois)
+### 1. Activer le jeu en ligne (une seule fois, puis à chaque mise à jour du fichier)
 1. Ouvrir le projet Supabase → **SQL Editor** → **New query**.
 2. Coller tout le contenu de `supabase/thaayam.sql` et cliquer sur **Run**.
+3. Notifications : Supabase → **Edge Functions** → **Deploy a new function** → **Via Editor**, nom
+   `thaayam-notifier`, coller `supabase/functions/thaayam-notifier/index.ts`, **Deploy**, puis désactiver
+   **Verify JWT** dans les réglages de la fonction. Le SQL active l'extension `pg_net`, qui appelle cette fonction.
+   La fonction crée elle-même ses clés de notifications web (table privée `thaayam_config`).
 
 Le jeu utilise le même projet Supabase que Kamal Campus. Tout est préfixé `thaayam_` : rien d'existant n'est
 modifié. Pas besoin de compte pour jouer : chaque joueur reçoit un jeton secret gardé sur son appareil.
@@ -97,6 +121,10 @@ alors en plein écran, avec son icône.
    Thaayam (autoriser l'installation d'applis de sources inconnues si le téléphone le demande).
 
 Pour le Play Store, utiliser le profil `production` (fichier .aab) et un compte développeur Google.
+
+Notifications dans l'appli Android : `npx eas-cli init` (ajoute `extra.eas.projectId` dans `app.json`), puis donner
+à Expo une clé Firebase (FCM) avec `npx eas-cli credentials` (guide : https://docs.expo.dev/push-notifications/fcm-credentials/).
+Sans cela, tout le reste marche ; seul le bouton « Activer les notifications » de l'appli répond « pas encore installées ».
 
 ## Limites connues
 - En ligne, le serveur vérifie que c'est bien ton tour et que personne n'a joué entre-temps, mais les coups
