@@ -209,7 +209,7 @@ export const PLUS = {
     'තායම් හි මා මිතුරෙකු ලෙස එක් කරන්න! මගේ මිතුරු කේතය: {code}',
   ],
   codeAmiCopie: ['Code copié !', 'Code copied!', 'குறியீடு நகலெடுக்கப்பட்டது!', 'कोड कॉपी हो गया!', 'කේතය පිටපත් කළා!'],
-  codeAmiPlaceholder: ['Code ami (6 caractères)', 'Friend code (6 characters)', 'நண்பர் குறியீடு (6 எழுத்துகள்)', 'दोस्त कोड (6 अक्षर)', 'මිතුරු කේතය (අක්ෂර 6)'],
+  codeAmiPlaceholder: ['Code de ton ami', 'Friend’s code', 'நண்பரின் குறியீடு', 'दोस्त का कोड', 'මිතුරාගේ කේතය'],
   ajouterAmi: ['Ajouter', 'Add', 'சேர்', 'जोड़ें', 'එක් කරන්න'],
   amiAjoute: ['{nom} est maintenant ton ami.', '{nom} is now your friend.', '{nom} இப்போது உங்கள் நண்பர்.', '{nom} अब आपके दोस्त हैं।', '{nom} දැන් ඔබගේ මිතුරෙකි.'],
   aucunAmi: [

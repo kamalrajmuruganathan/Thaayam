@@ -457,3 +457,5 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 :root[data-skin="cristal"] .guide { background: rgba(95, 212, 255, 0.08); border-color: var(--cyan); }
 :root[data-skin="cristal"] .code-ami { font-family: var(--police-titre); color: #f2f8fc; text-shadow: 0 0 14px rgba(95, 212, 255, 0.6); }
 :root:is([lang="ta"], [lang="hi"], [lang="si"]) .titre h1 { letter-spacing: normal !important; }
+/* Texte d'aide des cases de code : normal (pas en majuscules espacées), pour qu'il tienne en entier */
+.champ-code::placeholder, #code-rejoindre::placeholder { text-transform: none; letter-spacing: normal; font-weight: 500; }
