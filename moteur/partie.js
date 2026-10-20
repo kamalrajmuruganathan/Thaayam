@@ -116,13 +116,18 @@ function lireLancer(regles, a) {
  */
 export function revoirPartie(etat) {
   if (!etat || !Array.isArray(etat.histo)) return null;
-  let e = nouvellePartie(etat.regles, etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
-  const etats = [e];
-  for (const a of etat.histo) {
-    e = a[0] === 'd' || a[0] === 'c' ? lancer(e, undefined, lireLancer(e.regles, a)) : jouer(e, Number(a.slice(1)), a[0] === 'g');
-    etats.push(e);
+  try {
+    let e = nouvellePartie(etat.regles, etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
+    const etats = [e];
+    for (const a of etat.histo) {
+      e = a[0] === 'd' || a[0] === 'c' ? lancer(e, undefined, lireLancer(e.regles, a)) : jouer(e, Number(a.slice(1)), a[0] === 'g');
+      etats.push(e);
+    }
+    // Historique incomplet (un joueur avait une ancienne version du jeu) : on ne peut pas revoir la partie
+    return e.numero === etat.numero ? etats : null;
+  } catch {
+    return null;
   }
-  return etats;
 }
 
 /** Destination d'un pion pour une valeur donnée, ou null si le coup est interdit. */

@@ -455,6 +455,11 @@ test('revoir une partie : l’historique rejoue exactement la partie (dés longs
     assert.ok(JSON.stringify(e.histo).length < 12000, 'historique compact');
   }
   assert.equal(revoirPartie({ ...nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]), histo: undefined }), null);
+  // Historique incomplet (ancienne version du jeu chez un joueur) : pas de plantage
+  let e2 = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  e2 = lancer(e2, () => 0.3);
+  assert.equal(revoirPartie({ ...e2, histo: [] }), null);
+  assert.equal(revoirPartie({ ...e2, histo: ['p3'] }), null);
 });
 
 test('partie guidée : premiers lancers imposés et conseils traduits', async () => {
