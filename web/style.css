@@ -474,3 +474,37 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 :root[data-skin="nuit"] .de-cube span.point { background: #ff8ae5; box-shadow: 0 0 6px #ff4fd8; }
 :root[data-skin="temple"] .de-cube { background: linear-gradient(#efe6d3, #c8b896); border-color: #6b5536; }
 :root[data-skin="temple"] .de-cube span.point { background: #9a6a12; }
+
+/* Discussion */
+.zone-partie-ligne { display: flex; flex-direction: column; gap: 14px; }
+.messages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; min-height: 40px; }
+.messages li { padding: 6px 10px; border-radius: 12px; background: color-mix(in srgb, var(--surface) 70%, var(--trait)); max-width: 88%; align-self: flex-start; overflow-wrap: anywhere; }
+.messages li.moi { align-self: flex-end; background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+.messages li .auteur { display: block; font-size: 0.75rem; font-weight: 700; }
+.messages li.emoji-seul .texte { font-size: 2rem; line-height: 1.1; }
+.messages li.vide { background: none; color: var(--attenue); font-size: 0.9rem; }
+.emojis { display: flex; flex-wrap: wrap; gap: 4px; }
+.emojis button { flex: 0 0 auto; min-height: 40px; min-width: 44px; padding: 4px 6px; font-size: 1.35rem; border-radius: 10px; }
+.form-message input { flex: 3 1 0; }
+.form-message button { flex: 1 1 0; }
+.emojis-volants { position: fixed; inset: 0; pointer-events: none; z-index: 20; overflow: hidden; }
+.emoji-volant { position: absolute; bottom: -60px; font-size: 3rem; animation: envol 2.6s ease-out forwards; }
+@keyframes envol { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-85vh) scale(1.4) rotate(12deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .emoji-volant { animation-duration: 0.01s; } }
+
+/* Appels */
+.appel-videos { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.appel-videos:empty { display: none; }
+.tuile { position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #0b1620; border: 1px solid var(--trait); }
+.tuile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tuile.moi video { transform: scaleX(-1); }
+.tuile .avatar { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2.4rem; font-weight: 800; color: #fff; }
+.tuile .nom-tuile { position: absolute; left: 6px; bottom: 6px; background: rgba(0, 0, 0, 0.55); color: #fff; border-radius: 8px; padding: 2px 8px; font-size: 0.8rem; font-weight: 700; }
+button.raccrocher { background: #c62828 !important; color: #fff !important; border-color: #c62828 !important; }
+.sonnerie { position: fixed; top: max(12px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 24px));
+  z-index: 30; background: var(--surface); color: var(--texte); border: 2px solid var(--accent); border-radius: 16px; padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); display: flex; flex-direction: column; gap: 10px; animation: sonne 1s ease-in-out infinite alternate; }
+.sonnerie p { margin: 0; font-weight: 800; font-size: 1.1rem; text-align: center; }
+@keyframes sonne { from { box-shadow: 0 0 0 0 rgba(95, 212, 255, 0.5); } to { box-shadow: 0 0 0 10px rgba(95, 212, 255, 0); } }
+:root[data-skin="cristal"] .sonnerie { background: rgba(8, 16, 24, 0.96); }
+:root[data-skin="nuit"] .sonnerie { background: rgba(16, 6, 30, 0.96); }

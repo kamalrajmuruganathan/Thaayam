@@ -5,7 +5,8 @@ import {
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, pionsAuCentre, zoneCase, etapesCoup, arcsCroix, revoirPartie } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
-import { sons, sonActif, basculerSon, vibrationsActives, basculerVibrations } from './sons.js';
+import { sons, sonActif, basculerSon, vibrationsActives, basculerVibrations, vibrer } from './sons.js';
+import { creerAppel, appelsPossibles } from './appel.js';
 import { nouvellePartieGuidee, lancerGuide, conseilGuide } from './moteur/guide.js';
 import { niveauJoueur, trierClassement } from './moteur/classement.js';
 import { creerEnLigne, REACTIONS } from './moteur/en-ligne.js';
@@ -65,6 +66,7 @@ LANGUES.forEach(({ code, nom }) => {
     if (!$('ecran-reglages').hidden) ouvrirReglages(modeReglages);
     if (session && !$('ecran-salon').hidden) afficherPartieEnLigne();
     if (session && session.etat && !$('ecran-jeu').hidden) dessinerJeu();
+    if (session && session.mode === 'ligne') { dessinerAppel(); redessinerMessages(); }
   });
   $('choix-langue').append(b);
 });
@@ -679,6 +681,7 @@ let session = null; // { mode, etat, partie?, place?, jeton?, arret? }
 function arreterSuivi() {
   if (session && session.arret) session.arret();
   if (session) session.arret = null;
+  arreterPartieSociale();
 }
 
 async function ouvrirPartieEnLigne(code, place, jeton) {
@@ -713,6 +716,7 @@ async function ouvrirPartieEnLigne(code, place, jeton) {
     }
   });
   history.replaceState(null, '', `?code=${code}`);
+  demarrerPartieSociale(code);
   afficherPartieEnLigne();
 }
 
@@ -738,6 +742,7 @@ function afficherPartieEnLigne() {
       ? (p.joueurs.length < 2 ? t('salonPeu') : t('salonPrets', { n: p.joueurs.length }))
       : t('salonAttente'));
     afficherAmisSalon();
+    placerZonePartie();
     return;
   }
   dessinerJeu();
@@ -773,6 +778,191 @@ $('btn-demarrer').addEventListener('click', async () => {
     $('btn-demarrer').disabled = false;
   }
 });
+
+// ---------------------------------------------------------------- discussion et appels (en ligne)
+const EMOJIS = ['😀', '😂', '😍', '😎', '😮', '😢', '😡', '👍', '👏', '🔥', '🎉', '🙏', '💪', '❤️'];
+const EMOJI_SEUL = /^(\p{Extended_Pictographic}|\p{Emoji_Modifier}|️|‍){1,8}$/u;
+let discussion = { arret: null, messages: [] };
+let appel = null;
+let canalAppel = null;
+
+/** Discussion et appels apparaissent dans le salon d'attente, puis sous le plateau pendant la partie. */
+function placerZonePartie() {
+  const zone = $('zone-partie-ligne');
+  const enLigne = session && session.mode === 'ligne';
+  zone.hidden = !enLigne;
+  if (!enLigne) return;
+  if (session.partie.statut === 'attente') {
+    if (zone.parentElement !== $('ecran-salon')) $('ecran-salon').append(zone);
+  } else if (zone.previousElementSibling !== $('jeu-message')) {
+    $('jeu-message').after(zone);
+  }
+}
+
+function nomDeLaPlace(place) {
+  const j = (session.etat && session.etat.joueurs[place]) || session.partie.joueurs[place];
+  return j ? nomAffiche(j.nom) : '?';
+}
+
+async function demarrerPartieSociale(code) {
+  arreterPartieSociale();
+  discussion = { arret: null, messages: [] };
+  redessinerMessages();
+  const s0 = session;
+  try {
+    const api = await obtenirEnLigne();
+    if (session !== s0) return;
+    discussion.arret = api.suivreMessages(code, (m) => ajouterMessage(m, true));
+    (await api.messages(code)).forEach((m) => ajouterMessage(m, false));
+    canalAppel = api.canalAppel(code, (m) => { if (appel) appel.recevoir(m); });
+    appel = creerAppel({ canal: canalAppel, place: session.place, nom: nomDeLaPlace(session.place), surChange: dessinerAppel, surSonnerie: montrerSonnerie });
+  } catch { /* hors ligne */ }
+  dessinerAppel();
+}
+
+function arreterPartieSociale() {
+  if (discussion.arret) discussion.arret();
+  discussion.arret = null;
+  if (appel) appel.raccrocher();
+  if (canalAppel) canalAppel.arreter();
+  appel = null;
+  canalAppel = null;
+  montrerSonnerie(null);
+  document.querySelectorAll('#appel-videos video').forEach((v) => { v.srcObject = null; });
+  $('appel-videos').innerHTML = '';
+}
+
+function ajouterMessage(m, nouveau) {
+  if (discussion.messages.some((x) => x.id === m.id)) return;
+  discussion.messages.push(m);
+  discussion.messages.sort((a, b) => a.id - b.id);
+  redessinerMessages();
+  if (!nouveau) return;
+  if (EMOJI_SEUL.test(m.texte)) lancerEmojiVolant(m.texte);
+  if (session && m.place !== session.place) vibrer(30);
+}
+
+function redessinerMessages() {
+  const liste = $('messages');
+  liste.innerHTML = '';
+  if (!discussion.messages.length) {
+    liste.append(el('li', { class: 'vide' }, t('aucunMessage')));
+    return;
+  }
+  discussion.messages.forEach((m) => {
+    const moi = session && m.place === session.place;
+    const couleur = COULEURS[m.place] ? COULEURS[m.place].code : '';
+    liste.append(el('li', { class: `${moi ? 'moi' : ''}${EMOJI_SEUL.test(m.texte) ? ' emoji-seul' : ''}` },
+      el('span', { class: 'auteur', style: `color:${couleur}` }, moi ? t('moi') : nomDeLaPlace(m.place)),
+      el('span', { class: 'texte' }, m.texte)));
+  });
+  liste.scrollTop = liste.scrollHeight;
+}
+
+function lancerEmojiVolant(texte) {
+  const zone = $('emojis-volants');
+  for (let k = 0; k < 3; k++) {
+    const e = el('span', { class: 'emoji-volant', style: `left:${10 + Math.random() * 75}%;animation-delay:${k * 0.25}s` }, texte);
+    zone.append(e);
+    setTimeout(() => e.remove(), 3400);
+  }
+}
+
+async function envoyerMessage(texte) {
+  if (!session || session.mode !== 'ligne' || !texte.trim()) return false;
+  try {
+    await (await obtenirEnLigne()).ecrire(session.partie.code, session.jeton, texte);
+    message('message-discussion', '');
+    return true;
+  } catch (e) {
+    message('message-discussion', traduireErreur(e.message, t), true);
+    return false;
+  }
+}
+EMOJIS.forEach((e) => $('emojis').append(el('button', { type: 'button', 'aria-label': e, onclick: () => envoyerMessage(e) }, e)));
+$('form-message').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const champ = $('champ-message');
+  if (await envoyerMessage(champ.value)) champ.value = '';
+});
+
+/** Tuiles vidéo (ou avatar pour un appel vocal) et boutons de l'appel. */
+function dessinerAppel() {
+  const possible = appelsPossibles();
+  const a = appel ? appel.etat : null;
+  const actif = !!(a && a.actif);
+  $('appel-depart').hidden = actif || !possible;
+  $('appel-en-cours').hidden = !actif;
+  if (!possible) message('message-appel', t('appelIndispo'), true);
+  if (!actif) {
+    document.querySelectorAll('#appel-videos video').forEach((v) => { v.srcObject = null; });
+    $('appel-videos').innerHTML = '';
+    $('appel-attente').hidden = true;
+    return;
+  }
+  $('btn-micro').textContent = a.micro ? t('micOui') : t('micNon');
+  $('btn-camera').textContent = a.camera ? t('camOui') : t('camNon');
+  $('btn-camera').hidden = !a.video;
+  $('appel-attente').hidden = [...a.pairs.values()].some((p) => p.flux);
+  const tuiles = [{ cle: 'moi', place: session.place, flux: a.local, moi: true }];
+  a.pairs.forEach((p, place) => { if (p.flux) tuiles.push({ cle: `p${place}`, place, flux: p.flux }); });
+  const zone = $('appel-videos');
+  // On garde les tuiles existantes (sinon la vidéo clignote à chaque mise à jour)
+  [...zone.children].forEach((x) => { if (!tuiles.some((tu) => tu.cle === x.dataset.cle)) x.remove(); });
+  tuiles.forEach((tu) => {
+    let tuile = zone.querySelector(`[data-cle="${tu.cle}"]`);
+    if (!tuile) {
+      const video = el('video', { autoplay: true, playsinline: true });
+      video.muted = !!tu.moi; // on ne s'entend pas soi-même
+      tuile = el('div', { class: `tuile${tu.moi ? ' moi' : ''}`, 'data-cle': tu.cle }, video,
+        el('div', { class: 'avatar' }), el('span', { class: 'nom-tuile' }));
+      zone.append(tuile);
+    }
+    const video = tuile.querySelector('video');
+    if (video.srcObject !== tu.flux) video.srcObject = tu.flux;
+    const avecImage = tu.flux.getVideoTracks().some((p) => p.enabled && p.readyState === 'live') && (!tu.moi || a.camera);
+    video.style.visibility = avecImage ? 'visible' : 'hidden';
+    const couleur = COULEURS[tu.place] ? COULEURS[tu.place].code : '#555';
+    const avatar = tuile.querySelector('.avatar');
+    avatar.hidden = avecImage;
+    avatar.style.background = couleur;
+    avatar.textContent = (tu.moi ? t('moi') : nomDeLaPlace(tu.place)).slice(0, 1).toUpperCase();
+    tuile.querySelector('.nom-tuile').textContent = tu.moi ? t('moi') : nomDeLaPlace(tu.place);
+  });
+}
+
+let sonnerieActuelle = null;
+function montrerSonnerie(s) {
+  sonnerieActuelle = s;
+  $('sonnerie').hidden = !s;
+  if (!s) return;
+  const nom = s.de !== undefined && session ? nomDeLaPlace(s.de) : s.nom;
+  $('sonnerie-texte').textContent = s.enCours ? t('enAppel', { nom }) : s.video ? t('tAppelleVideo', { nom }) : t('tAppelle', { nom });
+  if (!s.enCours) sons.tour();
+}
+
+/** Le jeu demande d'abord l'accord du joueur, puis le navigateur demande l'autorisation du micro (et de la caméra). */
+async function entrerDansAppel(video, accepter) {
+  if (!appel) return;
+  if (!appelsPossibles()) return message('message-appel', t('appelIndispo'), true);
+  if (!window.confirm(video ? t('confirmerCamera') : t('confirmerMicro'))) return;
+  message('message-appel', '');
+  try {
+    if (accepter) await appel.accepter(video);
+    else await appel.demarrer(video);
+  } catch {
+    message('message-appel', t('appelPermission'), true);
+    montrerSonnerie(null);
+  }
+}
+$('btn-appel-vocal').addEventListener('click', () => entrerDansAppel(false, false));
+$('btn-appel-video').addEventListener('click', () => entrerDansAppel(true, false));
+$('btn-accepter').addEventListener('click', () => entrerDansAppel(false, true));
+$('btn-accepter-video').addEventListener('click', () => entrerDansAppel(true, true));
+$('btn-refuser').addEventListener('click', () => { if (appel) appel.refuser(); else montrerSonnerie(null); });
+$('btn-raccrocher').addEventListener('click', () => { if (appel) appel.raccrocher(); });
+$('btn-micro').addEventListener('click', () => { if (appel) appel.basculerMicro(); });
+$('btn-camera').addEventListener('click', () => { if (appel) appel.basculerCamera(); });
 
 // ---------------------------------------------------------------- jeu
 let occupe = false;
@@ -1087,6 +1277,7 @@ function dessinerJeu() {
   $('btn-revanche').hidden = !enLigneFinie;
   $('btn-revanche').textContent = session.partie && session.partie.revanche ? t('rejoindreRevanche') : t('revanche');
   $('reactions').hidden = session.mode !== 'ligne';
+  placerZonePartie();
   noterStats(etat);
   const entree = coups.find((c) => c.depuis === -1 && !c.groupe);
   $('btn-entrer').hidden = !entree;

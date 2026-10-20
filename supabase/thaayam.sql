@@ -591,3 +591,55 @@ begin
 exception when others then
   raise notice 'Ménage de nuit non programmé : %', sqlerrm;
 end $$;
+
+-- =====================================================================
+-- Discussion pendant la partie (messages écrits et emojis)
+-- =====================================================================
+create table if not exists public.thaayam_messages (
+  id      bigint generated always as identity primary key,
+  code    text not null references public.thaayam_parties(code) on delete cascade,
+  place   integer not null,
+  texte   text not null check (char_length(texte) between 1 and 300),
+  cree_le timestamptz not null default now()
+);
+create index if not exists thaayam_messages_code on public.thaayam_messages (code, id);
+alter table public.thaayam_messages enable row level security;
+-- Lecture ouverte à qui connaît le code de la partie (comme la partie elle-même) ; écriture par la fonction seulement
+drop policy if exists thaayam_messages_lecture on public.thaayam_messages;
+create policy thaayam_messages_lecture on public.thaayam_messages for select to anon, authenticated using (true);
+revoke all on public.thaayam_messages from anon, authenticated;
+grant select on public.thaayam_messages to anon, authenticated;
+
+-- Écrire un message : seulement un joueur de la partie, au plus un message par seconde.
+-- On garde les 200 derniers messages de chaque partie.
+create or replace function public.thaayam_ecrire(p_code text, p_jeton uuid, p_texte text)
+returns bigint
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_place integer;
+  v_texte text := left(btrim(regexp_replace(coalesce(p_texte, ''), '[[:cntrl:]]', ' ', 'g')), 300);
+  v_id    bigint;
+begin
+  if v_texte = '' then raise exception 'Message vide'; end if;
+  select place into v_place from thaayam_jetons where code = p_code and jeton = p_jeton;
+  if v_place is null then raise exception 'Tu ne fais pas partie de cette partie'; end if;
+  if exists (select 1 from thaayam_messages where code = p_code and place = v_place and cree_le > now() - interval '1 second') then
+    raise exception 'Doucement : un message par seconde';
+  end if;
+  insert into thaayam_messages (code, place, texte) values (p_code, v_place, v_texte) returning id into v_id;
+  delete from thaayam_messages where code = p_code and id <= v_id - 200;
+  return v_id;
+end $$;
+revoke all on function public.thaayam_ecrire(text, uuid, text) from public;
+grant execute on function public.thaayam_ecrire(text, uuid, text) to anon, authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') and not exists (
+    select 1 from pg_publication_tables
+     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'thaayam_messages'
+  ) then
+    alter publication supabase_realtime add table public.thaayam_messages;
+  end if;
+end $$;

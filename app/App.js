@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, Share, View } from 'react-native';
+import { ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Bouton, Carte, Champ, Choix, Texte, useCouleurs, ThemeContexte, LangueContexte, themeLumineux } from './src/ui';
@@ -7,6 +7,7 @@ import { THEME_PAR_DEFAUT, THEMES, themeValide } from '../moteur/themes.js';
 import { Ambiance } from './src/Ambiance';
 import Social, { InviterAmis } from './src/ecrans/Social';
 import Revoir from './src/ecrans/Revoir';
+import Discussion, { CoucheEmojis } from './src/ecrans/Discussion';
 import { sons } from './src/sons';
 import { ecouterOuvertures } from './src/notifs';
 import { nouvellePartieGuidee } from '../moteur/guide.js';
@@ -79,6 +80,16 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
   const [aRevoir, setARevoir] = useState(null);
   const [retourRevoir, setRetourRevoir] = useState('accueil');
   const [replays, setReplays] = useState([]);
+  // Emojis de la discussion qui s'envolent sur l'écran
+  const [volants, setVolants] = useState([]);
+  const { width: largeurEcran } = useWindowDimensions();
+  const envolerEmoji = (texte) => setVolants((l) => [...l, ...[0, 1, 2].map((k) => ({
+    id: `${Date.now()}-${k}-${Math.random()}`, texte, gauche: largeurEcran * (0.1 + Math.random() * 0.75), retard: k * 250,
+  }))]);
+  const discussion = (s) => (
+    <Discussion code={s.partie.code} jeton={s.jeton} place={s.place} surEmoji={envolerEmoji}
+      nomDe={(pl) => N(((s.etat && s.etat.joueurs[pl]) || s.partie.joueurs[pl] || { nom: '?' }).nom)} />
+  );
   const revoirPartie = (etat, retour) => { setARevoir(etat); setRetourRevoir(retour); setEcran('revoir'); };
   // Toucher une notification ouvre la partie concernée
   useEffect(() => ecouterOuvertures(async (codeNotif) => {
@@ -416,6 +427,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
           {resumeReglesTraduit(p.regles, t).map((x, i) => <Texte key={i} attenue>• {x}</Texte>)}
         </Carte>
         <InviterAmis code={p.code} presents={p.joueurs.map((j) => j.nom)} pseudo={pseudo.trim()} />
+        {discussion(session)}
         {createur ? (
           <Bouton principal titre={t('commencerPartie')} desactive={p.joueurs.length < 2 || occupe} onPress={demarrer} />
         ) : null}
@@ -428,6 +440,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
     );
   } else if (ecran === 'jeu' && session && session.etat) {
     contenu = (
+      <>
       <Jeu etat={session.etat} moi={session.mode === 'ligne' ? session.place : null} occupe={occupe}
         guide={!!session.guide} desRoulent={desRoulent} enMouvement={enMouvement} eclat={eclat}
         surRevoir={() => revoirPartie(session.etat, 'jeu')}
@@ -439,6 +452,8 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
           etat: s.guide ? nouvellePartieGuidee(pseudo.trim())
             : nouvellePartie(s.etat.regles, s.etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false }))),
         }))} />
+      {session.mode === 'ligne' ? discussion(session) : null}
+      </>
     );
   } else {
     contenu = (
@@ -512,6 +527,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
         keyboardShouldPersistTaps="handled">
         {contenu}
       </ScrollView>
+      <CoucheEmojis volants={volants} retirer={(id) => setVolants((l) => l.filter((e) => e.id !== id))} />
     </SafeAreaView>
   );
 }

@@ -158,6 +158,35 @@
       <div id="reactions" class="reactions" hidden></div>
       <div id="bulle-reaction" class="bulle-reaction" role="status" aria-live="polite" hidden></div>
       <p id="jeu-message" class="message"></p>
+      <!-- Discussion et appels (parties en ligne) : déplacé dans le salon ou ici selon l'écran -->
+      <div id="zone-partie-ligne" class="zone-partie-ligne" hidden>
+        <div id="carte-discussion" class="carte">
+          <h2 data-i18n="discussionTitre">💬 Discussion</h2>
+          <ul id="messages" class="messages" aria-live="polite"></ul>
+          <div id="emojis" class="emojis"></div>
+          <form id="form-message" class="ligne form-message">
+            <input id="champ-message" maxlength="300" autocomplete="off" data-i18n-placeholder="ecrireMessage" />
+            <button type="submit" class="principal" data-i18n="envoyer">Envoyer</button>
+          </form>
+          <p id="message-discussion" class="message petit"></p>
+        </div>
+        <div id="carte-appel" class="carte">
+          <h2 data-i18n="appelTitre">📞 Appel</h2>
+          <p class="attenue petit" data-i18n="appelAide"></p>
+          <div id="appel-videos" class="appel-videos"></div>
+          <p id="appel-attente" class="attenue petit centre" hidden data-i18n="appelAttente"></p>
+          <div id="appel-depart" class="ligne">
+            <button id="btn-appel-vocal" type="button" data-i18n="appelVocal">🎤 Appel vocal</button>
+            <button id="btn-appel-video" type="button" data-i18n="appelVideo">📹 Appel vidéo</button>
+          </div>
+          <div id="appel-en-cours" class="ligne" hidden>
+            <button id="btn-micro" type="button"></button>
+            <button id="btn-camera" type="button"></button>
+            <button id="btn-raccrocher" type="button" class="raccrocher" data-i18n="raccrocher">📕 Raccrocher</button>
+          </div>
+          <p id="message-appel" class="message petit"></p>
+        </div>
+      </div>
       <details class="carte" open>
         <summary data-i18n="journal">Journal</summary>
         <ul id="journal" class="journal"></ul>
@@ -196,6 +225,16 @@
       </div>
     </section>
   </main>
+  <!-- Appel entrant : visible sur tous les écrans -->
+  <div id="sonnerie" class="sonnerie" role="alertdialog" hidden>
+    <p id="sonnerie-texte"></p>
+    <div class="ligne">
+      <button id="btn-accepter" type="button" class="principal" data-i18n="accepter">Accepter</button>
+      <button id="btn-accepter-video" type="button" data-i18n="accepterVideo">Accepter avec la vidéo</button>
+      <button id="btn-refuser" type="button" class="raccrocher" data-i18n="refuser">Refuser</button>
+    </div>
+  </div>
+  <div id="emojis-volants" class="emojis-volants" aria-hidden="true"></div>
 
   <script type="module" src="app.js"></script>
 </body>

@@ -204,6 +204,42 @@ export function creerEnLigne(client, stockage) {
       return nouveau;
     },
 
+    /** Discussion : les 200 derniers messages de la partie [{ id, place, texte, cree_le }]. */
+    async messages(code) {
+      const { data, error } = await client.from('thaayam_messages').select('id, place, texte, cree_le')
+        .eq('code', code).order('id', { ascending: true }).limit(200);
+      if (error) throw new Error(erreurLisible(error));
+      return data || [];
+    },
+
+    /** Discussion : écrire un message (texte libre ou emoji). */
+    async ecrire(code, jeton, texte) {
+      return rpc(client, 'thaayam_ecrire', { p_code: code, p_jeton: jeton, p_texte: texte });
+    },
+
+    /** Discussion : surMessage(message) à chaque nouveau message. Renvoie une fonction d'arrêt. */
+    suivreMessages(code, surMessage) {
+      const canal = client
+        .channel(`thaayam-messages-${code}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'thaayam_messages', filter: `code=eq.${code}` },
+          (p) => surMessage(p.new))
+        .subscribe();
+      return () => client.removeChannel(canal);
+    },
+
+    /**
+     * Appels audio / vidéo : canal de signalisation (WebRTC) entre les joueurs de la partie.
+     * surSignal(message) reçoit les messages des autres ; renvoie { envoyer(message), arreter() }.
+     */
+    canalAppel(code, surSignal) {
+      const canal = client.channel(`thaayam-appel-${code}`, { config: { broadcast: { self: false } } });
+      canal.on('broadcast', { event: 'signal' }, (p) => surSignal(p.payload)).subscribe();
+      return {
+        envoyer: (message) => canal.send({ type: 'broadcast', event: 'signal', payload: message }),
+        arreter: () => client.removeChannel(canal),
+      };
+    },
+
     /** Envoie un message rapide (un de REACTIONS) aux autres joueurs. */
     async reagir(code, jeton, texte) {
       await rpc(client, 'thaayam_reagir', { p_code: code, p_jeton: jeton, p_texte: texte });
