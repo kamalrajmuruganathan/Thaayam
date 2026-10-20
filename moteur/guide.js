@@ -41,7 +41,8 @@ export function conseilGuide(etat) {
     if (moi.pions.every((p) => p === -1)) return { cle: 'gSortir', params: {} };
     return { cle: 'gLancer', params: {} };
   }
-  // Phase « déplacer »
+  // Phase « déplacer » (pendant l'animation d'un pion, il n'y a plus de lancer en cours)
+  if (!etat.lancer) return { cle: 'pionAvance', params: {} };
   const v = etat.lancer.valeur;
   const coups = coupsPossibles(etat);
   if (coups.some((c) => c.captures.length)) return { cle: 'gManger', params: { v } };

@@ -512,3 +512,13 @@ test('thèmes : chaque thème a toutes les couleurs', async () => {
   assert.equal(themeValide('nuit'), 'nuit');
   assert.equal(themeValide('xxx'), 'cristal');
 });
+
+test('jeu sans internet : le service worker garde tous les fichiers du moteur', async () => {
+  const fs = await import('node:fs');
+  const sw = fs.readFileSync(new URL('../web/sw.js', import.meta.url), 'utf8');
+  const moteur = fs.readdirSync(new URL('.', import.meta.url)).filter((f) => f.endsWith('.js') && !f.endsWith('.test.js'));
+  for (const f of moteur) assert.ok(sw.includes(`'moteur/${f}'`), `moteur/${f} absent de web/sw.js`);
+  for (const f of fs.readdirSync(new URL('../web', import.meta.url)).filter((x) => /\.(js|html|css|png|webmanifest)$/.test(x) && x !== 'sw.js')) {
+    assert.ok(sw.includes(`'${f}'`), `${f} absent de web/sw.js`);
+  }
+});

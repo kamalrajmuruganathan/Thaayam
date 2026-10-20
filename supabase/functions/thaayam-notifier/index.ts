@@ -23,7 +23,14 @@ function texte(langue: string, type: 'tour' | 'invitation', params: Record<strin
   return modele.replace(/\{(\w+)\}/g, (m, k) => params[k] ?? m);
 }
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+};
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   const sb = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY')!,
@@ -31,10 +38,6 @@ Deno.serve(async (req) => {
   );
   const lireConfig = async (cle: string) =>
     (await sb.from('thaayam_config').select('valeur').eq('cle', cle).maybeSingle()).data?.valeur as string | undefined;
-
-  // Seule la base (qui connaît le secret partagé) peut demander un envoi.
-  const secret = await lireConfig('secret_notifier');
-  if (!secret || req.headers.get('x-thaayam') !== secret) return new Response('Interdit', { status: 403 });
 
   // Clés VAPID des notifications web : créées une seule fois.
   let publique = await lireConfig('vapid_public');
@@ -48,6 +51,14 @@ Deno.serve(async (req) => {
     publique = k.publicKey;
     privee = k.privateKey;
   }
+  // GET : le navigateur demande la clé publique pour s'abonner.
+  if (req.method === 'GET') {
+    return new Response(JSON.stringify({ cle: publique }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+
+  // Seule la base (qui connaît le secret partagé) peut demander un envoi.
+  const secret = await lireConfig('secret_notifier');
+  if (!secret || req.headers.get('x-thaayam') !== secret) return new Response('Interdit', { status: 403 });
   webpush.setVapidDetails(SITE, publique, privee);
 
   const { type, joueur, code, de } = await req.json();

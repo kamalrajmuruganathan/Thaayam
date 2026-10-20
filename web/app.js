@@ -2,13 +2,15 @@ import {
   REGLES_PAR_DEFAUT, PRESETS_DES, TAILLES, COULEURS,
   copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles, nomLancer,
 } from './moteur/regles.js';
-import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, pionsAuCentre, zoneCase, etapesCoup, arcsCroix } from './moteur/partie.js';
+import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, pionsAuCentre, zoneCase, etapesCoup, arcsCroix, revoirPartie } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
-import { sons, sonActif, basculerSon } from './sons.js';
+import { sons, sonActif, basculerSon, vibrationsActives, basculerVibrations } from './sons.js';
+import { nouvellePartieGuidee, lancerGuide, conseilGuide } from './moteur/guide.js';
+import { niveauJoueur, trierClassement } from './moteur/classement.js';
 import { creerEnLigne, REACTIONS } from './moteur/en-ligne.js';
 import { noterFin, resumeStats, normaliserStats, statsVides } from './moteur/stats.js';
-import { themePlateau, THEME_PAR_DEFAUT } from './moteur/themes.js';
+import { themePlateau, themeValide, THEMES } from './moteur/themes.js';
 import {
   LANGUES, traducteur, traduireJournal, traduireErreur, traduireNom, traduireReaction,
   resumeReglesTraduit, resumeStatsTraduit,
@@ -42,6 +44,8 @@ function appliquerLangue() {
   document.querySelectorAll('[data-i18n-placeholder]').forEach((e) => { e.placeholder = t(e.dataset.i18nPlaceholder); });
   document.querySelectorAll('#choix-langue button').forEach((b) => b.classList.toggle('actif', b.dataset.langue === code));
   if (typeof majBoutonSon === 'function') majBoutonSon();
+  if (typeof majBoutonVibr === 'function') majBoutonVibr();
+  if (typeof majNotifs === 'function') majNotifs();
   if (typeof majBoutonTrajet === 'function') majBoutonTrajet();
   document.querySelectorAll('[data-reaction]').forEach((b) => { b.textContent = traduireReaction(b.dataset.reaction, t); });
 }
@@ -56,6 +60,8 @@ LANGUES.forEach(({ code, nom }) => {
     appliquerLangue();
     // Redessiner l'écran visible dans la nouvelle langue
     if (!$('ecran-accueil').hidden) afficherAccueil();
+    if (!$('ecran-revoir').hidden) dessinerRevoir();
+    reabonnerLangue();
     if (!$('ecran-reglages').hidden) ouvrirReglages(modeReglages);
     if (session && !$('ecran-salon').hidden) afficherPartieEnLigne();
     if (session && session.etat && !$('ecran-jeu').hidden) dessinerJeu();
@@ -63,22 +69,32 @@ LANGUES.forEach(({ code, nom }) => {
   $('choix-langue').append(b);
 });
 
-// ---------------------------------------------------------------- thème (Cristal ou Bois)
+// ---------------------------------------------------------------- thème (Cristal, Temple, Nuit ou Bois)
+const COULEUR_BARRE = { cristal: '#05080c', temple: '#3b2f22', nuit: '#07030f', bois: '#7a3e12' };
 function themeChoisi() {
-  const t = memoire.lire('thaayam:theme');
-  return t === 'bois' || t === 'cristal' ? t : THEME_PAR_DEFAUT;
+  return themeValide(memoire.lire('thaayam:theme'));
 }
 function appliquerTheme() {
   document.documentElement.dataset.skin = themeChoisi();
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', themeChoisi() === 'cristal' ? '#05080c' : '#7a3e12');
+  if (meta) meta.setAttribute('content', COULEUR_BARRE[themeChoisi()] || '#7a3e12');
   document.querySelectorAll('[data-theme-choix]').forEach((b) => b.classList.toggle('actif', b.dataset.themeChoix === themeChoisi()));
 }
-document.querySelectorAll('[data-theme-choix]').forEach((b) => b.addEventListener('click', () => {
-  memoire.ecrire('thaayam:theme', b.dataset.themeChoix);
-  appliquerTheme();
-  if (session && session.etat && !$('ecran-jeu').hidden) dessinerJeu();
-}));
+THEMES.forEach(({ code, icone }) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.dataset.themeChoix = code;
+  b.append(`${icone} `);
+  const nom = document.createElement('span');
+  nom.dataset.i18n = code;
+  b.append(nom);
+  b.addEventListener('click', () => {
+    memoire.ecrire('thaayam:theme', code);
+    appliquerTheme();
+    if (session && session.etat && !$('ecran-jeu').hidden) dessinerJeu();
+  });
+  $('choix-theme').append(b);
+});
 appliquerTheme();
 const stockageAsync = {
   lire: async (k) => memoire.lire(k),
@@ -124,9 +140,15 @@ function message(id, texte, erreur = false) {
 function afficherAccueil() {
   const params = new URLSearchParams(location.search);
   if (params.get('code')) $('code-rejoindre').value = params.get('code').toUpperCase();
+  $('hors-ligne').hidden = navigator.onLine !== false;
   afficherMesParties();
   afficherStats();
+  afficherReplays();
+  afficherSocial();
+  majNotifs();
 }
+window.addEventListener('online', () => { if (!$('ecran-accueil').hidden) afficherAccueil(); });
+window.addEventListener('offline', () => { $('hors-ligne').hidden = false; });
 
 // ---------------------------------------------------------------- statistiques
 function lireStats() {
@@ -143,10 +165,11 @@ $('btn-stats-zero').addEventListener('click', () => {
   memoire.ecrire('thaayam:stats', JSON.stringify(statsVides()));
   afficherStats();
 });
-/** Compte la partie une seule fois, quand elle se termine. */
+/** Compte la partie une seule fois, quand elle se termine (et la garde pour la revoir). */
 function noterStats(etat) {
   if (!session || etat.phase !== 'fini' || session.statsNotees === etat) return;
   session.statsNotees = etat;
+  garderReplay(etat);
   const s = noterFin(lireStats(), etat, session.mode === 'ligne'
     ? { mode: 'ligne', place: session.place, code: session.partie.code } : { mode: 'local' });
   memoire.ecrire('thaayam:stats', JSON.stringify(s));
@@ -179,17 +202,109 @@ async function afficherMesParties() {
 }
 
 $('pseudo').value = memoire.lire('thaayam:pseudo') || '';
-
-$('btn-creer').addEventListener('click', () => {
-  if (!pseudo()) return message('message-accueil', t('errPseudo'), true);
-  ouvrirReglages('ligne');
+// Pseudo changé : on met à jour le profil (amis, classement) s'il existe
+$('pseudo').addEventListener('change', async () => {
+  const p = pseudo();
+  if (!p) return afficherSocial();
+  try {
+    const api = await obtenirEnLigne();
+    if (await api.profilLocal()) await api.profil(p);
+  } catch { /* hors ligne */ }
+  afficherSocial();
 });
-$('btn-local').addEventListener('click', () => { ordiLocal = [false, false, false, false]; ouvrirReglages('local'); });
-$('btn-ordi').addEventListener('click', () => { nbLocal = 2; ordiLocal = [false, true, true, true]; ouvrirReglages('local'); });
-$('btn-rejoindre').addEventListener('click', async () => {
-  const code = $('code-rejoindre').value.trim().toUpperCase();
+
+// ---------------------------------------------------------------- amis, invitations, classement
+let social = null; // { profil, amis, invitations, classement }
+let minuteurSocial = null;
+function cacherSocial(texte) {
+  $('zone-amis').innerHTML = '';
+  $('zone-amis').append(el('p', { class: 'attenue petit' }, texte));
+  $('carte-invitations').hidden = true;
+  $('carte-classement').hidden = true;
+}
+async function afficherSocial() {
+  clearTimeout(minuteurSocial);
+  const p = $('pseudo').value.trim();
+  if (!p) return cacherSocial(t('amisPseudo'));
+  try {
+    social = await (await obtenirEnLigne()).social(p);
+  } catch (e) {
+    social = null;
+    return cacherSocial(navigator.onLine === false ? t('amisHorsLigne') : traduireErreur(e.message, t));
+  }
+  dessinerSocial();
+  // Les invitations arrivent sans recharger la page
+  minuteurSocial = setTimeout(() => { if (!$('ecran-accueil').hidden) afficherSocial(); }, 20000);
+}
+
+function dessinerSocial() {
+  const s = social;
+  const zone = $('zone-amis');
+  zone.innerHTML = '';
+  zone.append(el('div', { class: 'mon-code-ami' }, el('span', { class: 'attenue petit' }, t('monCodeAmi')),
+    el('strong', { class: 'code-ami' }, s.profil.code_ami)));
+  zone.append(el('button', { type: 'button', onclick: async () => {
+    const texte = t('messageCodeAmi', { code: s.profil.code_ami });
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Thaayam', text: texte, url: `${location.origin}${location.pathname}` }); } catch { /* annulé */ }
+    } else {
+      try { await navigator.clipboard.writeText(texte); message('message-amis', t('codeAmiCopie')); } catch { message('message-amis', texte); }
+    }
+  } }, t('partagerCodeAmi')));
+  const champ = el('input', { maxlength: 6, placeholder: t('codeAmiPlaceholder'), autocapitalize: 'characters', class: 'champ-code' });
+  const ajouter = el('button', { type: 'button', class: 'principal' }, t('ajouterAmi'));
+  ajouter.addEventListener('click', async () => {
+    const code = champ.value.trim().toUpperCase();
+    if (code.length !== 6) return message('message-amis', t('errCodeAmi'), true);
+    ajouter.disabled = true;
+    try {
+      const a = await (await obtenirEnLigne()).ajouterAmi(code);
+      await afficherSocial();
+      message('message-amis', t('amiAjoute', { nom: a.pseudo }));
+    } catch (e) {
+      message('message-amis', traduireErreur(e.message, t), true);
+      ajouter.disabled = false;
+    }
+  });
+  zone.append(el('div', { class: 'ligne' }, champ, ajouter), el('p', { id: 'message-amis', class: 'message petit' }));
+  if (!s.amis.length) zone.append(el('p', { class: 'attenue petit' }, t('aucunAmi')));
+  const liste = el('ul', { class: 'liste-amis' });
+  s.amis.forEach((a) => {
+    liste.append(el('li', {}, el('span', { class: 'nom-ami' }, a.pseudo),
+      el('button', { type: 'button', class: 'discret petit', onclick: async () => {
+        if (!window.confirm(t('retirerAmiConfirmer', { nom: a.pseudo }))) return;
+        try { await (await obtenirEnLigne()).retirerAmi(a.id); afficherSocial(); } catch (e) { message('message-amis', traduireErreur(e.message, t), true); }
+      } }, t('retirerAmi'))));
+  });
+  zone.append(liste);
+
+  // Invitations reçues
+  $('carte-invitations').hidden = !s.invitations.length;
+  $('liste-invitations').innerHTML = '';
+  s.invitations.forEach((inv) => {
+    $('liste-invitations').append(el('button', { class: 'principal', onclick: () => rejoindrePartie(inv.code) },
+      t('invitePar', { nom: inv.de, code: inv.code })));
+  });
+
+  // Classement : moi et mes amis
+  const lignes = trierClassement(s.classement);
+  $('carte-classement').hidden = !s.amis.length && !lignes.some((x) => x.parties);
+  const ol = $('liste-classement');
+  ol.innerHTML = '';
+  if (!lignes.some((x) => x.parties)) ol.append(el('li', { class: 'attenue petit' }, t('classementVide')));
+  lignes.forEach((x) => {
+    const nv = niveauJoueur(x.victoires);
+    ol.append(el('li', { class: x.moi ? 'moi' : '' },
+      el('span', { class: 'rang' }, ['🥇', '🥈', '🥉'][x.rang - 1] || `${x.rang}.`),
+      el('div', { class: 'qui' },
+        el('div', { class: 'nom' }, x.pseudo + (x.moi ? t('toi') : '')),
+        el('div', { class: 'attenue petit' }, `${nv.icone} ${t(nv.cle)} · ${t('classementLigne', { v: x.victoires, p: x.parties })}`),
+        x.moi && nv.prochain ? el('div', { class: 'attenue petit' }, t('prochainNiveau', { n: nv.prochain })) : '')));
+  });
+}
+
+async function rejoindrePartie(code) {
   if (!pseudo()) return message('message-accueil', t('errPseudo'), true);
-  if (code.length !== 5) return message('message-accueil', t('errCode'), true);
   message('message-accueil', t('connexion'));
   try {
     const api = await obtenirEnLigne();
@@ -199,6 +314,163 @@ $('btn-rejoindre').addEventListener('click', async () => {
   } catch (e) {
     message('message-accueil', traduireErreur(e.message, t), true);
   }
+}
+
+/** Dans le salon : inviter mes amis dans la partie. */
+async function afficherAmisSalon() {
+  const carte = $('salon-amis');
+  if (!session || session.mode !== 'ligne' || session.partie.statut !== 'attente') { carte.hidden = true; return; }
+  if (!social) {
+    try { social = await (await obtenirEnLigne()).social(pseudo() || session.partie.joueurs[session.place].nom); } catch { carte.hidden = true; return; }
+  }
+  const presents = new Set(session.partie.joueurs.map((j) => j.nom));
+  const amis = social.amis.filter((a) => !presents.has(a.pseudo));
+  carte.hidden = !amis.length;
+  const zone = $('salon-liste-amis');
+  zone.innerHTML = '';
+  session.invites = session.invites || new Set();
+  amis.forEach((a) => {
+    const deja = session.invites.has(a.id);
+    const b = el('button', { type: 'button', class: deja ? '' : 'principal', disabled: deja }, deja ? t('invite') : t('inviter'));
+    b.addEventListener('click', async () => {
+      b.disabled = true;
+      try {
+        await (await obtenirEnLigne()).inviter(a.id, session.partie.code);
+        session.invites.add(a.id);
+        b.textContent = t('invite');
+        b.className = '';
+      } catch (e) {
+        message('salon-message', traduireErreur(e.message, t), true);
+        b.disabled = false;
+      }
+    });
+    zone.append(el('div', { class: 'ligne-ami' }, el('span', { class: 'nom-ami' }, a.pseudo), b));
+  });
+}
+
+// ---------------------------------------------------------------- dernières parties (à revoir)
+const CLE_REPLAYS = 'thaayam:replays';
+function lireReplays() {
+  try { const l = JSON.parse(memoire.lire(CLE_REPLAYS) || '[]'); return Array.isArray(l) ? l : []; } catch { return []; }
+}
+function garderReplay(etat) {
+  if (!Array.isArray(etat.histo) || !etat.histo.length) return;
+  const empreinte = JSON.stringify(etat.histo);
+  const liste = lireReplays().filter((r) => r && r.etat && JSON.stringify(r.etat.histo) !== empreinte);
+  memoire.ecrire(CLE_REPLAYS, JSON.stringify([{ quand: Date.now(), etat }, ...liste].slice(0, 5)));
+}
+function afficherReplays() {
+  const liste = lireReplays();
+  $('carte-replays').hidden = !liste.length;
+  $('liste-replays').innerHTML = '';
+  liste.forEach((r) => {
+    const e = r.etat;
+    const date = new Date(r.quand).toLocaleString(t.langue, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    $('liste-replays').append(el('button', { type: 'button', onclick: () => ouvrirRevoir(e, 'accueil') },
+      el('span', { class: 'petit' }, `${date} · ${e.joueurs.map((j) => nomAffiche(j.nom)).join(', ')}`),
+      el('span', { class: 'petit attenue' }, t('replayGagnant', { nom: nomAffiche(e.joueurs[e.gagnant].nom) }))));
+  });
+}
+
+// ---------------------------------------------------------------- notifications et mode hors ligne
+const swPret = 'serviceWorker' in navigator
+  ? navigator.serviceWorker.register('sw.js').catch(() => null)
+  : Promise.resolve(null);
+function appareilId() {
+  let id = memoire.lire('thaayam:appareil');
+  if (!id) {
+    id = window.crypto && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    memoire.ecrire('thaayam:appareil', id);
+  }
+  return id.slice(0, 64);
+}
+const notifsPossibles = () => 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+const notifsActives = () => notifsPossibles() && memoire.lire('thaayam:notifs') === 'oui' && Notification.permission === 'granted';
+function majNotifs() {
+  const actif = notifsActives();
+  $('btn-notifs').textContent = actif ? t('notifsActives') : t('notifsActiver');
+  $('btn-notifs').disabled = actif;
+  $('btn-notifs').classList.toggle('principal', !actif);
+  $('btn-notifs-couper').hidden = !actif;
+}
+function octetsCle(base64) {
+  const b = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
+}
+/** Abonne cet appareil (notifications même quand le jeu est fermé). Renvoie false si le serveur n'est pas prêt. */
+async function abonnerAppareil() {
+  const api = await obtenirEnLigne();
+  if (!(await api.profilLocal())) await api.profil(pseudo());
+  const cle = await api.cleNotifs();
+  if (!cle) return false;
+  const reg = await swPret;
+  if (!reg) return false;
+  await navigator.serviceWorker.ready;
+  let abo = await reg.pushManager.getSubscription();
+  if (!abo) abo = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: octetsCle(cle) });
+  await api.abonner(appareilId(), 'web', abo.toJSON(), t.langue);
+  return true;
+}
+$('btn-notifs').addEventListener('click', async () => {
+  if (!notifsPossibles()) return message('message-notifs', t('notifsIndispo'), true);
+  if (!pseudo()) return message('message-notifs', t('errPseudo'), true);
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') return message('message-notifs', t('notifsRefusees'), true);
+  memoire.ecrire('thaayam:notifs', 'oui');
+  majNotifs();
+  try {
+    message('message-notifs', (await abonnerAppareil()) ? '' : t('notifsPasPretes'));
+  } catch (e) {
+    message('message-notifs', traduireErreur(e.message, t), true);
+  }
+});
+$('btn-notifs-couper').addEventListener('click', async () => {
+  memoire.ecrire('thaayam:notifs', 'non');
+  majNotifs();
+  message('message-notifs', '');
+  try {
+    await (await obtenirEnLigne()).abonner(appareilId(), 'web', null, t.langue);
+    const reg = await swPret;
+    const abo = reg && (await reg.pushManager.getSubscription());
+    if (abo) await abo.unsubscribe();
+  } catch { /* hors ligne */ }
+});
+/** La langue des notifications suit celle du jeu. */
+function reabonnerLangue() {
+  if (typeof notifsActives === 'function' && notifsActives()) abonnerAppareil().catch(() => {});
+}
+
+/** C'est à moi de jouer : son, vibration, et notification si le jeu est en arrière-plan. */
+const titreNormal = document.title;
+document.addEventListener('visibilitychange', () => { if (!document.hidden) document.title = titreNormal; });
+async function signalerMonTour(code) {
+  sons.tour();
+  if (!document.hidden) return;
+  document.title = t('titreTonTour');
+  if (!notifsPossibles() || Notification.permission !== 'granted') return;
+  try {
+    const reg = await swPret;
+    if (reg) reg.showNotification('Thaayam', { body: t('notifTour', { code }), tag: `thaayam-${code}`, icon: 'icone-192.png',
+      badge: 'icone-192.png', data: { url: `${location.origin}${location.pathname}?code=${code}` } });
+  } catch { /* ignoré */ }
+}
+
+$('btn-creer').addEventListener('click', () => {
+  if (!pseudo()) return message('message-accueil', t('errPseudo'), true);
+  ouvrirReglages('ligne');
+});
+$('btn-local').addEventListener('click', () => { ordiLocal = [false, false, false, false]; ouvrirReglages('local'); });
+$('btn-ordi').addEventListener('click', () => { nbLocal = 2; ordiLocal = [false, true, true, true]; ouvrirReglages('local'); });
+$('btn-rejoindre').addEventListener('click', () => {
+  const code = $('code-rejoindre').value.trim().toUpperCase();
+  if (!pseudo()) return message('message-accueil', t('errPseudo'), true);
+  if (code.length !== 5) return message('message-accueil', t('errCode'), true);
+  rejoindrePartie(code);
+});
+$('btn-guide').addEventListener('click', () => {
+  session = { mode: 'local', guide: true, etat: nouvellePartieGuidee(pseudo()) };
+  aller('jeu');
+  dessinerJeu();
 });
 
 // ---------------------------------------------------------------- réglages
@@ -464,6 +736,10 @@ async function ouvrirPartieEnLigne(code, place, jeton) {
     if (!plusRecente && !changementStatut) return;
     const avant = session.etat;
     session.partie = nouvelle;
+    const e = nouvelle.etat;
+    if (e && e.phase !== 'fini' && e.tour === session.place && (!avant || avant.tour !== session.place)) {
+      signalerMonTour(nouvelle.code);
+    }
     if (nouvelle.statut !== 'attente' && avant && nouvelle.etat) montrer(avant, nouvelle.etat);
     else {
       session.etat = nouvelle.etat;
@@ -495,6 +771,7 @@ function afficherPartieEnLigne() {
     message('salon-message', createur
       ? (p.joueurs.length < 2 ? t('salonPeu') : t('salonPrets', { n: p.joueurs.length }))
       : t('salonAttente'));
+    afficherAmisSalon();
     return;
   }
   dessinerJeu();
@@ -570,9 +847,37 @@ function secouerDes() {
 
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** Les dés roulent un instant (faces au hasard) avant de montrer le vrai lancer. */
+async function roulerDes(etat) {
+  const zone = $('des');
+  const l = etat.dernierLancer;
+  if (!l) return;
+  const d = etat.regles.des;
+  zone.classList.add('roule');
+  for (let k = 0; k < 5; k++) {
+    zone.innerHTML = '';
+    if (d.type === 'cauris') l.detail.forEach(() => zone.append(cauri(Math.random() < 0.5)));
+    else l.detail.forEach(() => zone.append(deLong(d.faces[Math.floor(Math.random() * d.faces.length)])));
+    await pause(70);
+  }
+  zone.classList.remove('roule');
+}
+
+/** Éclat lumineux sur une case (pion mangé, pion arrivé), effacé après l'animation. */
+function eclat(k, couleur) {
+  if (!session) return;
+  session.eclat = { k, couleur };
+  setTimeout(() => {
+    if (session && session.eclat && session.eclat.k === k) {
+      session.eclat = null;
+      if (!animation && !$('ecran-jeu').hidden) dessinerJeu();
+    }
+  }, 700);
+}
+
 /**
- * Passe de l'état `ancien` à `nouveau` en jouant les sons et en faisant
- * avancer le pion déplacé case par case.
+ * Passe de l'état `ancien` à `nouveau` : les dés roulent, le pion déplacé avance
+ * case par case en sautillant, puis sons, vibrations et éclats.
  */
 async function montrer(ancien, nouveau) {
   const nouveauCoup = ancien && nouveau && nouveau.numero > ancien.numero;
@@ -582,38 +887,49 @@ async function montrer(ancien, nouveau) {
     return;
   }
   const g = geometrie(nouveau.regles, nouveau.joueurs.length);
-  if (nouveau.dernierLancer && JSON.stringify(nouveau.dernierLancer) !== JSON.stringify(ancien.dernierLancer)
-    && nouveau.numero === ancien.numero + 1 && nouveau.dernierCoup === ancien.dernierCoup) {
-    sons.des();
-  }
+  const s0 = session;
   const dc = nouveau.dernierCoup;
   const coupJoue = dc && JSON.stringify(dc) !== JSON.stringify(ancien.dernierCoup);
-  if (coupJoue && dc.depuis >= 0) {
-    animation = true;
-    const etapes = etapesCoup(g, dc.depuis, dc.vers);
-    const vue = JSON.parse(JSON.stringify(ancien));
-    vue.lancer = null;
-    for (const pos of etapes.slice(0, -1)) {
-      if (!session || (session.etat !== ancien && session.etat !== vue)) break; // partie quittée ou changée
-      vue.joueurs[dc.joueur].pions[dc.pion] = pos;
-      session.etat = vue;
-      dessinerJeu();
-      sons.pas();
-      await pause(110);
+  const nouveauLancer = nouveau.dernierLancer && JSON.stringify(nouveau.dernierLancer) !== JSON.stringify(ancien.dernierLancer);
+  animation = true;
+  try {
+    if (nouveauLancer && !coupJoue) {
+      sons.des();
+      await roulerDes(nouveau);
     }
-    animation = false;
-    if (!session || (session.etat !== vue && session.etat !== ancien)) return;
+    if (coupJoue && dc.depuis >= 0 && session === s0) {
+      const etapes = etapesCoup(g, dc.depuis, dc.vers);
+      const vue = JSON.parse(JSON.stringify(ancien));
+      vue.lancer = null;
+      s0.enMouvement = { joueur: dc.joueur, pion: dc.pion };
+      for (const pos of etapes.slice(0, -1)) {
+        if (session !== s0 || (session.etat !== ancien && session.etat !== vue)) break; // partie quittée ou changée
+        (dc.groupe || [dc.pion]).forEach((i) => { vue.joueurs[dc.joueur].pions[i] = pos; });
+        session.etat = vue;
+        dessinerJeu();
+        sons.pas();
+        await pause(140);
+      }
+      s0.enMouvement = null;
+    }
+  } finally {
+    animation = false; // toujours, même si la partie a été quittée pendant l'animation
   }
+  if (session !== s0) return;
   session.etat = nouveau;
   if (coupJoue) {
     const capturesAvant = ancien.joueurs.reduce((s, j) => s + j.captures, 0);
     const capturesApres = nouveau.joueurs.reduce((s, j) => s + j.captures, 0);
-    if (nouveau.phase === 'fini') sons.victoire();
-    else if (capturesApres > capturesAvant) sons.capture();
-    else if (dc.vers === g.arrivee) sons.arrivee();
+    const k = cle(g.chemins[dc.joueur][dc.vers]);
+    if (nouveau.phase === 'fini') { sons.victoire(); eclat(k, '#ffd54a'); }
+    else if (capturesApres > capturesAvant) { sons.capture(); eclat(k, '#ff4d4d'); }
+    else if (dc.vers === g.arrivee) { sons.arrivee(); eclat(k, '#ffd54a'); }
     else if (dc.depuis === -1) sons.entree();
     else sons.pas();
   }
+  // Contre l'ordinateur : petit signal quand c'est de nouveau à un humain de jouer
+  if (session.mode === 'local' && nouveau.phase !== 'fini' && nouveau.tour !== ancien.tour &&
+    !nouveau.joueurs[nouveau.tour].ordi && ancien.joueurs[ancien.tour].ordi) sons.tour();
   dessinerJeu();
 }
 
@@ -657,7 +973,7 @@ function tirageAleatoire() {
 $('btn-lancer').addEventListener('click', () => {
   if (!jePeuxJouer() || session.etat.phase !== 'lancer') return;
   secouerDes();
-  appliquer(lancer(session.etat, tirageAleatoire()));
+  appliquer(lancer(session.etat, tirageAleatoire(), session.guide ? lancerGuide(session.etat) : null));
 });
 $('btn-entrer').addEventListener('click', () => {
   const coup = coupsPossibles(session.etat).find((c) => c.depuis === -1 && !c.groupe);
@@ -679,11 +995,19 @@ $('btn-regles-jeu').addEventListener('click', () => { $('jeu-regles').hidden = !
 $('btn-rejouer').addEventListener('click', () => {
   const e = session && session.etat;
   if (!e || session.mode !== 'local') return;
-  session.etat = nouvellePartie(e.regles, e.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
+  session.etat = session.guide ? nouvellePartieGuidee(pseudo())
+    : nouvellePartie(e.regles, e.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
   session.statsNotees = null;
   dessinerJeu();
 });
+$('btn-revoir').addEventListener('click', () => { if (session && session.etat) ouvrirRevoir(session.etat, 'jeu'); });
 $('btn-son').addEventListener('click', () => { basculerSon(); majBoutonSon(); });
+$('btn-vibr').addEventListener('click', () => { basculerVibrations(); majBoutonVibr(); });
+function majBoutonVibr() {
+  $('btn-vibr').textContent = vibrationsActives() ? t('vibrOui') : t('vibrNon');
+  $('btn-vibr').hidden = !('vibrate' in navigator);
+}
+majBoutonVibr();
 $('btn-trajet').addEventListener('click', () => {
   voirTrajet = !voirTrajet;
   majBoutonTrajet();
@@ -694,8 +1018,7 @@ function majBoutonSon() { $('btn-son').textContent = sonActif() ? t('son') : t('
 majBoutonSon();
 majBoutonTrajet();
 
-function dessinerDes(etat) {
-  const zone = $('des');
+function dessinerDes(etat, zone = $('des')) {
   zone.innerHTML = '';
   const l = etat.lancer || etat.dernierLancer;
   if (!l) {
@@ -731,6 +1054,20 @@ function cauri(ouvert) {
   return s;
 }
 
+/** Bandeau des joueurs : pions à la maison, arrivés, captures. */
+function dessinerBandeau(etat, g, moi, bandeau) {
+  bandeau.innerHTML = '';
+  etat.joueurs.forEach((j, i) => {
+    const arrives = j.pions.filter((p) => p === g.arrivee).length;
+    const maison = j.pions.filter((p) => p === -1).length;
+    bandeau.append(el('div', { class: `joueur${i === etat.tour && etat.phase !== 'fini' ? ' actif' : ''}` },
+      el('span', { class: 'pastille', style: `background:${j.couleur}` }),
+      el('div', { style: 'min-width:0' },
+        el('div', { class: 'nom' }, nomAffiche(j.nom) + (i === moi ? t('toi') : '')),
+        el('div', { class: 'stats' }, `🏠 ${maison} · 🎯 ${arrives}/${j.pions.length} · ⚔️ ${j.captures}`))));
+  });
+}
+
 function dessinerJeu() {
   if (!session) return;
   const etat = session.etat;
@@ -742,21 +1079,16 @@ function dessinerJeu() {
   const peut = jePeuxJouer();
   const coups = peut ? coupsPossibles(etat) : [];
 
-  // Bandeau des joueurs
-  const bandeau = $('jeu-joueurs');
-  bandeau.innerHTML = '';
-  etat.joueurs.forEach((j, i) => {
-    const arrives = j.pions.filter((p) => p === g.arrivee).length;
-    const maison = j.pions.filter((p) => p === -1).length;
-    bandeau.append(el('div', { class: `joueur${i === etat.tour && etat.phase !== 'fini' ? ' actif' : ''}` },
-      el('span', { class: 'pastille', style: `background:${j.couleur}` }),
-      el('div', { style: 'min-width:0' },
-        el('div', { class: 'nom' }, nomAffiche(j.nom) + (i === moi ? t('toi') : '')),
-        el('div', { class: 'stats' }, `🏠 ${maison} · 🎯 ${arrives}/${j.pions.length} · ⚔️ ${j.captures}`))));
-  });
-
+  dessinerBandeau(etat, g, moi, $('jeu-joueurs'));
   dessinerPlateau(etat, g, coups);
-  dessinerDes(etat);
+  if (!animation || !$('des').classList.contains('roule')) dessinerDes(etat);
+
+  // Partie guidée : le conseil du moment
+  $('guide').hidden = !session.guide;
+  if (session.guide) {
+    const c = conseilGuide(etat);
+    $('guide-texte').textContent = t(c.cle, c.params);
+  }
 
   // Consigne
   let consigne;
@@ -773,6 +1105,7 @@ function dessinerJeu() {
   $('btn-lancer').disabled = !(peut && etat.phase === 'lancer');
   $('btn-lancer').hidden = etat.phase === 'fini';
   $('btn-rejouer').hidden = !(etat.phase === 'fini' && session.mode === 'local');
+  $('btn-revoir').hidden = !(etat.phase === 'fini' && Array.isArray(etat.histo));
   const enLigneFinie = etat.phase === 'fini' && session.mode === 'ligne';
   $('btn-revanche').hidden = !enLigneFinie;
   $('btn-revanche').textContent = session.partie && session.partie.revanche ? t('rejoindreRevanche') : t('revanche');
@@ -840,33 +1173,34 @@ function svg(tag, attrs, parent) {
   return e;
 }
 
-function dessinerPlateau(etat, g, coups) {
+/** Dessine le plateau dans `plateau` (svg). avecTrajet : dessiner le trajet d'un joueur (aide). */
+function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = voirTrajet) {
   const n = g.n;
   const S = 100;
-  const plateau = $('plateau');
   plateau.innerHTML = '';
   plateau.setAttribute('viewBox', `0 0 ${n * S} ${n * S}`);
   const zone = zoneCase(g, S);
   const T = themePlateau(themeChoisi());
+  const id = (nom) => `${plateau.id}-${nom}`; // identifiants propres à ce dessin (plusieurs plateaux dans la page)
 
   // Dégradés et halo lumineux du thème
   const defs = svg('defs', {}, plateau);
   if (T.fondLueur) {
-    const rg = svg('radialGradient', { id: 'fond-lueur', cx: '50%', cy: '50%', r: '60%' }, defs);
+    const rg = svg('radialGradient', { id: id('fond-lueur'), cx: '50%', cy: '50%', r: '60%' }, defs);
     svg('stop', { offset: '0%', 'stop-color': T.fondLueur }, rg);
     svg('stop', { offset: '100%', 'stop-color': T.fond }, rg);
-    const lg = svg('linearGradient', { id: 'verre', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    const lg = svg('linearGradient', { id: id('verre'), x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
     svg('stop', { offset: '0%', 'stop-color': '#ffffff', 'stop-opacity': 0.10 }, lg);
     svg('stop', { offset: '55%', 'stop-color': '#ffffff', 'stop-opacity': 0 }, lg);
   }
   if (T.lueur) {
-    const f = svg('filter', { id: 'lueur', x: '-50%', y: '-50%', width: '200%', height: '200%' }, defs);
+    const f = svg('filter', { id: id('lueur'), x: '-50%', y: '-50%', width: '200%', height: '200%' }, defs);
     svg('feGaussianBlur', { stdDeviation: 4, result: 'flou' }, f);
     const m = svg('feMerge', {}, f);
     svg('feMergeNode', { in: 'flou' }, m);
     svg('feMergeNode', { in: 'SourceGraphic' }, m);
   }
-  const avecLueur = T.lueur ? { filter: 'url(#lueur)' } : {};
+  const avecLueur = T.lueur ? { filter: `url(#${id('lueur')})` } : {};
 
   // Couleur de chaque joueur : sa case de départ, sa colonne d'arrivée (croix) et ses croix
   const teintes = new Map();
@@ -877,17 +1211,17 @@ function dessinerPlateau(etat, g, coups) {
   });
 
   if (g.forme === 'croix') {
-    svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: T.fondLueur ? 'url(#fond-lueur)' : T.fond }, plateau);
+    svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: T.fondLueur ? `url(#${id('fond-lueur')})` : T.fond }, plateau);
     if (T.lueur) {
       // Grille d'hologramme très fine, plus visible au centre
-      const motif = svg('pattern', { id: 'holo', width: S / 4, height: S / 4, patternUnits: 'userSpaceOnUse' }, defs);
+      const motif = svg('pattern', { id: id('holo'), width: S / 4, height: S / 4, patternUnits: 'userSpaceOnUse' }, defs);
       svg('path', { d: `M${S / 4} 0V${S / 4}M0 ${S / 4}H${S / 4}`, stroke: T.diagonaleLueur, 'stroke-width': 0.6, opacity: 0.35, fill: 'none' }, motif);
-      const masque = svg('radialGradient', { id: 'holo-masque', cx: '50%', cy: '50%', r: '55%' }, defs);
+      const masque = svg('radialGradient', { id: id('holo-masque'), cx: '50%', cy: '50%', r: '55%' }, defs);
       svg('stop', { offset: '0%', 'stop-color': '#fff', 'stop-opacity': 0.9 }, masque);
       svg('stop', { offset: '100%', 'stop-color': '#fff', 'stop-opacity': 0.08 }, masque);
-      const m = svg('mask', { id: 'holo-m' }, defs);
-      svg('rect', { x: 0, y: 0, width: n * S, height: n * S, fill: 'url(#holo-masque)' }, m);
-      svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: 'url(#holo)', mask: 'url(#holo-m)' }, plateau);
+      const m = svg('mask', { id: id('holo-m') }, defs);
+      svg('rect', { x: 0, y: 0, width: n * S, height: n * S, fill: `url(#${id('holo-masque')})` }, m);
+      svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: `url(#${id('holo')})`, mask: `url(#${id('holo-m')})` }, plateau);
     }
     // Diagonales : des coins du plateau jusqu'au centre, à travers les cases de coin
     const { r: r0, c: c0, taille: t } = g.centre;
@@ -915,7 +1249,7 @@ function dessinerPlateau(etat, g, coups) {
     const teinte = teintes.get(k);
     svg('rect', { x: x + 2, y: y + 2, width: S - 4, height: S - 4, rx: 6, fill: T.caseFond, stroke: T.caseTrait, 'stroke-width': 3 }, plateau);
     if (teinte) svg('rect', { x: x + 2, y: y + 2, width: S - 4, height: S - 4, rx: 6, fill: teinte, 'fill-opacity': T.teinteOpacite }, plateau);
-    if (T.fondLueur) svg('rect', { x: x + 4, y: y + 4, width: S - 8, height: S - 8, rx: 5, fill: 'url(#verre)' }, plateau);
+    if (T.fondLueur) svg('rect', { x: x + 4, y: y + 4, width: S - 8, height: S - 8, rx: 5, fill: `url(#${id('verre')})` }, plateau);
     if (g.refuges.has(k)) {
       svg('path', { d: `M${x + 14} ${y + 14}L${x + S - 14} ${y + S - 14}M${x + S - 14} ${y + 14}L${x + 14} ${y + S - 14}`,
         stroke: teinte || T.croixRefuge, 'stroke-width': 7, 'stroke-linecap': 'round', opacity: teinte ? 0.95 : 0.6 }, plateau);
@@ -932,20 +1266,20 @@ function dessinerPlateau(etat, g, coups) {
   fill: 'none', stroke: g.forme === 'croix' ? T.centreCroix : '#fff3da', 'stroke-width': g.forme === 'croix' ? 3 : 4, opacity: 0.8 }, plateau);
 
   // Trajet d'un joueur (aide) : ligne pointillée avec des flèches
-  if (voirTrajet) {
+  if (avecTrajet && session) {
     // En ligne : son propre trajet ; en local : celui du joueur humain qui joue (ou du premier humain)
     const premierHumain = Math.max(0, etat.joueurs.findIndex((j) => !j.ordi));
     const qui = session.mode === 'ligne' ? session.place : (etat.joueurs[etat.tour].ordi ? premierHumain : etat.tour);
     const centre = (p) => { const z = zone(cle(p)); return `${z.x + z.w / 2},${z.y + z.w / 2}`; };
     const ch = g.chemins[qui];
     const couleur = etat.joueurs[qui].couleur;
-    const marqueur = svg('marker', { id: 'fleche', viewBox: '0 0 10 10', refX: 5, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto' }, defs);
+    const marqueur = svg('marker', { id: id('fleche'), viewBox: '0 0 10 10', refX: 5, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto' }, defs);
     svg('path', { d: 'M0 0L10 5L0 10Z', fill: couleur }, marqueur);
     svg('polyline', { points: ch.map(centre).join(' '), fill: 'none', stroke: couleur, 'stroke-width': 8,
       'stroke-dasharray': '4 14', 'stroke-linecap': 'round', opacity: 0.85 }, plateau);
     for (let i = 2; i < ch.length; i += 3) {
       svg('line', { x1: centre(ch[i - 1]).split(',')[0], y1: centre(ch[i - 1]).split(',')[1], x2: centre(ch[i]).split(',')[0],
-        y2: centre(ch[i]).split(',')[1], stroke: couleur, 'stroke-width': 8, 'marker-end': 'url(#fleche)', opacity: 0.9 }, plateau);
+        y2: centre(ch[i]).split(',')[1], stroke: couleur, 'stroke-width': 8, 'marker-end': `url(#${id('fleche')})`, opacity: 0.9 }, plateau);
     }
   }
 
@@ -993,7 +1327,9 @@ function dessinerPlateau(etat, g, coups) {
       const cy = z.y + 8 + pas * Math.floor(i / cote) + pas / 2;
       const j = etat.joueurs[p.joueur];
       const jouable = jouables.has(`${p.joueur}:${p.pion}`);
-      const grp = svg('g', { class: jouable ? 'pion-jouable' : '' }, plateau);
+      const bouge = plateau.id === 'plateau' && session && session.enMouvement &&
+        session.enMouvement.joueur === p.joueur && session.enMouvement.pion === p.pion;
+      const grp = svg('g', { class: jouable ? 'pion-jouable' : bouge ? 'pion-bouge' : '' }, plateau);
       svg('circle', { cx, cy, r: rayon, fill: j.couleur, stroke: jouable ? T.jouable : T.pionTrait, 'stroke-width': jouable ? 6 : 3, ...avecLueur }, grp);
       svg('circle', { cx: cx - rayon * 0.3, cy: cy - rayon * 0.3, r: rayon * 0.3, fill: T.pionReflet, opacity: 0.35 }, grp);
       if (jouable) {
@@ -1006,7 +1342,89 @@ function dessinerPlateau(etat, g, coups) {
       }
     });
   });
+
+  // Éclat (pion mangé, pion arrivé)
+  if (plateau.id === 'plateau' && session && session.eclat) {
+    const z = zone(session.eclat.k);
+    svg('circle', { cx: z.x + z.w / 2, cy: z.y + z.w / 2, r: z.w / 2, fill: 'none', stroke: session.eclat.couleur,
+      'stroke-width': 10, class: 'eclat' }, plateau);
+  }
 }
+
+// ---------------------------------------------------------------- revoir une partie
+let revoir = null; // { etats, i, retour, minuteur }
+
+/** Lignes du journal ajoutées entre deux états (le journal garde seulement les 30 dernières). */
+function lignesAjoutees(avant, apres) {
+  const a = avant.journal, b = apres.journal;
+  for (let n = 1; n <= 4; n++) {
+    const debutB = b.slice(0, b.length - n);
+    const finA = a.slice(a.length - debutB.length);
+    if (debutB.length === finA.length && debutB.every((l, i) => l === finA[i])) return b.slice(b.length - n);
+  }
+  return b.slice(-1);
+}
+
+function ouvrirRevoir(etatFinal, retour) {
+  const etats = revoirPartie(etatFinal);
+  if (!etats) {
+    message(retour === 'jeu' ? 'jeu-message' : 'message-accueil', t('pasDeReplay'), true);
+    return;
+  }
+  arreterLecture();
+  revoir = { etats, i: 0, retour, minuteur: null };
+  $('revoir-curseur').max = etats.length - 1;
+  aller('revoir');
+  dessinerRevoir();
+}
+
+function dessinerRevoir() {
+  if (!revoir) return;
+  const e = revoir.etats[revoir.i];
+  const g = geometrie(e.regles, e.joueurs.length);
+  dessinerBandeau(e, g, null, $('revoir-joueurs'));
+  dessinerPlateau(e, g, [], $('plateau-revoir'), false);
+  dessinerDes(e, $('des-revoir'));
+  $('revoir-ligne').textContent = revoir.i === 0 ? t('debutPartieReplay')
+    : lignesAjoutees(revoir.etats[revoir.i - 1], e).map((l) => traduireJournal(l, t)).join(' ');
+  $('revoir-ligne').style.color = revoir.i === 0 ? '' : e.joueurs[(e.dernierLancer || { joueur: 0 }).joueur].couleur;
+  $('revoir-etape').textContent = t('etapeN', { n: revoir.i, total: revoir.etats.length - 1 });
+  $('revoir-curseur').value = String(revoir.i);
+  const fin = revoir.i >= revoir.etats.length - 1;
+  $('revoir-debut').disabled = $('revoir-prec').disabled = revoir.i === 0;
+  $('revoir-suiv').disabled = $('revoir-fin').disabled = fin;
+  $('revoir-lecture').textContent = revoir.minuteur ? t('rPause') : t('rLecture');
+}
+
+function allerEtape(i) {
+  if (!revoir) return;
+  revoir.i = Math.max(0, Math.min(revoir.etats.length - 1, i));
+  if (revoir.i >= revoir.etats.length - 1) arreterLecture();
+  dessinerRevoir();
+}
+function arreterLecture() {
+  if (revoir && revoir.minuteur) clearInterval(revoir.minuteur);
+  if (revoir) revoir.minuteur = null;
+}
+$('revoir-debut').addEventListener('click', () => { arreterLecture(); allerEtape(0); });
+$('revoir-prec').addEventListener('click', () => { arreterLecture(); allerEtape(revoir.i - 1); });
+$('revoir-suiv').addEventListener('click', () => { arreterLecture(); allerEtape(revoir.i + 1); });
+$('revoir-fin').addEventListener('click', () => { arreterLecture(); allerEtape(Infinity); });
+$('revoir-curseur').addEventListener('input', (e) => { arreterLecture(); allerEtape(Number(e.target.value)); });
+$('revoir-lecture').addEventListener('click', () => {
+  if (!revoir) return;
+  if (revoir.minuteur) { arreterLecture(); dessinerRevoir(); return; }
+  if (revoir.i >= revoir.etats.length - 1) revoir.i = 0;
+  revoir.minuteur = setInterval(() => allerEtape(revoir.i + 1), 900);
+  dessinerRevoir();
+});
+$('btn-revoir-retour').addEventListener('click', () => {
+  arreterLecture();
+  const retour = revoir ? revoir.retour : 'accueil';
+  revoir = null;
+  if (retour === 'jeu' && session && session.etat) { aller('jeu'); dessinerJeu(); }
+  else { aller('accueil'); afficherAccueil(); }
+});
 
 // ---------------------------------------------------------------- démarrage
 async function demarrage() {

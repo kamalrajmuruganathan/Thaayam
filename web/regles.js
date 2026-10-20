@@ -2,7 +2,7 @@
 import { geometrie, zoneCase, arcsCroix } from './moteur/partie.js';
 import { REGLES_PAR_DEFAUT, COULEURS, valeurDesLongs, faitRejouer } from './moteur/regles.js';
 import { cle } from './moteur/plateau.js';
-import { themePlateau, THEME_PAR_DEFAUT } from './moteur/themes.js';
+import { themePlateau, themeValide } from './moteur/themes.js';
 import { TEXTES_REGLES, LIBELLES_FR } from './moteur/textes-regles.js';
 
 // Même langue que le jeu, mémorisée sur l'appareil (le français est écrit dans la page)
@@ -21,8 +21,8 @@ if (TX) {
   document.title = `Thaayam : ${TX.titre}`;
 }
 
-// Même thème que le jeu (Cristal ou Bois), mémorisé sur l'appareil
-const nomTheme = (() => { try { const t = localStorage.getItem('thaayam:theme'); return t === 'bois' || t === 'cristal' ? t : THEME_PAR_DEFAUT; } catch { return THEME_PAR_DEFAUT; } })();
+// Même thème que le jeu (Cristal, Temple, Nuit ou Bois), mémorisé sur l'appareil
+const nomTheme = (() => { try { return themeValide(localStorage.getItem('thaayam:theme')); } catch { return themeValide(null); } })();
 document.documentElement.dataset.skin = nomTheme;
 const T = themePlateau(nomTheme);
 
@@ -116,8 +116,8 @@ function fleche(p, de, a, couleur, id) {
     const [x, y] = milieu(k.split(',').map(Number));
     const colonne = liste[0] <= g.debutBoucle || liste[0] >= g.longueurExterieur;
     const etiquette = liste.join('/');
-    svg('circle', { cx: x, cy: y, r: liste[0] === g.arrivee ? 40 : 32, fill: colonne ? COULEURS[0].code : (T.lueur ? '#0f1b26' : '#fffaf1'), stroke: COULEURS[0].code, 'stroke-width': 4 }, p);
-    texte(p, x, y, etiquette, { 'font-size': etiquette.length > 3 ? 21 : 30, fill: colonne ? '#fff' : (T.lueur ? '#e9f3fb' : '#2b1d10') });
+    svg('circle', { cx: x, cy: y, r: liste[0] === g.arrivee ? 40 : 32, fill: colonne ? COULEURS[0].code : (T.lueur ? T.caseFond : '#fffaf1'), stroke: COULEURS[0].code, 'stroke-width': 4 }, p);
+    texte(p, x, y, etiquette, { 'font-size': etiquette.length > 3 ? 21 : 30, fill: colonne ? '#fff' : (T.lueur ? '#f2f6fb' : '#2b1d10') });
   });
 }
 

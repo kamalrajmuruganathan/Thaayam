@@ -36,10 +36,14 @@
 
       <div class="carte">
         <h2 data-i18n="apparence">Apparence</h2>
-        <div class="choix-theme">
-          <button type="button" data-theme-choix="cristal">💎 <span data-i18n="cristal">Cristal</span></button>
-          <button type="button" data-theme-choix="bois">🪵 <span data-i18n="bois">Bois</span></button>
-        </div>
+        <div id="choix-theme" class="choix-theme"></div>
+      </div>
+
+      <p id="hors-ligne" class="message attenue" hidden data-i18n="horsLigne"></p>
+
+      <div id="carte-invitations" class="carte" hidden>
+        <h2 data-i18n="invitationsTitre">📨 Invitations</h2>
+        <div id="liste-invitations" class="liste-parties"></div>
       </div>
 
       <div id="mes-stats" class="carte" hidden>
@@ -51,6 +55,27 @@
       <div id="mes-parties" class="carte" hidden>
         <h2 data-i18n="mesParties">Mes parties en ligne</h2>
         <div id="liste-mes-parties" class="liste-parties"></div>
+      </div>
+
+      <div id="carte-amis" class="carte">
+        <h2 data-i18n="amisTitre">👥 Mes amis</h2>
+        <div id="zone-amis"></div>
+      </div>
+
+      <div id="carte-classement" class="carte" hidden>
+        <h2 data-i18n="classementTitre">🏆 Classement entre amis</h2>
+        <p class="attenue petit" data-i18n="classementAide"></p>
+        <ol id="liste-classement" class="liste-classement"></ol>
+      </div>
+
+      <div id="carte-notifs" class="carte">
+        <h2 data-i18n="notifsTitre">🔔 Notifications</h2>
+        <p class="attenue petit" data-i18n="notifsAide"></p>
+        <div class="ligne">
+          <button id="btn-notifs" data-i18n="notifsActiver">Activer les notifications</button>
+          <button id="btn-notifs-couper" class="discret" hidden data-i18n="notifsCouper">Couper</button>
+        </div>
+        <p id="message-notifs" class="message petit"></p>
       </div>
 
       <div class="carte">
@@ -67,6 +92,13 @@
         <h2 data-i18n="jouerIci">Jouer sur ce téléphone</h2>
         <button id="btn-ordi" class="principal" data-i18n="contreOrdi">Contre l'ordinateur</button>
         <button id="btn-local" data-i18n="plusieurs">À plusieurs, chacun son tour</button>
+        <button id="btn-guide" data-i18n="partieGuidee">🎓 Partie guidée (débutant)</button>
+        <p class="attenue petit" data-i18n="partieGuideeAide"></p>
+      </div>
+
+      <div id="carte-replays" class="carte" hidden>
+        <h2 data-i18n="mesReplays">🎬 Mes dernières parties</h2>
+        <div id="liste-replays" class="liste-parties"></div>
       </div>
 
       <a class="bouton-lien principal" href="regles.html" data-i18n="reglesDessins">📖 Règles du jeu (avec dessins)</a>
@@ -95,6 +127,10 @@
       <ul id="salon-joueurs" class="liste-joueurs"></ul>
       <h3 data-i18n="regles">Règles</h3>
       <ul id="salon-regles" class="petit"></ul>
+      <div id="salon-amis" class="carte" hidden>
+        <h2 data-i18n="inviterAmis">Inviter des amis</h2>
+        <div id="salon-liste-amis" class="liste-amis"></div>
+      </div>
       <button id="btn-demarrer" class="principal" data-i18n="commencerPartie">Commencer la partie</button>
       <p id="salon-message" class="message"></p>
     </section>
@@ -103,6 +139,10 @@
     <section id="ecran-jeu" class="ecran large" hidden>
       <div id="jeu-joueurs" class="bandeau-joueurs"></div>
       <div class="zone-plateau"><svg id="plateau" role="img" aria-label="Plateau de Thaayam"></svg></div>
+      <div id="guide" class="guide" hidden>
+        <strong data-i18n="guideTitre">🎓 Le guide</strong>
+        <p id="guide-texte"></p>
+      </div>
       <div class="zone-des">
         <div id="des" class="des"></div>
         <div id="jeu-consigne" class="consigne"></div>
@@ -112,6 +152,7 @@
           <button id="btn-entrer-groupe" hidden>Faire entrer les pions mangés</button>
           <button id="btn-rejouer" class="principal" hidden data-i18n="rejouer">Rejouer</button>
           <button id="btn-revanche" class="principal" hidden>Revanche !</button>
+          <button id="btn-revoir" hidden data-i18n="revoir">🎬 Revoir la partie</button>
         </div>
       </div>
       <div id="reactions" class="reactions" hidden></div>
@@ -124,6 +165,7 @@
       <div class="ligne">
         <button id="btn-trajet" class="discret">Voir le trajet</button>
         <button id="btn-son" class="discret">🔊 Son</button>
+        <button id="btn-vibr" class="discret">📳 Vibrations</button>
       </div>
       <div class="ligne">
         <button id="btn-quitter" class="discret" data-i18n="quitter">Quitter la partie</button>
@@ -131,6 +173,27 @@
       </div>
       <ul id="jeu-regles" class="petit" hidden></ul>
       <a class="bouton-lien discret-lien" href="regles.html" target="_blank" rel="noopener" data-i18n="reglesDessins2">📖 Règles du jeu avec dessins</a>
+    </section>
+
+    <!-- Revoir une partie -->
+    <section id="ecran-revoir" class="ecran large" hidden>
+      <button id="btn-revoir-retour" class="retour" data-i18n="retour">← Retour</button>
+      <h2 data-i18n="revoir">🎬 Revoir la partie</h2>
+      <div id="revoir-joueurs" class="bandeau-joueurs"></div>
+      <div class="zone-plateau"><svg id="plateau-revoir" role="img" aria-label="Plateau"></svg></div>
+      <div class="zone-des">
+        <div id="des-revoir" class="des"></div>
+        <p id="revoir-ligne" class="consigne"></p>
+        <input id="revoir-curseur" type="range" min="0" max="0" value="0" aria-label="Étape" />
+        <p id="revoir-etape" class="attenue petit centre"></p>
+        <div class="ligne controles-revoir">
+          <button id="revoir-debut" data-i18n="rDebut">⏮</button>
+          <button id="revoir-prec" data-i18n="rPrec">◀</button>
+          <button id="revoir-lecture" class="principal" data-i18n="rLecture">▶</button>
+          <button id="revoir-suiv" data-i18n="rSuiv">▶</button>
+          <button id="revoir-fin" data-i18n="rFin">⏭</button>
+        </div>
+      </div>
     </section>
   </main>
 

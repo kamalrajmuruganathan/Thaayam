@@ -240,8 +240,8 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 :root[data-skin="cristal"] .journal li { border-bottom-color: rgba(95, 212, 255, 0.15); }
 
 /* Choix du thème */
-.choix-theme { display: flex; gap: 8px; }
-.choix-theme button { flex: 1 1 0; }
+.choix-theme { display: flex; gap: 8px; flex-wrap: wrap; }
+.choix-theme button { flex: 1 1 40%; }
 .choix-theme button.actif { background: var(--accent); color: var(--accent-texte); border-color: var(--accent); }
 
 /* --------------------------------------------------------------------- */
@@ -327,3 +327,133 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 :root:is([lang="ta"], [lang="hi"], [lang="si"]) h1,
 :root:is([lang="ta"], [lang="hi"], [lang="si"]) h2,
 :root:is([lang="ta"], [lang="hi"], [lang="si"]) .code-geant { letter-spacing: normal !important; }
+
+/* ===================================================================== */
+/* Nouveautés : guide, revoir, amis, classement, animations               */
+/* ===================================================================== */
+.centre { text-align: center; }
+.guide { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border: 2px solid var(--accent); border-radius: 14px;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+.guide p { margin: 0; line-height: 1.45; font-weight: 600; }
+.mon-code-ami { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.code-ami { font-size: 1.6rem; letter-spacing: 0.18em; color: var(--accent); font-weight: 800; }
+.champ-code { text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; }
+.liste-amis { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.liste-amis li, .ligne-ami { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.liste-amis li { padding: 6px 0; border-bottom: 1px dashed var(--trait); }
+.liste-amis button { min-height: 0; padding: 4px 8px; flex: none; }
+.ligne-ami button { flex: none; min-height: 38px; padding: 6px 14px; }
+.nom-ami { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.liste-classement { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.liste-classement li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--trait); }
+.liste-classement li.moi { border-color: var(--accent); }
+.liste-classement .rang { font-size: 1.4rem; min-width: 2ch; text-align: center; font-weight: 800; }
+.liste-classement .qui { min-width: 0; }
+.liste-classement .nom { font-weight: 700; }
+.liste-parties button { flex-direction: column; align-items: flex-start; }
+#revoir-curseur { width: 100%; accent-color: var(--accent); min-height: 30px; padding: 0; border: none; background: none; }
+.controles-revoir { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.controles-revoir > button { padding: 10px 4px; min-width: 0; font-size: 0.9rem; }
+.controles-revoir > #revoir-lecture { grid-column: 1 / -1; order: 5; }
+
+/* Dés qui roulent, pion qui sautille, éclat d'une capture */
+.des.roule .de-long, .des.roule svg { animation: roule 0.14s linear infinite; }
+@keyframes roule { 0% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-5px) rotate(8deg); } 100% { transform: translateY(0) rotate(-8deg); } }
+.pion-bouge { transform-box: fill-box; transform-origin: center; animation: sautille 0.14s ease-out; }
+@keyframes sautille { 0% { transform: scale(1); } 45% { transform: translateY(-10px) scale(1.18); } 100% { transform: scale(1); } }
+.eclat { transform-box: fill-box; transform-origin: center; animation: eclat 0.7s ease-out forwards; }
+@keyframes eclat { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .des.roule .de-long, .pion-bouge, .eclat { animation: none; } }
+
+/* ===================================================================== */
+/* Thème « Temple » : pierre claire, sculptures et dorures                */
+/* ===================================================================== */
+:root[data-skin="temple"] {
+  --fond: #e9dfcb;
+  --surface: #f6efe1;
+  --texte: #2a2118;
+  --attenue: #6f5f48;
+  --accent: #9a6a12;
+  --accent-texte: #fff8e6;
+  --trait: #c9b48e;
+  --or: linear-gradient(180deg, #f7e08f, #d9a520 55%, #a8770f);
+  color-scheme: light;
+}
+:root[data-skin="temple"] body {
+  background:
+    repeating-linear-gradient(0deg, rgba(120, 95, 60, 0.07) 0 2px, transparent 2px 46px),
+    repeating-linear-gradient(90deg, rgba(120, 95, 60, 0.05) 0 2px, transparent 2px 92px),
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(217, 165, 32, 0.22), transparent 70%),
+    var(--fond);
+}
+:root[data-skin="temple"] .titre h1 { font-family: Georgia, 'Times New Roman', serif; letter-spacing: 0.12em; color: #7a520c;
+  text-shadow: 0 1px 0 #fff3c4, 0 2px 6px rgba(122, 82, 12, 0.35); }
+:root[data-skin="temple"] .titre h1::after { content: ""; display: block; height: 10px; width: 60%; margin: 8px auto 0;
+  background: radial-gradient(circle, #d9a520 2px, transparent 3px) 0 0 / 14px 10px repeat-x; }
+:root[data-skin="temple"] .tamoul { color: #9a6a12; }
+:root[data-skin="temple"] h2 { font-family: Georgia, serif; color: #7a520c; }
+:root[data-skin="temple"] .carte, :root[data-skin="temple"] .zone-des, :root[data-skin="temple"] .formulaire fieldset,
+:root[data-skin="temple"] .joueur, :root[data-skin="temple"] .liste-joueurs li {
+  border: 1px solid var(--trait); box-shadow: inset 0 0 0 3px rgba(217, 165, 32, 0.18), 0 4px 12px rgba(80, 60, 30, 0.15);
+}
+:root[data-skin="temple"] button.principal, :root[data-skin="temple"] a.bouton-lien.principal,
+:root[data-skin="temple"] .choix button.actif, :root[data-skin="temple"] .choix-theme button.actif, :root[data-skin="temple"] .choix-langue button.actif {
+  background: var(--or); color: #3b2a08; border: 1px solid #a8770f; box-shadow: inset 0 1px 0 #fff3c4, 0 2px 6px rgba(122, 82, 12, 0.35);
+}
+:root[data-skin="temple"] .zone-plateau, :root[data-skin="temple"] .dessin-plateau {
+  background: var(--or); padding: 5px; box-shadow: 0 0 0 2px #6b4a10, 0 10px 24px rgba(80, 60, 30, 0.35);
+}
+:root[data-skin="temple"] .de-long { background: linear-gradient(#efe6d3, #c8b896); border-color: #6b5536; }
+:root[data-skin="temple"] .de-long .point { background: #9a6a12; }
+
+/* ===================================================================== */
+/* Thème « Nuit » : néons violets et roses sur fond noir                  */
+/* ===================================================================== */
+:root[data-skin="nuit"] {
+  --fond: #06020d;
+  --surface: rgba(24, 10, 44, 0.78);
+  --texte: #f6e9ff;
+  --attenue: #b49ccc;
+  --accent: #ff4fd8;
+  --accent-texte: #1a0517;
+  --trait: rgba(182, 120, 255, 0.35);
+  --erreur: #ff6b8b;
+  color-scheme: dark;
+}
+:root[data-skin="nuit"] body {
+  background:
+    radial-gradient(ellipse 80% 45% at 15% 0%, rgba(255, 79, 216, 0.22), transparent 70%),
+    radial-gradient(ellipse 80% 45% at 85% 100%, rgba(122, 60, 255, 0.28), transparent 70%),
+    var(--fond);
+  background-attachment: fixed;
+}
+:root[data-skin="nuit"] .titre h1 { font-family: 'Saira', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.2em; color: #fff;
+  text-shadow: 0 0 8px #ff4fd8, 0 0 22px #ff4fd8, 0 0 40px #7a3cff; }
+:root[data-skin="nuit"] .tamoul { color: #b678ff; text-shadow: 0 0 12px #7a3cff; }
+:root[data-skin="nuit"] h2 { color: #ff8ae5; text-shadow: 0 0 10px rgba(255, 79, 216, 0.6); }
+:root[data-skin="nuit"] .carte, :root[data-skin="nuit"] .zone-des, :root[data-skin="nuit"] .formulaire fieldset,
+:root[data-skin="nuit"] .joueur, :root[data-skin="nuit"] .liste-joueurs li {
+  border: 1px solid var(--trait); box-shadow: 0 0 18px rgba(122, 60, 255, 0.25), inset 0 0 12px rgba(255, 79, 216, 0.08);
+}
+:root[data-skin="nuit"] button, :root[data-skin="nuit"] input, :root[data-skin="nuit"] select { background: rgba(16, 6, 30, 0.85); color: var(--texte); border-color: var(--trait); }
+:root[data-skin="nuit"] button.principal, :root[data-skin="nuit"] a.bouton-lien.principal,
+:root[data-skin="nuit"] .choix button.actif, :root[data-skin="nuit"] .choix-theme button.actif, :root[data-skin="nuit"] .choix-langue button.actif {
+  background: linear-gradient(90deg, #ff4fd8, #7a3cff); color: #fff; border: 1px solid #ffb8f1; box-shadow: 0 0 16px rgba(255, 79, 216, 0.55);
+}
+:root[data-skin="nuit"] button.discret { background: transparent; border-color: transparent; color: #ff8ae5; }
+:root[data-skin="nuit"] .zone-plateau, :root[data-skin="nuit"] .dessin-plateau {
+  background: linear-gradient(135deg, #ff4fd8, #7a3cff); padding: 3px; box-shadow: 0 0 30px rgba(255, 79, 216, 0.45), 0 0 60px rgba(122, 60, 255, 0.35);
+}
+:root[data-skin="nuit"] .de-long { background: #12061f; border: 1px solid #ff4fd8; box-shadow: 0 0 12px rgba(255, 79, 216, 0.5); }
+:root[data-skin="nuit"] .de-long .point { background: #ff8ae5; box-shadow: 0 0 8px #ff4fd8; }
+:root[data-skin="nuit"] .des .valeur { color: #fff; text-shadow: 0 0 12px #ff4fd8; }
+:root[data-skin="nuit"] .joueur.actif { border-color: #ff4fd8; box-shadow: 0 0 16px rgba(255, 79, 216, 0.6); }
+:root[data-skin="nuit"] .code-geant, :root[data-skin="nuit"] .code-ami { color: #fff; text-shadow: 0 0 14px #ff4fd8; }
+:root[data-skin="nuit"] .guide { background: rgba(255, 79, 216, 0.1); }
+:root[data-skin="nuit"] .entree { background: rgba(255, 79, 216, 0.75); color: #1a0517; }
+:root[data-skin="nuit"] .rejoue { background: rgba(182, 120, 255, 0.75); color: #12061f; }
+:root[data-skin="nuit"] .kaapal { background: rgba(180, 156, 204, 0.4); color: var(--texte); }
+:root[data-skin="nuit"] .bulle-reaction { background: rgba(16, 6, 30, 0.95); border-color: #ff4fd8; }
+:root[data-skin="cristal"] .guide { background: rgba(95, 212, 255, 0.08); border-color: var(--cyan); }
+:root[data-skin="cristal"] .code-ami { font-family: var(--police-titre); color: #f2f8fc; text-shadow: 0 0 14px rgba(95, 212, 255, 0.6); }
+:root:is([lang="ta"], [lang="hi"], [lang="si"]) .titre h1 { letter-spacing: normal !important; }

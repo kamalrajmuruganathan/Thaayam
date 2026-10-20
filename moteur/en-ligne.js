@@ -104,9 +104,17 @@ export function creerEnLigne(client, stockage) {
         p_abonnement: abonnement, p_langue: langue });
     },
 
-    /** Clé publique des notifications web (null tant que le notificateur n'a jamais tourné). */
+    /** Clé publique des notifications web, ou null si la fonction Edge « thaayam-notifier » n'est pas installée. */
     async cleNotifs() {
-      return rpc(client, 'thaayam_cle_notifs', {});
+      const cle = await rpc(client, 'thaayam_cle_notifs', {});
+      if (cle) return cle;
+      try {
+        // Premier abonnement : la fonction Edge crée les clés et renvoie la clé publique.
+        const { data } = await client.functions.invoke('thaayam-notifier', { method: 'GET' });
+        return (data && data.cle) || null;
+      } catch {
+        return null;
+      }
     },
 
     /** Crée le profil si besoin, puis relie la place. Ne fait jamais échouer la partie. */
