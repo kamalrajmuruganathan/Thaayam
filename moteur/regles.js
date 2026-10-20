@@ -52,6 +52,7 @@ export const REGLES_PAR_DEFAUT = {
  * dans les réglages de la partie.
  */
 export const REGLES_FIXES = {
+  forme: 'croix', // plateau en croix (thaayam kattai) : le plateau carré n'est plus proposé
   rejouerApresCapture: true, // on rejoue aussi après une capture
   captureAvantInterieur: true, // il faut avoir capturé un pion pour monter au centre
   arriveeExacte: true, // il faut tomber pile sur le centre

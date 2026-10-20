@@ -10,7 +10,7 @@ import {
 export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, surValider, occupe, erreurServeur }) {
   const t = useT();
   const N = (nom) => traduireNom(nom, t);
-  const [r, setR] = useState(reglesInitiales);
+  const [r, setR] = useState(() => avecReglesFixes(reglesInitiales));
   const [nb, setNb] = useState(2);
   const [ordi, setOrdi] = useState(ordiInitial || [false, false, false, false]);
   const [niveau, setNiveau] = useState('normal');
@@ -52,10 +52,6 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
       ) : null}
 
       <Carte titre={t('plateau')}>
-        <Choix options={[['croix', t('enCroix')], ['carre', t('carre')]]} valeur={r.forme} onChange={(v) => maj((x) => { x.forme = v; })} />
-        {r.forme === 'carre' ? (
-          <Choix options={TAILLES.map((t) => [t, `${t} × ${t}`])} valeur={r.taille} onChange={(v) => maj((x) => { x.taille = v; })} />
-        ) : null}
         <Texte style={{ fontWeight: '600' }}>{t('pionsParJoueur')}</Texte>
         <Choix options={[1, 2, 3, 4, 5, 6, 8, 10, 12].map((v) => [v, String(v)])} valeur={r.nbPions} onChange={(v) => maj((x) => { x.nbPions = v; })} />
       </Carte>
@@ -106,15 +102,6 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
       </Carte>
 
       {/* Déplacements : règles fixes (REGLES_FIXES), plus de choix à faire */}
-      {r.forme === 'carre' ? (
-        <Carte titre={t('refuges')}>
-          <Texte attenue style={{ fontSize: 12 }}>{t('aideRefuges')}</Texte>
-          <Interrupteur libelle={t('coins2')} valeur={r.refuges.coinsDeuxiemeAnneau}
-            onChange={(v) => maj((x) => { x.refuges.coinsDeuxiemeAnneau = v; })} />
-          <Interrupteur libelle={t('milieux')} valeur={r.refuges.milieuxInterieurs}
-            onChange={(v) => maj((x) => { x.refuges.milieuxInterieurs = v; })} />
-        </Carte>
-      ) : null}
 
       {erreurs.length ? <Texte erreur>{erreurs.map((e) => traduireErreur(e, t)).join(' ')}</Texte> : null}
       {erreurServeur ? <Texte erreur>{erreurServeur}</Texte> : null}

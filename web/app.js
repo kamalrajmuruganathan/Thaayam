@@ -557,15 +557,8 @@ function construireFormulaire() {
         }))));
   }
 
-  // Options propres au plateau carré (cachées pour la croix)
-  const seulementCarre = [];
-  const montrerForme = () => seulementCarre.forEach((e) => { e.hidden = r.forme !== 'carre'; });
-  const tailles = el('div', {}, choix(TAILLES.map((t) => [t, `${t} × ${t}`]), r.taille, (v) => { r.taille = v; verifierReglages(); }));
-  seulementCarre.push(tailles);
-
+  // Plateau toujours en croix (REGLES_FIXES) : seul le nombre de pions se choisit
   f.append(el('fieldset', {}, el('legend', {}, t('plateau')),
-    choix([['croix', t('enCroix')], ['carre', t('carre')]], r.forme, (v) => { r.forme = v; montrerForme(); verifierReglages(); }),
-    tailles,
     el('label', {}, t('pionsParJoueur'),
       (() => {
         const s = el('select', { onchange: (e) => { r.nbPions = Number(e.target.value); verifierReglages(); } });
@@ -628,13 +621,6 @@ function construireFormulaire() {
 
   // Déplacements : règles fixes (REGLES_FIXES), plus de choix à faire
 
-  const refugesCarre = el('fieldset', {}, el('legend', {}, t('refuges')),
-    el('div', { class: 'aide' }, t('aideRefuges')),
-    caseACocher(t('coins2'), r.refuges.coinsDeuxiemeAnneau, (v) => { r.refuges.coinsDeuxiemeAnneau = v; }),
-    caseACocher(t('milieux'), r.refuges.milieuxInterieurs, (v) => { r.refuges.milieuxInterieurs = v; }));
-  seulementCarre.push(refugesCarre);
-  f.append(refugesCarre);
-  montrerForme();
 
   verifierReglages();
 }
