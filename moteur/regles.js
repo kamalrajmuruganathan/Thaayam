@@ -37,6 +37,7 @@ export const REGLES_PAR_DEFAUT = {
   groupeRentreEnsemble: true, // un groupe mangé d'un coup peut rentrer d'un coup avec une valeur qui fait rejouer
   captureAvantInterieur: true, // il faut avoir « coupé » un pion pour entrer à l'intérieur
   arriveeExacte: true,
+  sortieObligatoire: true, // avec une valeur d'entrée, s'il reste des pions au centre, on doit en faire sortir un
   unPionParCase: false, // false : on peut empiler ses pions ; un adversaire qui tombe dessus mange tout le groupe
   sens: 'anti-horaire', // sens de l'anneau extérieur
   sensInterieurs: 'inverse', // 'inverse' | 'meme' | 'alterne' (par rapport à l'anneau extérieur)
@@ -54,6 +55,7 @@ export const REGLES_FIXES = {
   rejouerApresCapture: true, // on rejoue aussi après une capture
   captureAvantInterieur: true, // il faut avoir capturé un pion pour monter au centre
   arriveeExacte: true, // il faut tomber pile sur le centre
+  sortieObligatoire: true, // avec un 1, tant qu'il reste des pions au centre, on doit en faire sortir un
   unPionParCase: false, // on peut empiler ses pions ; un adversaire qui tombe dessus mange tout le groupe
   groupeRentreEnsemble: true, // un groupe mangé d'un coup rentre d'un coup (avec 1, 5, 6, 2 + 2)
   sens: 'anti-horaire', // sens inverse des aiguilles d'une montre
@@ -169,6 +171,7 @@ export function normaliserRegles(source) {
     groupeRentreEnsemble: s.groupeRentreEnsemble !== false,
     captureAvantInterieur: s.captureAvantInterieur !== false,
     arriveeExacte: s.arriveeExacte !== false,
+    sortieObligatoire: s.sortieObligatoire !== false,
     sens: s.sens === 'horaire' ? 'horaire' : 'anti-horaire',
     unPionParCase: typeof s.unPionParCase === 'boolean' ? s.unPionParCase : d0.unPionParCase,
     sensInterieurs: ['inverse', 'meme', 'alterne'].includes(s.sensInterieurs) ? s.sensInterieurs : d0.sensInterieurs,

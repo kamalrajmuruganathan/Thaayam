@@ -49,7 +49,8 @@ export function conseilGuide(etat) {
   if (coups.some((c) => c.groupe)) return { cle: 'gGroupe', params: {} };
   if (coups.some((c) => c.vers === g.arrivee)) return { cle: 'gArrivee', params: { v } };
   if (coups.some((c) => c.depuis === -1)) {
-    return { cle: moi.pions.every((p) => p === -1) ? 'gEntrer' : 'gEntrerOuAvancer', params: { v } };
+    const avancerPermis = !etat.regles.sortieObligatoire && moi.pions.some((p) => p >= 0);
+    return { cle: avancerPermis ? 'gEntrerOuAvancer' : 'gEntrer', params: { v } };
   }
   if (etat.regles.captureAvantInterieur && moi.captures === 0 &&
     moi.pions.some((p) => p >= 0 && p < g.longueurExterieur && p + v >= g.longueurExterieur)) {

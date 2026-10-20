@@ -350,7 +350,7 @@ test("l'ordinateur « fort » bat l'ordinateur « normal »", async () => {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
   let victoires = 0;
-  const N = 60; // les dés comptent beaucoup : il faut assez de parties
+  const N = 120; // les dés comptent beaucoup : il faut assez de parties
   for (let k = 0; k < N; k++) {
     const niv = k % 2 ? ['normal', 'fort'] : ['fort', 'normal']; // chacun commence à son tour
     let e = nouvellePartie(REGLES_PAR_DEFAUT, niv.map((ordi) => ({ nom: ordi, ordi })));
@@ -535,4 +535,32 @@ test('règles de déplacement fixes (plus de choix dans les réglages)', async (
   for (const [k, v] of Object.entries(REGLES_FIXES)) assert.equal(r[k], v, k);
   for (const k of Object.keys(REGLES_FIXES)) assert.equal(REGLES_PAR_DEFAUT[k], REGLES_FIXES[k], `défaut ${k}`);
   assert.equal(normaliserRegles(r).erreurs.length, 0);
+});
+
+test('sortie obligatoire : avec un 1 et des pions au centre, on doit en faire sortir un', () => {
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  e.joueurs[0].pions = [5, -1, -1, -1];
+  e = lancer(e, Math.random, { valeur: 1, detail: [1, 0] });
+  const coups = coupsPossibles(e);
+  assert.ok(coups.length > 0 && coups.every((c) => c.depuis === -1), JSON.stringify(coups));
+  assert.throws(() => jouer(e, 0));
+  // Plus aucun pion au centre : le 1 fait avancer
+  let f = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  f.joueurs[0].pions = [5, 7, 9, 11];
+  f = lancer(f, Math.random, { valeur: 1, detail: [1, 0] });
+  assert.equal(coupsPossibles(f).length, 4);
+  // Règle désactivée (ancienne partie) : on peut choisir
+  let g = nouvellePartie({ ...REGLES_PAR_DEFAUT, sortieObligatoire: false }, [{ nom: 'A' }, { nom: 'B' }]);
+  g.joueurs[0].pions = [5, -1, -1, -1];
+  g = lancer(g, Math.random, { valeur: 1, detail: [1, 0] });
+  assert.ok(coupsPossibles(g).some((c) => c.depuis === 5));
+});
+
+test('sortie obligatoire : rentrer un groupe avec un 5 reste un choix', () => {
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  e.joueurs[0].pions = [5, -1, -1, 9];
+  e.joueurs[0].groupes = [[1, 2]];
+  e = lancer(e, Math.random, { valeur: 5, detail: [3, 2] });
+  const coups = coupsPossibles(e);
+  assert.ok(coups.some((c) => c.groupe) && coups.some((c) => c.depuis === 5), JSON.stringify(coups));
 });

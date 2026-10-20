@@ -30,7 +30,7 @@
 - Règles validées par Kamal (par défaut) : croix 3 × 4, pions au départ dans le centre, sortie sur la case de sa
   colonne collée au centre → descente → tour anti-horaire → retour au bout du bras → remontée sur les 3 arcs du coin
   à gauche de son bras (positions non entières, `ARCS_RAYONS`) → centre (`cheminCroix`), 4 pions, dés longs 0-3, 0 + 0 = Kaapal (on passe les dés),
-  entrée avec 1, relance avec 1, 5, 6, 2 + 2 et après capture, capture obligatoire, empilement (groupe mangé en
+  entrée avec 1 (sortie obligatoire tant qu'il reste des pions au centre, `sortieObligatoire`), relance avec 1, 5, 6, 2 + 2 et après capture, capture obligatoire, empilement (groupe mangé en
   entier, groupe mangé qui rentre ensemble avec une valeur de relance). Page `web/regles.html` + écran `ReglesJeu`.
 
 ## Règles absolues

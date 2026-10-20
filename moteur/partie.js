@@ -191,6 +191,9 @@ export function coupsPossibles(etat) {
       coups.push({ pion: gr[0], depuis: -1, vers: 0, captures: victimes(etat, etat.tour, 0), groupe: [...gr] });
     });
   }
+  // Sortie obligatoire : si un pion peut sortir du centre, on ne peut pas avancer un autre pion à la place.
+  // (Seulement avec une valeur d'entrée : rentrer un groupe mangé avec 5, 6 ou 2 + 2 reste un choix.)
+  if (r.sortieObligatoire && coups.some((c) => c.depuis === -1 && !c.groupe)) return coups.filter((c) => c.depuis === -1);
   return coups;
 }
 
