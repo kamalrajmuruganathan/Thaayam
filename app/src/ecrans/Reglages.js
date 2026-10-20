@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Bouton, Carte, Champ, Choix, Interrupteur, Texte, useT } from '../ui';
 import { traduireErreur, traduireNom } from '../../../moteur/i18n.js';
 import {
-  COULEURS, PRESETS_DES, TAILLES, lireListe, normaliserRegles, valeursPossibles,
+  COULEURS, PRESETS_DES, TAILLES, lireListe, normaliserRegles, valeursPossibles, avecReglesFixes,
 } from '../../../moteur/regles.js';
 
 /** Formulaire de toutes les règles. mode : 'local' ou 'ligne'. */
@@ -103,34 +103,9 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
           onChangeText={(t) => { setTxtEntree(t); maj((x) => { x.valeursEntree = lireListe(t); }); }} />
         <Champ libelle={t('valeursRejouer')} value={txtRejouer}
           onChangeText={(t) => { setTxtRejouer(t); maj((x) => { x.valeursRejouer = lireListe(t); }); }} />
-        <Interrupteur libelle={t('rejouerCapture')} valeur={r.rejouerApresCapture}
-          onChange={(v) => maj((x) => { x.rejouerApresCapture = v; })} />
       </Carte>
 
-      <Carte titre={t('deplacements')}>
-        <Interrupteur libelle={t('captureObligatoire')}
-          aide={t('aideCapture')}
-          valeur={r.captureAvantInterieur} onChange={(v) => maj((x) => { x.captureAvantInterieur = v; })} />
-        <Interrupteur libelle={t('arriveeExacte')} valeur={r.arriveeExacte}
-          onChange={(v) => maj((x) => { x.arriveeExacte = v; })} />
-        <Interrupteur libelle={t('unPion')} valeur={r.unPionParCase}
-          aide={t('aideUnPion')}
-          onChange={(v) => maj((x) => { x.unPionParCase = v; })} />
-        <Interrupteur libelle={t('groupe')} valeur={r.groupeRentreEnsemble}
-          aide={t('aideGroupe')}
-          onChange={(v) => maj((x) => { x.groupeRentreEnsemble = v; })} />
-        <Texte style={{ fontWeight: '600' }}>{t('sensTour')}</Texte>
-        <Choix options={[['anti-horaire', `↺ ${t('antiHoraire')}`], ['horaire', `↻ ${t('horaire')}`]]} valeur={r.sens}
-          onChange={(v) => maj((x) => { x.sens = v; })} />
-        {r.forme === 'carre' ? (
-          <>
-            <Texte style={{ fontWeight: '600' }}>{t('sensInterieurs')}</Texte>
-            <Choix options={[['inverse', t('inverse')], ['meme', t('meme')], ['alterne', t('alterne')]]} valeur={r.sensInterieurs}
-              onChange={(v) => maj((x) => { x.sensInterieurs = v; })} />
-          </>
-        ) : null}
-      </Carte>
-
+      {/* Déplacements : règles fixes (REGLES_FIXES), plus de choix à faire */}
       {r.forme === 'carre' ? (
         <Carte titre={t('refuges')}>
           <Texte attenue style={{ fontSize: 12 }}>{t('aideRefuges')}</Texte>
@@ -149,7 +124,7 @@ export default function Reglages({ mode, reglesInitiales, ordiInitial, pseudo, s
         desactive={erreurs.length > 0 || occupe}
         onPress={() =>
           surValider(
-            normaliserRegles(r).regles,
+            avecReglesFixes(normaliserRegles(r).regles),
             noms.slice(0, nb).map((x, i) => ({ nom: nomCanonique(x, i), ordi: ordi[i] ? niveau : false }))
           )
         }

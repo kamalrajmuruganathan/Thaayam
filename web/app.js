@@ -1,6 +1,6 @@
 import {
   REGLES_PAR_DEFAUT, PRESETS_DES, TAILLES, COULEURS,
-  copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles, nomLancer,
+  copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles, nomLancer, avecReglesFixes,
 } from './moteur/regles.js';
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, pionsAuCentre, zoneCase, etapesCoup, arcsCroix, revoirPartie } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
@@ -483,9 +483,9 @@ let niveauOrdi = (() => { try { return localStorage.getItem('thaayam:niveau') ||
 function ouvrirReglages(mode) {
   modeReglages = mode;
   try {
-    edition = normaliserRegles(JSON.parse(memoire.lire('thaayam:regles:v5')) || REGLES_PAR_DEFAUT).regles;
+    edition = avecReglesFixes(normaliserRegles(JSON.parse(memoire.lire('thaayam:regles:v5')) || REGLES_PAR_DEFAUT).regles);
   } catch {
-    edition = copieRegles();
+    edition = avecReglesFixes(copieRegles());
   }
   $('titre-reglages').textContent = mode === 'local' ? t('titreLocal') : t('titreLigne');
   $('btn-valider-regles').textContent = mode === 'local' ? t('commencer') : t('creerLaPartie');
@@ -624,35 +624,9 @@ function construireFormulaire() {
     blocCauris, blocDes,
     el('div', { id: 'valeurs-possibles', class: 'aide' }),
     el('label', {}, t('valeursEntree'), entree),
-    el('label', {}, t('valeursRejouer'), rejouer),
-    caseACocher(t('rejouerCapture'), r.rejouerApresCapture, (v) => { r.rejouerApresCapture = v; })));
+    el('label', {}, t('valeursRejouer'), rejouer)));
 
-  f.append(el('fieldset', {}, el('legend', {}, t('deplacements')),
-    caseACocher(t('captureObligatoire'), r.captureAvantInterieur,
-      (v) => { r.captureAvantInterieur = v; }, t('aideCapture')),
-    caseACocher(t('arriveeExacte'), r.arriveeExacte, (v) => { r.arriveeExacte = v; }),
-    caseACocher(t('unPion'), r.unPionParCase, (v) => { r.unPionParCase = v; },
-      t('aideUnPion')),
-    caseACocher(t('groupe'), r.groupeRentreEnsemble, (v) => { r.groupeRentreEnsemble = v; },
-      t('aideGroupe')),
-    el('label', {}, t('sensTour'),
-      (() => {
-        const s = el('select', { onchange: (e) => { r.sens = e.target.value; } });
-        s.append(el('option', { value: 'anti-horaire', selected: r.sens === 'anti-horaire' }, t('antiHoraire')));
-        s.append(el('option', { value: 'horaire', selected: r.sens === 'horaire' }, t('horaire')));
-        return s;
-      })()),
-    (() => {
-      const l = el('label', {}, t('sensInterieurs'),
-        (() => {
-          const s = el('select', { onchange: (e) => { r.sensInterieurs = e.target.value; } });
-          [['inverse', t('inverse')], ['meme', t('meme')], ['alterne', t('alterne')]]
-            .forEach(([v, t]) => s.append(el('option', { value: v, selected: r.sensInterieurs === v }, t)));
-          return s;
-        })());
-      seulementCarre.push(l);
-      return l;
-    })()));
+  // Déplacements : règles fixes (REGLES_FIXES), plus de choix à faire
 
   const refugesCarre = el('fieldset', {}, el('legend', {}, t('refuges')),
     el('div', { class: 'aide' }, t('aideRefuges')),
@@ -677,7 +651,7 @@ function verifierReglages() {
 $('form-regles').addEventListener('submit', (e) => e.preventDefault());
 $('btn-valider-regles').addEventListener('click', async () => {
   if (!verifierReglages()) return;
-  const { regles } = normaliserRegles(edition);
+  const regles = avecReglesFixes(normaliserRegles(edition).regles);
   memoire.ecrire('thaayam:regles:v5', JSON.stringify(regles));
   if (modeReglages === 'local') {
     // Les noms par défaut sont gardés en français (« Rouge », « Ordi vert ») pour être traduits à l'affichage

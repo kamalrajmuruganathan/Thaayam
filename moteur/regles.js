@@ -46,6 +46,24 @@ export const REGLES_PAR_DEFAUT = {
   },
 };
 
+/**
+ * Règles de déplacement toujours appliquées (choix de Kamal) : elles ne sont plus proposées
+ * dans les réglages de la partie.
+ */
+export const REGLES_FIXES = {
+  rejouerApresCapture: true, // on rejoue aussi après une capture
+  captureAvantInterieur: true, // il faut avoir capturé un pion pour monter au centre
+  arriveeExacte: true, // il faut tomber pile sur le centre
+  unPionParCase: false, // on peut empiler ses pions ; un adversaire qui tombe dessus mange tout le groupe
+  groupeRentreEnsemble: true, // un groupe mangé d'un coup rentre d'un coup (avec 1, 5, 6, 2 + 2)
+  sens: 'anti-horaire', // sens inverse des aiguilles d'une montre
+};
+
+/** Copie des règles avec les règles fixes imposées. */
+export function avecReglesFixes(r) {
+  return { ...JSON.parse(JSON.stringify(r)), ...REGLES_FIXES };
+}
+
 /** Valeurs par défaut proposées quand on change de type de dés. */
 export const PRESETS_DES = {
   desLongs: { valeursEntree: [1], valeursRejouer: [1, 5, 6], doublesRejouer: [2] },

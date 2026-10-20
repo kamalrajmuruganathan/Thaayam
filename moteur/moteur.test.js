@@ -527,3 +527,12 @@ test('jeu sans internet : le service worker garde tous les fichiers du moteur', 
     assert.ok(sw.includes(`'${f}'`), `${f} absent de web/sw.js`);
   }
 });
+
+test('règles de déplacement fixes (plus de choix dans les réglages)', async () => {
+  const { REGLES_FIXES, avecReglesFixes } = await import('./regles.js');
+  const r = avecReglesFixes({ ...REGLES_PAR_DEFAUT, unPionParCase: true, arriveeExacte: false, sens: 'horaire',
+    captureAvantInterieur: false, rejouerApresCapture: false, groupeRentreEnsemble: false });
+  for (const [k, v] of Object.entries(REGLES_FIXES)) assert.equal(r[k], v, k);
+  for (const k of Object.keys(REGLES_FIXES)) assert.equal(REGLES_PAR_DEFAUT[k], REGLES_FIXES[k], `défaut ${k}`);
+  assert.equal(normaliserRegles(r).erreurs.length, 0);
+});
