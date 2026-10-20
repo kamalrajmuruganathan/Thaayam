@@ -5,7 +5,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#f6efe3",
+    "backgroundColor": "#04070b",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kamal.thaayam"
@@ -14,13 +14,13 @@
       "package": "com.kamal.thaayam",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#7a3e12"
+        "backgroundColor": "#05080c"
       }
     },
     "plugins": [
       "expo-status-bar",
       "expo-audio",
-      ["expo-notifications", { "color": "#7a3e12" }]
+      ["expo-notifications", { "color": "#5fd4ff" }]
     ],
     "icon": "./assets/icon.png",
     "web": {
