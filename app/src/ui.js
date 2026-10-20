@@ -17,13 +17,34 @@ const CRISTAL = {
   accent: '#7fdcff', accentTexte: '#03121c', trait: '#1f4a63', erreur: '#ff5a5a', cyan: '#5fd4ff',
 };
 
+// Thème « Temple » : pierre claire et dorures
+const TEMPLE = {
+  fond: '#e9dfcb', surface: '#f6efe1', texte: '#2a2118', attenue: '#6f5f48',
+  accent: '#9a6a12', accentTexte: '#fff8e6', trait: '#c9b48e', erreur: '#b3261e', or: '#d9a520',
+};
+// Thème « Nuit » : néons violets et roses sur fond noir
+const NUIT = {
+  fond: '#06020d', surface: '#160a2a', texte: '#f6e9ff', attenue: '#b49ccc',
+  accent: '#ff4fd8', accentTexte: '#1a0517', trait: '#4a2a7a', erreur: '#ff6b8b', cyan: '#b678ff',
+};
+
+/** Couleurs des dés longs selon le thème : { fond, bord, point, valeur, epais }. */
+export function couleursDes(theme) {
+  if (theme === 'cristal') return { fond: '#0d1a25', bord: '#5fd4ff', point: '#5fd4ff', valeur: '#f2f8fc', epais: 1 };
+  if (theme === 'nuit') return { fond: '#12061f', bord: '#ff4fd8', point: '#ff8ae5', valeur: '#ffffff', epais: 1 };
+  if (theme === 'temple') return { fond: '#e6dac3', bord: '#6b5536', point: '#9a6a12', valeur: '#9a6a12', epais: 2 };
+  return { fond: '#d9a845', bord: '#7a5418', point: '#3b2410', valeur: '#7a3e12', epais: 2 };
+}
+/** Thèmes sombres et lumineux (halo, ambiance futuriste). */
+export const themeLumineux = (theme) => theme === 'cristal' || theme === 'nuit';
+
 /** Langue choisie ('fr', 'en', 'ta', 'hi', 'si'), fournie par App.js : useT() renvoie t(cle, params). */
 export const LangueContexte = createContext(traducteur('fr'));
 export function useT() {
   return useContext(LangueContexte);
 }
 
-/** Thème choisi ('cristal' ou 'bois'), fourni par App.js. */
+/** Thème choisi ('cristal', 'temple', 'nuit' ou 'bois'), fourni par App.js. */
 export const ThemeContexte = createContext('cristal');
 export function useTheme() {
   return useContext(ThemeContexte);
@@ -33,6 +54,8 @@ export function useCouleurs() {
   const theme = useTheme();
   const schema = useColorScheme();
   if (theme === 'cristal') return CRISTAL;
+  if (theme === 'nuit') return NUIT;
+  if (theme === 'temple') return TEMPLE;
   return schema === 'dark' ? SOMBRE : CLAIR;
 }
 
@@ -106,9 +129,18 @@ export function Interrupteur({ libelle, aide, valeur, onChange }) {
 
 export function Carte({ titre, children }) {
   const c = useCouleurs();
+  const theme = useTheme();
+  const lumineux = themeLumineux(theme);
   return (
-    <View style={[s.carte, { backgroundColor: c.surface, borderColor: c.trait }]}>
-      {titre ? <Text style={[s.titreCarte, { color: c.texte }]}>{titre}</Text> : null}
+    <View style={[s.carte, { backgroundColor: c.surface, borderColor: c.trait },
+      lumineux && { shadowColor: c.cyan || c.accent, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4 },
+      theme === 'temple' && { shadowColor: '#503c1e', shadowOpacity: 0.18, shadowRadius: 8, elevation: 2 }]}>
+      {/* Arête lumineuse en haut de la carte, comme une vitre éclairée */}
+      {lumineux ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: 1,
+        backgroundColor: theme === 'nuit' ? '#ffb8f1' : '#bff0ff', shadowColor: c.cyan, shadowOpacity: 0.9, shadowRadius: 6 }} /> : null}
+      {theme === 'temple' ? <View pointerEvents="none" style={{ position: 'absolute', top: 3, left: 3, right: 3, bottom: 3,
+        borderRadius: 11, borderWidth: 1, borderColor: 'rgba(217,165,32,0.35)' }} /> : null}
+      {titre ? <Text style={[s.titreCarte, { color: lumineux ? (c.cyan || c.accent) : theme === 'temple' ? '#7a520c' : c.texte }]}>{titre}</Text> : null}
       {children}
     </View>
   );

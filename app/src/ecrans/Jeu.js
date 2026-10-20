@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, View, useWindowDimensions } from 'react-native';
-import { Bouton, Carte, Texte, useCouleurs, useTheme, useT } from '../ui';
+import { Bouton, Carte, Texte, useCouleurs, useTheme, useT, couleursDes, themeLumineux } from '../ui';
+import { lancerGuide, conseilGuide } from '../../../moteur/guide.js';
+import { sonActif, vibrationsActives, basculerSon, basculerVibrations } from '../sons';
 import { Plateau, Cauri } from '../Plateau';
 import { lancer, jouer, coupsPossibles, geometrie } from '../../../moteur/partie.js';
 import { nomLancer } from '../../../moteur/regles.js';
@@ -13,9 +15,12 @@ import { traduireJournal, traduireNom, traduireReaction, resumeReglesTraduit } f
  * surAction(nouvelEtat) : applique / envoie le nouvel état.
  */
 export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter, surRejouer, surReglesJeu,
-  bulle, surReaction, surRevanche, revancheExiste }) {
+  bulle, surReaction, surRevanche, revancheExiste, guide = false, desRoulent = null, enMouvement = null, eclat = null, surRevoir = null }) {
   const c = useCouleurs();
-  const cristal = useTheme() === 'cristal';
+  const theme = useTheme();
+  const lumineux = themeLumineux(theme);
+  const D = couleursDes(theme);
+  const [, rafraichir] = useState(0);
   const t = useT();
   const N = (nom) => traduireNom(nom, t);
   const { width } = useWindowDimensions();
@@ -37,7 +42,9 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
   else if (etat.phase === 'lancer') consigne = moi === null ? t('aToiLocal', { nom: N(actif.nom) }) : t('aToi');
   else consigne = t('touchePionBlanc');
 
-  const l = etat.lancer || etat.dernierLancer;
+  // Pendant que les dés roulent, on montre des faces au hasard
+  const l = desRoulent || etat.lancer || etat.dernierLancer;
+  const conseil = guide ? conseilGuide(etat) : null;
 
   return (
     <View style={{ gap: 12 }}>
@@ -63,8 +70,16 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
 
       <View style={{ alignItems: 'center' }}>
         <Plateau etat={etat} coups={coups} largeur={largeur} surPion={(p) => peut && surAction(jouer(etat, p))}
+          enMouvement={enMouvement} eclat={eclat}
           trajetDe={voirTrajet ? (moi !== null ? moi : actif.ordi ? Math.max(0, etat.joueurs.findIndex((j) => !j.ordi)) : etat.tour) : null} />
       </View>
+
+      {conseil ? (
+        <View style={{ borderWidth: 2, borderColor: c.accent, borderRadius: 14, padding: 12, gap: 4, backgroundColor: c.surface }}>
+          <Texte style={{ fontWeight: '800', color: c.accent }}>{t('guideTitre')}</Texte>
+          <Texte style={{ fontWeight: '600', lineHeight: 21 }}>{t(conseil.cle, conseil.params)}</Texte>
+        </View>
+      ) : null}
 
       <Carte>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', alignItems: 'center', minHeight: 44 }}>
@@ -74,12 +89,18 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
               {etat.regles.des.type === 'cauris'
                 ? l.detail.map((o, i) => <Cauri key={i} ouvert={o} />)
                 : l.detail.map((f, i) => (
-                  <View key={i} accessibilityLabel={`dé long : ${f}`} style={{ width: 92, height: 30, borderRadius: 6, backgroundColor: cristal ? '#0d1a25' : '#d9a845', borderWidth: cristal ? 1 : 2, borderColor: cristal ? '#5fd4ff' : '#7a5418', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12 }}>
-                    {f > 3 ? <Texte style={{ color: cristal ? '#5fd4ff' : '#3b2410', fontWeight: '800' }}>{f}</Texte>
-                      : Array.from({ length: f }, (_, k) => <View key={k} style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: cristal ? '#5fd4ff' : '#3b2410' }} />)}
+                  <View key={i} accessibilityLabel={`dé long : ${f}`} style={{ width: 92, height: 30, borderRadius: 6, backgroundColor: D.fond, borderWidth: D.epais, borderColor: D.bord,
+                    alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12,
+                    transform: desRoulent ? [{ rotate: `${(i % 2 ? 1 : -1) * 8}deg` }, { translateY: -4 }] : [],
+                    shadowColor: D.point, shadowOpacity: lumineux ? 0.5 : 0, shadowRadius: 8 }}>
+                    {f > 3 ? <Texte style={{ color: D.point, fontWeight: '800' }}>{f}</Texte>
+                      : Array.from({ length: f }, (_, k) => <View key={k} style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: D.point }} />)}
                   </View>
                 ))}
-              <Texte style={{ fontSize: cristal ? 36 : 30, fontWeight: cristal ? '500' : '800', fontStyle: cristal ? 'italic' : 'normal', color: c.accent, marginLeft: 6 }}>{nomLancer(etat.regles, l)}</Texte>
+              {desRoulent ? null : (
+                <Texte style={{ fontSize: lumineux ? 36 : 30, fontWeight: lumineux ? '500' : '800', fontStyle: lumineux ? 'italic' : 'normal', color: lumineux ? D.valeur : c.accent, marginLeft: 6,
+                  textShadowColor: lumineux ? D.bord : 'transparent', textShadowRadius: lumineux ? 12 : 0 }}>{nomLancer(etat.regles, l)}</Texte>
+              )}
             </>
           )}
         </View>
@@ -87,11 +108,14 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {etat.phase !== 'fini' ? (
             <Bouton style={{ flex: 1 }} principal titre={t('lancer')} desactive={!(peut && etat.phase === 'lancer')}
-              onPress={() => surAction(lancer(etat))} />
+              onPress={() => surAction(lancer(etat, Math.random, guide ? lancerGuide(etat) : null))} />
           ) : null}
           {entree ? <Bouton style={{ flex: 1 }} titre={t('entrerPion')} onPress={() => surAction(jouer(etat, entree.pion))} /> : null}
           {groupe ? <Bouton style={{ flex: 1 }} titre={t('entrerGroupe', { n: groupe.groupe.length })} onPress={() => surAction(jouer(etat, groupe.pion, true))} /> : null}
           {etat.phase === 'fini' && moi === null ? <Bouton style={{ flex: 1 }} principal titre={t('rejouer')} onPress={surRejouer} /> : null}
+          {etat.phase === 'fini' && surRevoir && Array.isArray(etat.histo) ? (
+            <Bouton style={{ flex: 1 }} titre={t('revoir')} onPress={surRevoir} />
+          ) : null}
           {etat.phase === 'fini' && surRevanche ? (
             <Bouton style={{ flex: 1 }} principal desactive={occupe} titre={revancheExiste ? t('rejoindreRevanche') : t('revanche')} onPress={surRevanche} />
           ) : null}
@@ -123,6 +147,10 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
       </Carte>
 
       <Bouton titre={voirTrajet ? t('cacherTrajet') : t('voirTrajet')} onPress={() => setVoirTrajet(!voirTrajet)} />
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <Bouton style={{ flex: 1 }} titre={sonActif() ? t('son') : t('muet')} onPress={() => { basculerSon(); rafraichir((x) => x + 1); }} />
+        <Bouton style={{ flex: 1 }} titre={vibrationsActives() ? t('vibrOui') : t('vibrNon')} onPress={() => { basculerVibrations(); rafraichir((x) => x + 1); }} />
+      </View>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Bouton style={{ flex: 1 }} titre={t('quitter')} onPress={surQuitter} />
         <Bouton style={{ flex: 1 }} titre={voirRegles ? t('masquerRegles') : t('voirReglesCourt')} onPress={() => setVoirRegles(!voirRegles)} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, useWindowDimensions } from 'react-native';
-import { Carte, Texte, useCouleurs, useT } from '../ui';
+import { Carte, Texte, useCouleurs, useT, useTheme, couleursDes, themeLumineux } from '../ui';
 import { TEXTES_REGLES } from '../../../moteur/textes-regles.js';
 import { Plateau } from '../Plateau';
 import { nouvellePartie, geometrie } from '../../../moteur/partie.js';
@@ -24,13 +24,21 @@ const etatGroupe = (() => {
 })();
 
 const COULEUR = { entree: '#f6c28b', rejoue: '#b9dfc4', kaapal: '#cfc6ba' };
+const COULEUR_SOMBRE = {
+  cristal: { entree: 'rgba(127,220,255,0.8)', rejoue: 'rgba(78,224,143,0.75)', kaapal: 'rgba(142,167,185,0.45)' },
+  nuit: { entree: 'rgba(255,79,216,0.75)', rejoue: 'rgba(182,120,255,0.75)', kaapal: 'rgba(180,156,204,0.4)' },
+};
 
+/** Dé long aux couleurs du thème (barre de verre lumineuse en Cristal et Nuit, bois doré en Bois…). */
 function DeLong({ points, petit }) {
+  const theme = useTheme();
+  const D = couleursDes(theme);
   return (
-    <View accessibilityLabel={`face ${points}`} style={{ width: petit ? 58 : 84, height: petit ? 20 : 28, borderRadius: 6, backgroundColor: '#d9a845',
-      borderWidth: 2, borderColor: '#7a5418', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: petit ? 7 : 11 }}>
+    <View accessibilityLabel={`face ${points}`} style={{ width: petit ? 58 : 84, height: petit ? 20 : 28, borderRadius: 6, backgroundColor: D.fond,
+      borderWidth: D.epais, borderColor: D.bord, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: petit ? 7 : 11,
+      shadowColor: D.point, shadowOpacity: themeLumineux(theme) ? 0.45 : 0, shadowRadius: 6 }}>
       {Array.from({ length: points }, (_, k) => (
-        <View key={k} style={{ width: petit ? 7 : 9, height: petit ? 7 : 9, borderRadius: 5, backgroundColor: '#3b2410' }} />
+        <View key={k} style={{ width: petit ? 7 : 9, height: petit ? 7 : 9, borderRadius: 5, backgroundColor: D.point }} />
       ))}
     </View>
   );
@@ -53,6 +61,7 @@ function Riche({ html, style }) {
 export default function ReglesJeu() {
   const c = useCouleurs();
   const t = useT();
+  const CT = COULEUR_SOMBRE[useTheme()] || COULEUR;
   const TX = TEXTES_REGLES[t.langue] || TEXTES_REGLES.fr;
   // Dans l'appli, le dessin du trajet n'est pas numéroté : on retire « (0) », « (1 à 3) »…
   const R = (cle) => (TX[cle] || TEXTES_REGLES.fr[cle]).replace(/\s*\(\d+(\s+\S+\s+\d+)?\)/g, '');
@@ -104,13 +113,13 @@ export default function ReglesJeu() {
               {F.map((b) => {
                 const tirage = { valeur: valeurDesLongs(REGLES_PAR_DEFAUT.des, [a, b]), detail: [a, b] };
                 const kaapal = tirage.valeur === 0;
-                const fond = kaapal ? COULEUR.kaapal
-                  : REGLES_PAR_DEFAUT.valeursEntree.includes(tirage.valeur) ? COULEUR.entree
-                  : faitRejouer(REGLES_PAR_DEFAUT, tirage) ? COULEUR.rejoue : 'transparent';
+                const fond = kaapal ? CT.kaapal
+                  : REGLES_PAR_DEFAUT.valeursEntree.includes(tirage.valeur) ? CT.entree
+                  : faitRejouer(REGLES_PAR_DEFAUT, tirage) ? CT.rejoue : 'transparent';
                 return (
                   <View key={b} style={{ width: 54, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: fond,
                     borderWidth: 1, borderColor: c.trait }}>
-                    <Texte style={{ fontWeight: '800', fontSize: kaapal ? 11 : 16, color: fond === 'transparent' ? c.texte : '#2b1d10' }}>
+                    <Texte style={{ fontWeight: '800', fontSize: kaapal ? 11 : 16, color: fond === 'transparent' || (CT !== COULEUR && kaapal) ? c.texte : '#2b1d10' }}>
                       {kaapal ? 'Kaapal' : tirage.valeur}
                     </Texte>
                   </View>

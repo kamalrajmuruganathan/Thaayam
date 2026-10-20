@@ -18,7 +18,9 @@
       }
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-audio",
+      ["expo-notifications", { "color": "#7a3e12" }]
     ],
     "icon": "./assets/icon.png",
     "web": {

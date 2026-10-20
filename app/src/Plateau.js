@@ -4,13 +4,21 @@ import Svg, { Rect, Path, Circle, G, Ellipse, Line, Polyline, Defs, RadialGradie
 import { geometrie, pionsParCase, pionsAuCentre, zoneCase, arcsCroix } from '../../moteur/partie.js';
 import { cle } from '../../moteur/plateau.js';
 import { themePlateau } from '../../moteur/themes.js';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from './ui';
 
 const S = 100;
 
-/** Plateau (croix ou carré) ; `coups` = coups jouables, `surPion(pion)` quand on touche un pion jouable. */
-export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
-  const T = themePlateau(useTheme());
+// Cadre du plateau selon le thème : chrome (Cristal), néon (Nuit), or (Temple)
+const CADRES = { cristal: '#aab6c0', nuit: '#ff4fd8', temple: '#d9a520' };
+
+/**
+ * Plateau (croix ou carré) ; `coups` = coups jouables, `surPion(pion)` quand on touche un pion jouable.
+ * enMouvement : { joueur, pion } du pion qui avance (dessiné plus gros) ; eclat : { k, couleur } (case qui s'illumine).
+ */
+export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouvement = null, eclat = null }) {
+  const nomTheme = useTheme();
+  const T = themePlateau(nomTheme);
   const g = geometrie(etat.regles, etat.joueurs.length);
   const n = g.n;
   const zone = zoneCase(g, S);
@@ -102,21 +110,36 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
       const cx = z.x + 8 + pas * (i % cote) + pas / 2;
       const cy = z.y + 8 + pas * Math.floor(i / cote) + pas / 2;
       const jouable = p.joueur === etat.tour && jouables.has(p.pion);
+      const bouge = enMouvement && enMouvement.joueur === p.joueur && enMouvement.pion === p.pion;
+      const r = bouge ? rayon * 1.22 : rayon;
       pions.push(
         <G key={`p${p.joueur}-${p.pion}`} onPress={jouable ? () => surPion(p.pion) : undefined}>
           {jouable ? <Circle cx={cx} cy={cy} r={Math.max(rayon + 10, 60)} fill="#ffffff" fillOpacity={0.45} /> : null}
-          <Circle cx={cx} cy={cy} r={rayon} fill={etat.joueurs[p.joueur].couleur}
+          {bouge ? <Circle cx={cx + 4} cy={cy + 8} r={r} fill="#000000" opacity={0.3} /> : null}
+          <Circle cx={cx} cy={bouge ? cy - 6 : cy} r={r} fill={etat.joueurs[p.joueur].couleur}
             stroke={jouable ? T.jouable : T.pionTrait} strokeWidth={jouable ? 6 : 3} />
-          <Circle cx={cx - rayon * 0.3} cy={cy - rayon * 0.3} r={rayon * 0.3} fill="#ffffff" opacity={0.35} />
+          <Circle cx={cx - r * 0.3} cy={(bouge ? cy - 6 : cy) - r * 0.3} r={r * 0.3} fill="#ffffff" opacity={0.35} />
         </G>
       );
     });
   });
 
+  // Éclat d'une capture ou d'une arrivée
+  const zoneEclat = eclat ? zone(eclat.k) : null;
+  const halo = eclat ? (
+    <G>
+      <Circle cx={zoneEclat.x + zoneEclat.w / 2} cy={zoneEclat.y + zoneEclat.w / 2} r={zoneEclat.w * 0.62} fill={eclat.couleur} opacity={0.25} />
+      <Circle cx={zoneEclat.x + zoneEclat.w / 2} cy={zoneEclat.y + zoneEclat.w / 2} r={zoneEclat.w * 0.55} fill="none" stroke={eclat.couleur} strokeWidth={10} opacity={0.9} />
+    </G>
+  ) : null;
+
+  const fin = CADRES[nomTheme] ? (nomTheme === 'temple' ? 5 : 3) : 8;
+  const couleurHalo = nomTheme === 'nuit' ? '#ff4fd8' : '#5fd4ff';
   return (
-    <View style={{ backgroundColor: T.lueur ? '#aab6c0' : T.cadre, padding: T.lueur ? 3 : 8, borderRadius: 16,
-      shadowColor: '#5fd4ff', shadowOpacity: T.lueur ? 0.35 : 0, shadowRadius: 16 }}>
-      <Svg width={largeur - (T.lueur ? 6 : 16)} height={largeur - (T.lueur ? 6 : 16)} viewBox={`0 0 ${n * S} ${n * S}`}>
+    <View style={{ alignItems: 'center' }}>
+    <View style={{ backgroundColor: CADRES[nomTheme] || T.cadre, padding: fin, borderRadius: 16,
+      shadowColor: couleurHalo, shadowOpacity: T.lueur ? 0.45 : 0, shadowRadius: 18, elevation: T.lueur ? 8 : 0 }}>
+      <Svg width={largeur - 2 * fin} height={largeur - 2 * fin} viewBox={`0 0 ${n * S} ${n * S}`}>
         {T.fondLueur ? (
           <Defs>
             <RadialGradient id="fondLueur" cx="50%" cy="50%" r="60%">
@@ -133,7 +156,13 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null }) {
         {dernier}
         {cibles}
         {pions}
+        {halo}
       </Svg>
+    </View>
+    {/* Sol brillant : reflet lumineux sous le plateau */}
+    {T.lueur ? (
+      <LinearGradient colors={[`${couleurHalo}55`, `${couleurHalo}00`]} style={{ width: largeur * 0.92, height: 22, borderBottomLeftRadius: 40, borderBottomRightRadius: 40 }} />
+    ) : null}
     </View>
   );
 }

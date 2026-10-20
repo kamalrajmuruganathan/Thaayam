@@ -1,9 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, Share, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Bouton, Carte, Champ, Choix, Texte, useCouleurs, ThemeContexte, LangueContexte } from './src/ui';
-import { THEME_PAR_DEFAUT } from '../moteur/themes.js';
+import { Bouton, Carte, Champ, Choix, Texte, useCouleurs, ThemeContexte, LangueContexte, themeLumineux } from './src/ui';
+import { THEME_PAR_DEFAUT, THEMES, themeValide } from '../moteur/themes.js';
+import { Ambiance } from './src/Ambiance';
+import Social, { InviterAmis } from './src/ecrans/Social';
+import Revoir from './src/ecrans/Revoir';
+import { sons } from './src/sons';
+import { ecouterOuvertures } from './src/notifs';
+import { nouvellePartieGuidee } from '../moteur/guide.js';
+import { cle } from '../moteur/plateau.js';
 import { LANGUES, traducteur, traduireErreur, traduireNom, traduireReaction, resumeReglesTraduit, resumeStatsTraduit } from '../moteur/i18n.js';
 import Reglages from './src/ecrans/Reglages';
 import Jeu from './src/ecrans/Jeu';
@@ -26,7 +33,7 @@ function Racine() {
   // Thème choisi (Cristal ou Bois), mémorisé sur l'appareil
   const [theme, setTheme] = useState(THEME_PAR_DEFAUT);
   useEffect(() => {
-    stockage.lire('thaayam:theme').then((t) => (t === 'bois' || t === 'cristal') && setTheme(t)).catch(() => {});
+    stockage.lire('thaayam:theme').then((t) => t && setTheme(themeValide(t))).catch(() => {});
   }, []);
   const choisirTheme = (t) => { setTheme(t); stockage.ecrire('thaayam:theme', t).catch(() => {}); };
   // Langue choisie, mémorisée sur l'appareil
@@ -35,7 +42,7 @@ function Racine() {
     stockage.lire('thaayam:langue').then((l) => LANGUES.some((x) => x.code === l) && setLangue(l)).catch(() => {});
   }, []);
   const choisirLangue = (l) => { setLangue(l); stockage.ecrire('thaayam:langue', l).catch(() => {}); };
-  const t = traducteur(langue);
+  const t = useMemo(() => traducteur(langue), [langue]);
   return (
     <LangueContexte.Provider value={t}>
       <ThemeContexte.Provider value={theme}>
@@ -64,6 +71,21 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
   sessionRef.current = session;
   const arretRef = useRef(null);
   const animRef = useRef(false);
+  // Animations : dés qui roulent, pion qui avance, éclat d'une capture
+  const [desRoulent, setDesRoulent] = useState(null);
+  const [enMouvement, setEnMouvement] = useState(null);
+  const [eclat, setEclat] = useState(null);
+  // Revoir une partie : état final de la partie, et écran où revenir
+  const [aRevoir, setARevoir] = useState(null);
+  const [retourRevoir, setRetourRevoir] = useState('accueil');
+  const [replays, setReplays] = useState([]);
+  const revoirPartie = (etat, retour) => { setARevoir(etat); setRetourRevoir(retour); setEcran('revoir'); };
+  // Toucher une notification ouvre la partie concernée
+  useEffect(() => ecouterOuvertures(async (codeNotif) => {
+    const moi = await enLigne.maPlace(codeNotif);
+    if (moi) ouvrirEnLigne(codeNotif, moi.place, moi.jeton).catch(() => {});
+    else { setCode(codeNotif); setEcran('accueil'); }
+  }), []);
 
   useEffect(() => {
     stockage.lire('thaayam:pseudo').then((p) => p && setPseudo(p)).catch(() => {});
@@ -94,6 +116,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
     if (ecran !== 'accueil') return undefined;
     let actif = true;
     enLigne.mesParties().then((l) => actif && setMesParties(l)).catch(() => actif && setMesParties([]));
+    stockage.lire('thaayam:replays').then((x) => { try { if (actif) setReplays(JSON.parse(x || '[]')); } catch { /* abîmé */ } }).catch(() => {});
     stockage.lire('thaayam:stats').then((t) => actif && setStats(normaliserStats(JSON.parse(t || 'null')))).catch(() => {});
     return () => { actif = false; };
   }, [ecran]);
@@ -108,6 +131,16 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
     stockage.lire('thaayam:stats')
       .then((t) => stockage.ecrire('thaayam:stats', JSON.stringify(noterFin(normaliserStats(JSON.parse(t || 'null')), e, infos))))
       .catch(() => {});
+    // Garder les 5 dernières parties pour les revoir
+    if (Array.isArray(e.histo) && e.histo.length) {
+      stockage.lire('thaayam:replays').then((x) => {
+        let liste = [];
+        try { liste = JSON.parse(x || '[]'); } catch { /* abîmé */ }
+        const empreinte = JSON.stringify(e.histo);
+        liste = [{ quand: Date.now(), etat: e }, ...liste.filter((r) => r && r.etat && JSON.stringify(r.etat.histo) !== empreinte)].slice(0, 5);
+        return stockage.ecrire('thaayam:replays', JSON.stringify(liste));
+      }).catch(() => {});
+    }
   }, [session]);
 
   // Messages rapides reçus (affichés 3 secondes)
@@ -150,7 +183,9 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
     const reactionVue = { n: partie.reaction ? partie.reaction.n : 0 };
     setSession({ mode: 'ligne', partie, etat: partie.etat, place, jeton });
     setEcran(partie.statut === 'attente' ? 'salon' : 'jeu');
-    arretRef.current = enLigne.suivre(codePartie, (nouvelle) => {
+    // Mises à jour reçues pendant une animation : on garde la plus récente et on la traite juste après.
+    let enAttente = null;
+    const traiter = (nouvelle) => {
       const s = sessionRef.current;
       if (!s || s.mode !== 'ligne' || nouvelle.code !== s.partie.code) return;
       if (nouvelle.reaction && nouvelle.reaction.n !== reactionVue.n) {
@@ -158,23 +193,49 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
         montrerReaction(nouvelle.reaction, s);
       }
       if (nouvelle.revanche && nouvelle.revanche !== s.partie.revanche) {
-        setSession((x) => (x && x.partie.code === nouvelle.code ? { ...x, partie: { ...x.partie, revanche: nouvelle.revanche } } : x));
+        const x = { ...s, partie: { ...s.partie, revanche: nouvelle.revanche } };
+        sessionRef.current = x;
+        setSession(x);
       }
-      const plusRecente = nouvelle.version > s.partie.version || nouvelle.statut !== s.partie.statut ||
-        (nouvelle.statut === 'attente' && JSON.stringify(nouvelle.joueurs) !== JSON.stringify(s.partie.joueurs));
+      if (animRef.current) { enAttente = nouvelle; return; }
+      const ref = sessionRef.current;
+      const plusRecente = nouvelle.version > ref.partie.version || nouvelle.statut !== ref.partie.statut ||
+        (nouvelle.statut === 'attente' && JSON.stringify(nouvelle.joueurs) !== JSON.stringify(ref.partie.joueurs));
       if (!plusRecente) return;
-      setSession({ ...s, partie: nouvelle, etat: nouvelle.etat });
-      if (nouvelle.statut !== 'attente') setEcran('jeu');
-    });
+      const avant = ref.etat;
+      const e = nouvelle.etat;
+      if (e && e.phase !== 'fini' && e.tour === ref.place && (!avant || avant.tour !== ref.place)) sons.tour();
+      const fixer = () => {
+        const x = sessionRef.current;
+        if (!x || x.mode !== 'ligne' || x.partie.code !== nouvelle.code) return;
+        const n = { ...x, partie: nouvelle, etat: nouvelle.etat };
+        sessionRef.current = n; // tout de suite, pour la mise à jour suivante
+        setSession(n);
+        if (nouvelle.statut !== 'attente') setEcran('jeu');
+      };
+      if (nouvelle.statut !== 'attente' && avant && e && e.numero > avant.numero) {
+        // Coup d'un autre joueur : on le montre (dés, pion qui avance), puis on garde le nouvel état
+        animer(avant, e).then(() => {
+          fixer();
+          const suivante = enAttente;
+          enAttente = null;
+          if (suivante) traiter(suivante);
+        });
+        return;
+      }
+      fixer();
+    };
+    arretRef.current = enLigne.suivre(codePartie, traiter);
   }
 
-  async function rejoindre() {
+  const rejoindre = () => rejoindreCode(code);
+  async function rejoindreCode(codePartie) {
     if (!pseudo.trim()) return setMessage(t('errPseudo'));
-    if (code.trim().length !== 5) return setMessage(t('errCode'));
+    if (codePartie.trim().length !== 5) return setMessage(t('errCode'));
     setOccupe(true);
     setMessage('');
     try {
-      const r = await enLigne.rejoindre(code, pseudo.trim());
+      const r = await enLigne.rejoindre(codePartie, pseudo.trim());
       await ouvrirEnLigne(r.code, r.place, r.jeton);
     } catch (e) {
       setMessage(traduireErreur(e.message, t));
@@ -219,24 +280,67 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
     }
   }
 
-  /** Fait avancer le pion déplacé case par case avant d'afficher le nouvel état. */
+  const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
+  /**
+   * Montre le passage de `ancien` à `nouveau` : les dés roulent, le pion avance case par case
+   * (en plus gros), puis sons, vibrations et éclat lumineux.
+   */
   async function animer(ancien, nouveau) {
+    if (!ancien || !nouveau || nouveau.numero <= ancien.numero) return;
+    const s0 = sessionRef.current;
     const dc = nouveau.dernierCoup;
-    if (!dc || dc.depuis < 0 || JSON.stringify(dc) === JSON.stringify(ancien.dernierCoup)) return;
+    const coupJoue = dc && JSON.stringify(dc) !== JSON.stringify(ancien.dernierCoup);
+    const nouveauLancer = nouveau.dernierLancer && JSON.stringify(nouveau.dernierLancer) !== JSON.stringify(ancien.dernierLancer);
     const g = geometrie(nouveau.regles, nouveau.joueurs.length);
-    const etapes = etapesCoup(g, dc.depuis, dc.vers).slice(0, -1);
     animRef.current = true;
     setOccupe(true);
-    for (const pos of etapes) {
-      const vue = JSON.parse(JSON.stringify(ancien));
-      vue.lancer = null;
-      vue.joueurs[dc.joueur].pions[dc.pion] = pos;
-      setSession((x) => (x ? { ...x, etat: vue } : x));
-      await new Promise((r) => setTimeout(r, 110));
-      if (!sessionRef.current) break;
+    try {
+      if (nouveauLancer && !coupJoue) {
+        sons.des();
+        const d = nouveau.regles.des;
+        for (let k = 0; k < 5; k++) {
+          setDesRoulent({ joueur: nouveau.dernierLancer.joueur, valeur: nouveau.dernierLancer.valeur, detail: nouveau.dernierLancer.detail.map(() => (d.type === 'cauris'
+            ? Math.random() < 0.5 : d.faces[Math.floor(Math.random() * d.faces.length)])) });
+          await attendre(70);
+        }
+        setDesRoulent(null);
+      }
+      if (coupJoue && dc.depuis >= 0) {
+        setEnMouvement({ joueur: dc.joueur, pion: dc.pion });
+        for (const pos of etapesCoup(g, dc.depuis, dc.vers).slice(0, -1)) {
+          if (sessionRef.current !== s0 && (!sessionRef.current || !s0 || sessionRef.current.mode !== s0.mode)) break;
+          const vue = JSON.parse(JSON.stringify(ancien));
+          vue.lancer = null;
+          (dc.groupe || [dc.pion]).forEach((i) => { vue.joueurs[dc.joueur].pions[i] = pos; });
+          setSession((x) => (x ? { ...x, etat: vue } : x));
+          sons.pas();
+          await attendre(140);
+          if (!sessionRef.current) break;
+        }
+      }
+      if (coupJoue) {
+        const captures = (e) => e.joueurs.reduce((n, j) => n + j.captures, 0);
+        const k = cle(g.chemins[dc.joueur][dc.vers]);
+        let couleur = null;
+        if (nouveau.phase === 'fini') { sons.victoire(); couleur = '#ffd54a'; }
+        else if (captures(nouveau) > captures(ancien)) { sons.capture(); couleur = '#ff4d4d'; }
+        else if (dc.vers === g.arrivee) { sons.arrivee(); couleur = '#ffd54a'; }
+        else if (dc.depuis === -1) sons.entree();
+        else sons.pas();
+        if (couleur) {
+          setEclat({ k, couleur });
+          setTimeout(() => setEclat(null), 650);
+        }
+      }
+      // Contre l'ordinateur : petit signal quand c'est de nouveau à un humain
+      if (s0 && s0.mode === 'local' && nouveau.phase !== 'fini' && nouveau.tour !== ancien.tour &&
+        !nouveau.joueurs[nouveau.tour].ordi && ancien.joueurs[ancien.tour].ordi) sons.tour();
+    } finally {
+      setDesRoulent(null);
+      setEnMouvement(null);
+      animRef.current = false;
+      setOccupe(false);
     }
-    animRef.current = false;
-    setOccupe(false);
   }
 
   async function agir(nouvelEtat) {
@@ -273,7 +377,9 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
   }
 
   let contenu;
-  if (ecran === 'regles') {
+  if (ecran === 'revoir' && aRevoir) {
+    contenu = <Revoir etatFinal={aRevoir} surRetour={() => setEcran(retourRevoir === 'jeu' && sessionRef.current ? 'jeu' : 'accueil')} />;
+  } else if (ecran === 'regles') {
     contenu = (
       <>
         <Bouton titre={t('retour')} onPress={() => setEcran(retourRegles)} />
@@ -309,6 +415,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
         <Carte titre={t('regles')}>
           {resumeReglesTraduit(p.regles, t).map((x, i) => <Texte key={i} attenue>• {x}</Texte>)}
         </Carte>
+        <InviterAmis code={p.code} presents={p.joueurs.map((j) => j.nom)} pseudo={pseudo.trim()} />
         {createur ? (
           <Bouton principal titre={t('commencerPartie')} desactive={p.joueurs.length < 2 || occupe} onPress={demarrer} />
         ) : null}
@@ -322,12 +429,15 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
   } else if (ecran === 'jeu' && session && session.etat) {
     contenu = (
       <Jeu etat={session.etat} moi={session.mode === 'ligne' ? session.place : null} occupe={occupe}
+        guide={!!session.guide} desRoulent={desRoulent} enMouvement={enMouvement} eclat={eclat}
+        surRevoir={() => revoirPartie(session.etat, 'jeu')}
         message={message} surAction={agir} surQuitter={quitter} surReglesJeu={voirReglesJeu}
         bulle={bulle} surReaction={session.mode === 'ligne' ? reagir : null}
         surRevanche={session.mode === 'ligne' ? revanche : null} revancheExiste={!!(session.partie && session.partie.revanche)}
         surRejouer={() => setSession((s) => ({
           ...s,
-          etat: nouvellePartie(s.etat.regles, s.etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false }))),
+          etat: s.guide ? nouvellePartieGuidee(pseudo.trim())
+            : nouvellePartie(s.etat.regles, s.etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false }))),
         }))} />
     );
   } else {
@@ -342,7 +452,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
           <Choix options={LANGUES.map((l) => [l.code, l.nom])} valeur={langue} onChange={choisirLangue} />
         </Carte>
         <Carte titre={t('apparence')}>
-          <Choix options={[['cristal', `💎 ${t('cristal')}`], ['bois', `🪵 ${t('bois')}`]]} valeur={theme} onChange={choisirTheme} />
+          <Choix options={THEMES.map(({ code: c2, icone }) => [c2, `${icone} ${t(c2)}`])} valeur={theme} onChange={choisirTheme} />
         </Carte>
         {resumeStatsTraduit(stats, t).length ? (
           <Carte titre={t('mesStats')}>
@@ -359,6 +469,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
           </Carte>
         ) : null}
         <Champ libelle={t('pseudo')} value={pseudo} onChangeText={memoriserPseudo} maxLength={20} placeholder={t('pseudoExemple')} />
+        <Social pseudo={pseudo.trim()} surRejoindre={(c2) => { setCode(c2); rejoindreCode(c2); }} />
         <Carte titre={t('jouerEnLigne')}>
           <Bouton principal titre={t('creerPartie')} desactive={occupe}
             onPress={() => { if (!pseudo.trim()) return setMessage(t('errPseudo')); setMessage(''); setMode('ligne'); setEcran('reglages'); }} />
@@ -375,7 +486,18 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
             onPress={() => { setMessage(''); setOrdiInitial([false, true, true, true]); setMode('local'); setEcran('reglages'); }} />
           <Bouton titre={t('plusieurs')}
             onPress={() => { setMessage(''); setOrdiInitial([false, false, false, false]); setMode('local'); setEcran('reglages'); }} />
+          <Bouton titre={t('partieGuidee')}
+            onPress={() => { setMessage(''); setSession({ mode: 'local', guide: true, etat: nouvellePartieGuidee(pseudo.trim()) }); setEcran('jeu'); }} />
+          <Texte attenue style={{ fontSize: 13 }}>{t('partieGuideeAide')}</Texte>
         </Carte>
+        {replays.length ? (
+          <Carte titre={t('mesReplays')}>
+            {replays.map((r) => (
+              <Bouton key={r.quand} titre={`${new Date(r.quand).toLocaleDateString(langue)} · ${r.etat.joueurs.map((j) => N(j.nom)).join(', ')} · ${t('replayGagnant', { nom: N(r.etat.joueurs[r.etat.gagnant].nom) })}`}
+                onPress={() => revoirPartie(r.etat, 'accueil')} />
+            ))}
+          </Carte>
+        ) : null}
         <Bouton titre={t('reglesDessins')} onPress={voirReglesJeu} />
         {message ? <Texte erreur>{message}</Texte> : null}
       </>
@@ -384,7 +506,8 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.fond }}>
-      <StatusBar style={theme === 'cristal' ? 'light' : 'auto'} />
+      <StatusBar style={themeLumineux(theme) ? 'light' : theme === 'temple' ? 'dark' : 'auto'} />
+      <Ambiance />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 14, width: '100%', maxWidth: 640, alignSelf: 'center' }}
         keyboardShouldPersistTaps="handled">
         {contenu}
