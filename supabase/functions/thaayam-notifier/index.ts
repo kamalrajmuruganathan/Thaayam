@@ -4,7 +4,7 @@
 //   dans la table privée thaayam_config).
 // - Appli Android / iPhone : service de notifications d'Expo.
 // - Appels audio / vidéo : identifiants du serveur relais TURN de Cloudflare, donnés seulement aux joueurs
-//   d'une partie (secrets CF_TURN_KEY_ID et CF_TURN_API_TOKEN, à mettre dans Edge Functions → Secrets).
+//   d'une partie (secrets CF_TURN_KEY_ID et CF_TURN_API_TOKEN, ou lignes cf_turn_key_id / cf_turn_api_token de thaayam_config).
 // À déployer une fois : Supabase → Edge Functions → Deploy a new function → Via Editor,
 // nom « thaayam-notifier », coller ce fichier, puis désactiver « Verify JWT » dans ses réglages.
 import webpush from 'npm:web-push@3.6.7';
@@ -69,8 +69,9 @@ Deno.serve(async (req) => {
     const { data: place } = await sb.from('thaayam_jetons').select('place')
       .eq('code', String(demande.code ?? '')).eq('jeton', String(demande.jeton ?? '')).maybeSingle();
     if (!place) return reponse({ erreur: 'Tu ne fais pas partie de cette partie' }, 403);
-    const id = Deno.env.get('CF_TURN_KEY_ID');
-    const jeton = Deno.env.get('CF_TURN_API_TOKEN');
+    // Valeurs du relais : secrets de la fonction, ou sinon table privée thaayam_config (cf_turn_key_id, cf_turn_api_token)
+    const id = Deno.env.get('CF_TURN_KEY_ID') ?? await lireConfig('cf_turn_key_id');
+    const jeton = Deno.env.get('CF_TURN_API_TOKEN') ?? await lireConfig('cf_turn_api_token');
     if (!id || !jeton) return reponse({ iceServers: [] }); // relais pas encore installé : connexion directe seulement
     const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${id}/credentials/generate-ice-servers`, {
       method: 'POST',
