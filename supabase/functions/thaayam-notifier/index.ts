@@ -3,6 +3,8 @@
 // - Navigateurs : notifications web (Web Push, clés VAPID créées ici au premier appel et rangées
 //   dans la table privée thaayam_config).
 // - Appli Android / iPhone : service de notifications d'Expo.
+// - Appels audio / vidéo : identifiants du serveur relais TURN de Cloudflare, donnés seulement aux joueurs
+//   d'une partie (secrets CF_TURN_KEY_ID et CF_TURN_API_TOKEN, à mettre dans Edge Functions → Secrets).
 // À déployer une fois : Supabase → Edge Functions → Deploy a new function → Via Editor,
 // nom « thaayam-notifier », coller ce fichier, puis désactiver « Verify JWT » dans ses réglages.
 import webpush from 'npm:web-push@3.6.7';
@@ -58,12 +60,39 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ cle: publique }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
   }
 
+  const demande = await req.json().catch(() => ({}));
+
+  // Appel audio / vidéo : un joueur de la partie demande les serveurs (dont le relais TURN de Cloudflare).
+  if (demande.type === 'turn') {
+    const reponse = (corps: unknown, statut = 200) =>
+      new Response(JSON.stringify(corps), { status: statut, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    const { data: place } = await sb.from('thaayam_jetons').select('place')
+      .eq('code', String(demande.code ?? '')).eq('jeton', String(demande.jeton ?? '')).maybeSingle();
+    if (!place) return reponse({ erreur: 'Tu ne fais pas partie de cette partie' }, 403);
+    const id = Deno.env.get('CF_TURN_KEY_ID');
+    const jeton = Deno.env.get('CF_TURN_API_TOKEN');
+    if (!id || !jeton) return reponse({ iceServers: [] }); // relais pas encore installé : connexion directe seulement
+    const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${id}/credentials/generate-ice-servers`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ttl: 6 * 3600 }), // valables 6 heures
+    });
+    if (!r.ok) return reponse({ iceServers: [], erreur: `TURN ${r.status}` });
+    const brut = await r.json();
+    const liste = Array.isArray(brut.iceServers) ? brut.iceServers : [brut.iceServers].filter(Boolean);
+    // Les navigateurs bloquent le port 53 : on le retire
+    const iceServers = liste.map((x: { urls: string | string[]; username?: string; credential?: string }) => ({
+      ...x, urls: (Array.isArray(x.urls) ? x.urls : [x.urls]).filter((u) => !/:53(\?|$)/.test(u)),
+    })).filter((x: { urls: string[] }) => x.urls.length);
+    return reponse({ iceServers });
+  }
+
   // Seule la base (qui connaît le secret partagé) peut demander un envoi.
   const secret = await lireConfig('secret_notifier');
   if (!secret || req.headers.get('x-thaayam') !== secret) return new Response('Interdit', { status: 403 });
   webpush.setVapidDetails(SITE, publique, privee);
 
-  const { type, joueur, code, de } = await req.json();
+  const { type, joueur, code, de } = demande;
   if ((type !== 'tour' && type !== 'invitation') || !joueur || !code) return new Response('Demande invalide', { status: 400 });
   let nomDe = '';
   if (type === 'invitation' && de) {

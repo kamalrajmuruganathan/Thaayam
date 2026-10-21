@@ -825,7 +825,8 @@ async function demarrerPartieSociale(code) {
     discussion.arret = api.suivreMessages(code, (m) => ajouterMessage(m, true));
     (await api.messages(code)).forEach((m) => ajouterMessage(m, false));
     canalAppel = api.canalAppel(code, (m) => { if (appel) appel.recevoir(m); });
-    appel = creerAppel({ canal: canalAppel, place: session.place, nom: nomDeLaPlace(session.place), surChange: dessinerAppel, surSonnerie: montrerSonnerie });
+    appel = creerAppel({ canal: canalAppel, place: session.place, nom: nomDeLaPlace(session.place), surChange: dessinerAppel,
+      surSonnerie: montrerSonnerie, serveurs: () => api.serveursAppel(code, session.jeton) });
   } catch { /* hors ligne */ }
   dessinerAppel();
 }

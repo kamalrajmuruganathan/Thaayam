@@ -27,8 +27,10 @@
 - Discussion : table `thaayam_messages` + RPC `thaayam_ecrire` (1 message/s, 300 caractères, 200 derniers gardés),
   `messages` / `ecrire` / `suivreMessages` dans `moteur/en-ligne.js` ; site : `#zone-partie-ligne` (salon puis sous le
   plateau) ; appli : `app/src/ecrans/Discussion.js`. Un message fait d'un seul emoji s'envole sur l'écran.
-- Appels audio / vidéo (site seulement) : `web/appel.js` (WebRTC en maillage, 2 à 4 joueurs, serveurs STUN Google,
-  pas de TURN), signalisation par diffusion Supabase (`canalAppel`). Confirmation du joueur (window.confirm) avant
+- Appels audio / vidéo (site seulement) : `web/appel.js` (WebRTC en maillage, 2 à 4 joueurs, STUN Cloudflare/Google
+  + relais TURN Cloudflare via `serveursAppel` → fonction Edge `thaayam-notifier` { type: 'turn', code, jeton }, secrets
+  `CF_TURN_KEY_ID` / `CF_TURN_API_TOKEN` ; reconnexion automatique 3 fois), signalisation par diffusion Supabase (`canalAppel`).
+  Test du relais en local : coturn + `politique: 'relay'`. Confirmation du joueur (window.confirm) avant
   d'allumer le micro / la caméra. Appli : il faudrait `react-native-webrtc` (module natif, build EAS).
 - Hors ligne et notifications web : `web/sw.js` (liste `FICHIERS` vérifiée par un test : tout nouveau fichier de
   `web/` ou `moteur/` doit y être ajouté). Sons de l'appli : `app/assets/sons/*.wav` + `app/src/sons.js`.

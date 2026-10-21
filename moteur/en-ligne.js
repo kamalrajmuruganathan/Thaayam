@@ -228,6 +228,20 @@ export function creerEnLigne(client, stockage) {
     },
 
     /**
+     * Appels audio / vidéo : serveurs pour relier les téléphones, dont le relais TURN (Cloudflare) qui fait
+     * passer l'appel même quand la connexion directe est bloquée (réseau mobile, box, wifi d'entreprise).
+     * Renvoie une liste vide si le relais n'est pas installé.
+     */
+    async serveursAppel(code, jeton) {
+      try {
+        const { data } = await client.functions.invoke('thaayam-notifier', { body: { type: 'turn', code, jeton } });
+        return (data && Array.isArray(data.iceServers)) ? data.iceServers : [];
+      } catch {
+        return [];
+      }
+    },
+
+    /**
      * Appels audio / vidéo : canal de signalisation (WebRTC) entre les joueurs de la partie.
      * surSignal(message) reçoit les messages des autres ; renvoie { envoyer(message), arreter() }.
      */

@@ -7,7 +7,8 @@
  *   offre / reponse / ice : mise en relation de deux joueurs ; quitte : je raccroche
  * Le micro et la caméra ne s'allument qu'après l'accord du joueur (et du navigateur).
  */
-const SERVEURS = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+// Serveurs publics pour trouver le chemin direct ; le relais TURN (Cloudflare) s'y ajoute pour les réseaux difficiles
+const SERVEURS_DE_BASE = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }];
 
 export const appelsPossibles = () => !!(window.RTCPeerConnection && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
@@ -15,7 +16,9 @@ export const appelsPossibles = () => !!(window.RTCPeerConnection && navigator.me
  * canal : { envoyer(message), arreter() } ; place : ma place ; nom : mon nom.
  * surChange() : l'état a changé (redessiner) ; surSonnerie(s) : appel entrant { de, nom, video } ou null.
  */
-export function creerAppel({ canal, place, nom, surChange, surSonnerie }) {
+export function creerAppel({ canal, place, nom, surChange, surSonnerie, serveurs = async () => [], politique = 'all' }) {
+  let iceServers = SERVEURS_DE_BASE;
+  const essais = new Map(); // place → nombre de reconnexions tentées
   const a = {
     actif: false, video: false, local: null, micro: true, camera: true,
     pairs: new Map(), // place → { pc, flux, enAttente: [] }
@@ -35,14 +38,27 @@ export function creerAppel({ canal, place, nom, surChange, surSonnerie }) {
 
   function creerPair(x) {
     fermerPair(x);
-    const pc = new RTCPeerConnection({ iceServers: SERVEURS });
+    // politique 'relay' : tout passe par le relais (sert aux tests)
+    const pc = new RTCPeerConnection({ iceServers, iceCandidatePoolSize: 2, iceTransportPolicy: politique });
     const p = { pc, flux: null, enAttente: [] };
     a.pairs.set(x, p);
     a.local.getTracks().forEach((piste) => pc.addTrack(piste, a.local));
     pc.onicecandidate = (e) => { if (e.candidate) envoyer({ type: 'ice', a: x, candidat: e.candidate.toJSON() }); };
     pc.ontrack = (e) => { p.flux = e.streams[0]; surChange(); };
     pc.onconnectionstatechange = () => {
-      if (['failed', 'closed'].includes(pc.connectionState)) fermerPair(x);
+      if (pc.connectionState === 'connected') essais.set(x, 0);
+      if (pc.connectionState === 'failed') {
+        // Connexion perdue (changement de réseau, wifi → 4G…) : on recommence, 3 fois au plus
+        const n = (essais.get(x) || 0) + 1;
+        essais.set(x, n);
+        fermerPair(x);
+        if (a.actif && n <= 3) {
+          if (place < x) setTimeout(() => offrir(x).catch(() => {}), 500 * n);
+          else envoyer({ type: 'present', a: x });
+        }
+        return;
+      }
+      if (pc.connectionState === 'closed') fermerPair(x);
       else surChange();
     };
     return p;
@@ -102,6 +118,11 @@ export function creerAppel({ canal, place, nom, surChange, surSonnerie }) {
   }
 
   async function allumer(video) {
+    // Serveurs relais demandés au moment de l'appel (identifiants valables quelques heures)
+    try {
+      const relais = await serveurs();
+      if (relais.length) iceServers = [...SERVEURS_DE_BASE, ...relais];
+    } catch { /* sans relais : connexion directe seulement */ }
     a.local = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true },
       video: video ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : false,

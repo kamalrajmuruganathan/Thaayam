@@ -4,7 +4,7 @@
  *    d'abord (pour avoir la dernière version), et on se sert de la copie quand il n'y a pas d'internet.
  * 2. Notifications « C'est ton tour » et invitations, même quand le jeu est fermé.
  */
-const CACHE = 'thaayam-v4';
+const CACHE = 'thaayam-v5';
 const FICHIERS = [
   './', 'index.html', 'regles.html', 'app.js', 'appel.js', 'regles.js', 'sons.js', 'config.js', 'style.css',
   'manifest.webmanifest', 'icone-180.png', 'icone-192.png', 'icone-512.png',
