@@ -9,6 +9,9 @@
  */
 // Serveurs publics pour trouver le chemin direct ; le relais TURN (Cloudflare) s'y ajoute pour les réseaux difficiles
 const SERVEURS_DE_BASE = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }];
+// Relais public sans compte (secours) : partagé par tout le monde, sans garantie. L'appel reste chiffré de bout en bout :
+// le relais transporte les données sans pouvoir les voir ni les entendre. Le relais privé (Metered…) passe avant lui.
+const RELAIS_PUBLICS = [{ urls: ['turn:freestun.net:3478?transport=udp', 'turn:freestun.net:3478?transport=tcp'], username: 'free', credential: 'free' }];
 
 export const appelsPossibles = () => !!(window.RTCPeerConnection && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
@@ -119,10 +122,9 @@ export function creerAppel({ canal, place, nom, surChange, surSonnerie, serveurs
 
   async function allumer(video) {
     // Serveurs relais demandés au moment de l'appel (identifiants valables quelques heures)
-    try {
-      const relais = await serveurs();
-      if (relais.length) iceServers = [...SERVEURS_DE_BASE, ...relais];
-    } catch { /* sans relais : connexion directe seulement */ }
+    let relais = [];
+    try { relais = await serveurs(); } catch { /* relais privé indisponible */ }
+    iceServers = [...SERVEURS_DE_BASE, ...relais, ...RELAIS_PUBLICS];
     a.local = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true },
       video: video ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : false,
