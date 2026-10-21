@@ -116,7 +116,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
         const coup = choisirCoup(e);
         if (coup) agir(jouer(e, coup.pion, !!coup.groupe));
       }
-    }, e.phase === 'lancer' ? 650 : 850);
+    }, e.phase === 'lancer' ? 450 : 550);
     return () => clearTimeout(m);
   }, [session]);
 
@@ -357,13 +357,16 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
   async function agir(nouvelEtat) {
     const s = sessionRef.current;
     if (!s) return;
+    // En ligne, le coup part au serveur tout de suite, pendant que le pion avance à l'écran
+    const envoi = s.mode === 'ligne' ? enLigne.envoyer(s.partie.code, s.jeton, s.partie.version, nouvelEtat) : null;
+    if (envoi) envoi.catch(() => {});
     await animer(s.etat, nouvelEtat);
     if (!sessionRef.current) return;
     if (s.mode === 'local') return setSession({ ...sessionRef.current, etat: nouvelEtat });
     setOccupe(true);
     setSession({ ...sessionRef.current, etat: nouvelEtat });
     try {
-      const v = await enLigne.envoyer(s.partie.code, s.jeton, s.partie.version, nouvelEtat);
+      const v = await envoi;
       setSession((x) => (x.partie.version >= v ? x : {
         ...x, etat: nouvelEtat,
         partie: { ...x.partie, etat: nouvelEtat, version: v, statut: nouvelEtat.phase === 'fini' ? 'finie' : 'en_cours' },

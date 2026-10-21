@@ -689,7 +689,14 @@ async function ouvrirPartieEnLigne(code, place, jeton) {
   const api = await obtenirEnLigne();
   const partie = await api.lire(code);
   session = { mode: 'ligne', partie, etat: partie.etat, place, jeton, reactionVue: partie.reaction ? partie.reaction.n : 0 };
-  session.arret = api.suivre(code, (nouvelle) => {
+  session.arret = api.suivre(code, (nouvelle) => traiterMiseAJour(nouvelle));
+  history.replaceState(null, '', `?code=${code}`);
+  demarrerPartieSociale(code);
+  afficherPartieEnLigne();
+}
+
+/** Mise à jour reçue du serveur (coup d'un autre joueur, message rapide, revanche…). */
+function traiterMiseAJour(nouvelle) {
     if (!session || session.mode !== 'ligne' || nouvelle.code !== session.partie.code) return;
     if (nouvelle.reaction && nouvelle.reaction.n !== session.reactionVue) {
       session.reactionVue = nouvelle.reaction.n;
@@ -699,6 +706,13 @@ async function ouvrirPartieEnLigne(code, place, jeton) {
       session.partie = { ...session.partie, revanche: nouvelle.revanche };
       if (session.etat && session.etat.phase === 'fini') dessinerJeu();
     }
+    // Mon propre coup qui revient du serveur : rien à rejouer, on garde juste la version
+    if (session.envoi && nouvelle.etat && nouvelle.etat.numero <= session.envoi.numero && nouvelle.statut !== 'attente') {
+      if (nouvelle.version > session.partie.version) session.partie = { ...nouvelle, etat: session.partie.etat };
+      return;
+    }
+    // Pendant une animation, on garde la mise à jour la plus récente pour juste après
+    if (animation) { session.enAttente = nouvelle; return; }
     const changementStatut = nouvelle.statut !== session.partie.statut;
     const plusRecente = nouvelle.version > session.partie.version ||
       (nouvelle.statut === 'attente' && JSON.stringify(nouvelle.joueurs) !== JSON.stringify(session.partie.joueurs));
@@ -714,10 +728,6 @@ async function ouvrirPartieEnLigne(code, place, jeton) {
       session.etat = nouvelle.etat;
       afficherPartieEnLigne();
     }
-  });
-  history.replaceState(null, '', `?code=${code}`);
-  demarrerPartieSociale(code);
-  afficherPartieEnLigne();
 }
 
 function lienPartie() {
@@ -992,7 +1002,7 @@ function faireJouerOrdi() {
       const coup = choisirCoup(e);
       if (coup) appliquer(jouer(e, coup.pion, !!coup.groupe));
     }
-  }, e.phase === 'lancer' ? 650 : 850);
+  }, e.phase === 'lancer' ? 450 : 550);
 }
 
 function secouerDes() {
@@ -1055,19 +1065,15 @@ async function montrer(ancien, nouveau) {
       await roulerDes(nouveau);
     }
     if (coupJoue && dc.depuis >= 0 && session === s0) {
-      const etapes = etapesCoup(g, dc.depuis, dc.vers);
+      // Le pion glisse de case en case (animation fluide, sans redessiner le plateau)
+      const bouges = dc.groupe || [dc.pion];
       const vue = JSON.parse(JSON.stringify(ancien));
       vue.lancer = null;
-      s0.enMouvement = { joueur: dc.joueur, pion: dc.pion };
-      for (const pos of etapes.slice(0, -1)) {
-        if (session !== s0 || (session.etat !== ancien && session.etat !== vue)) break; // partie quittée ou changée
-        (dc.groupe || [dc.pion]).forEach((i) => { vue.joueurs[dc.joueur].pions[i] = pos; });
-        session.etat = vue;
-        dessinerJeu();
-        sons.pas();
-        await pause(140);
-      }
-      s0.enMouvement = null;
+      s0.masques = new Set(bouges.map((i) => `${dc.joueur}:${i}`));
+      session.etat = vue;
+      dessinerJeu();
+      await glisser(g, dc.joueur, [dc.depuis, ...etapesCoup(g, dc.depuis, dc.vers)], ancien.joueurs[dc.joueur].couleur, bouges.length);
+      s0.masques = null;
     }
   } finally {
     animation = false; // toujours, même si la partie a été quittée pendant l'animation
@@ -1088,6 +1094,57 @@ async function montrer(ancien, nouveau) {
   if (session.mode === 'local' && nouveau.phase !== 'fini' && nouveau.tour !== ancien.tour &&
     !nouveau.joueurs[nouveau.tour].ordi && ancien.joueurs[ancien.tour].ordi) sons.tour();
   dessinerJeu();
+  // Une mise à jour est arrivée pendant l'animation : on la traite maintenant
+  if (session.enAttente) {
+    const suivante = session.enAttente;
+    session.enAttente = null;
+    traiterMiseAJour(suivante);
+  }
+}
+
+/**
+ * Fait glisser un pion (ou un groupe) par les cases `positions` de son chemin.
+ * Animation confiée au navigateur (carte graphique) : fluide même sur un petit téléphone.
+ */
+const PAS_MS = 125;
+function glisser(g, joueur, positions, couleur, nombre) {
+  const racine = $('plateau');
+  const couche = racine._glisse; // groupe tourné comme le plateau : sert à convertir les positions
+  const conteneur = racine.parentElement;
+  if (!couche || positions.length < 2 || !couche.getScreenCTM) return Promise.resolve();
+  const zone = zoneCase(g, 100);
+  const T = themePlateau(themeChoisi());
+  const ctm = couche.getScreenCTM();
+  const boite = conteneur.getBoundingClientRect();
+  const echelle = Math.hypot(ctm.a, ctm.b);
+  // Positions à l'écran (en pixels, dans la zone du plateau), plateau tourné compris
+  const pts = positions.map((p) => {
+    const z = zone(cle(g.chemins[joueur][p]));
+    const pt = new DOMPoint(z.x + z.w / 2, z.y + z.w / 2).matrixTransform(ctm);
+    return [pt.x - boite.left, pt.y - boite.top];
+  });
+  const d = 68 * echelle;
+  // Le pion qui glisse est un disque posé au-dessus du dessin : le téléphone le déplace sans repeindre le plateau
+  const pion = document.createElement('div');
+  pion.className = 'pion-glisse';
+  pion.style.cssText = `width:${d}px;height:${d}px;margin:${-d / 2}px 0 0 ${-d / 2}px;background:${couleur};` +
+    `border:${Math.max(1.5, 3 * echelle)}px solid ${T.pionTrait};transform:translate(${pts[0][0]}px,${pts[0][1]}px)`;
+  if (nombre > 1) pion.textContent = `×${nombre}`;
+  conteneur.append(pion);
+  const sonsPas = pts.slice(1).map((_, i) => setTimeout(() => sons.pas(), PAS_MS * (i + 1)));
+  const fin = () => { sonsPas.forEach(clearTimeout); pion.remove(); };
+  const images = [];
+  pts.forEach(([x, y], i) => {
+    images.push({ transform: `translate(${x}px,${y}px) scale(1)`, offset: i / (pts.length - 1), easing: 'ease-in-out' });
+    if (i < pts.length - 1) {
+      const [x2, y2] = pts[i + 1];
+      images.push({ transform: `translate(${(x + x2) / 2}px,${(y + y2) / 2}px) scale(1.18)`, offset: (i + 0.5) / (pts.length - 1), easing: 'ease-in-out' });
+    }
+  });
+  const reduit = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof pion.animate !== 'function' || reduit) return pause(reduit ? 0 : PAS_MS * (pts.length - 1)).then(fin);
+  const a = pion.animate(images, { duration: PAS_MS * (pts.length - 1), fill: 'forwards' });
+  return a.finished.then(fin, fin);
 }
 
 async function appliquer(nouvelEtat) {
@@ -1098,10 +1155,13 @@ async function appliquer(nouvelEtat) {
   }
   occupe = true;
   const ancien = session.partie;
+  // Le coup part au serveur tout de suite, pendant que le pion avance à l'écran
+  session.envoi = nouvelEtat;
+  const envoi = obtenirEnLigne().then((api) => api.envoyer(ancien.code, session.jeton, ancien.version, nouvelEtat));
+  envoi.catch(() => {});
   await montrer(avant, nouvelEtat);
   try {
-    const api = await obtenirEnLigne();
-    const v = await api.envoyer(ancien.code, session.jeton, ancien.version, nouvelEtat);
+    const v = await envoi;
     if (v >= session.partie.version) {
       session.partie = { ...session.partie, etat: nouvelEtat, version: v, statut: nouvelEtat.phase === 'fini' ? 'finie' : 'en_cours' };
     }
@@ -1114,6 +1174,7 @@ async function appliquer(nouvelEtat) {
       session.etat = session.partie.etat;
     } catch { /* hors ligne */ }
   } finally {
+    if (session) session.envoi = null;
     occupe = false;
     dessinerJeu();
   }
@@ -1223,6 +1284,9 @@ function cauri(ouvert) {
 
 /** Bandeau des joueurs : pions à la maison, arrivés, captures. */
 function dessinerBandeau(etat, g, moi, bandeau) {
+  const cleBandeau = `${t.langue}|${moi}|${etat.tour}|${etat.phase}|${JSON.stringify(etat.joueurs.map((j) => [j.nom, j.pions, j.captures]))}`;
+  if (bandeau.dataset.cle === cleBandeau) return; // rien n'a changé
+  bandeau.dataset.cle = cleBandeau;
   bandeau.innerHTML = '';
   etat.joueurs.forEach((j, i) => {
     const arrives = j.pions.filter((p) => p === g.arrivee).length;
@@ -1265,7 +1329,7 @@ function dessinerJeu() {
   else if (animation) consigne = t('pionAvance');
   else if (actif.ordi) consigne = t('reflechit', { nom: nomActif });
   else if (etat.phase === 'lancer') consigne = session.mode === 'local' ? t('aToiLocal', { nom: nomActif }) : t('aToi');
-  else consigne = t('touchePion');
+  else consigne = t('touchePionBlanc');
   $('jeu-consigne').textContent = consigne;
   $('jeu-consigne').style.color = etat.phase === 'fini' ? '' : actif.couleur;
 
@@ -1285,11 +1349,18 @@ function dessinerJeu() {
   $('btn-entrer-groupe').hidden = !groupe;
   if (groupe) $('btn-entrer-groupe').textContent = t('entrerGroupe', { n: groupe.groupe.length });
 
+  // Journal et règles : reconstruits seulement s'ils ont changé (plus fluide)
   const journal = $('journal');
-  journal.innerHTML = '';
-  etat.journal.forEach((l) => journal.append(el('li', {}, traduireJournal(l, t))));
-  $('jeu-regles').innerHTML = '';
-  resumeReglesTraduit(etat.regles, t).forEach((l) => $('jeu-regles').append(el('li', {}, l)));
+  const cleJournal = `${t.langue}|${etat.numero}|${etat.journal.length}|${etat.journal[etat.journal.length - 1]}`;
+  if (journal.dataset.cle !== cleJournal) {
+    journal.dataset.cle = cleJournal;
+    journal.replaceChildren(...etat.journal.map((l) => el('li', {}, traduireJournal(l, t))));
+  }
+  const cleRegles = `${t.langue}|${JSON.stringify(etat.regles)}`;
+  if ($('jeu-regles').dataset.cle !== cleRegles) {
+    $('jeu-regles').dataset.cle = cleRegles;
+    $('jeu-regles').replaceChildren(...resumeReglesTraduit(etat.regles, t).map((l) => el('li', {}, l)));
+  }
   faireJouerOrdi();
 }
 
@@ -1460,6 +1531,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
   // Couche mobile (pions, dernier coup, destinations, éclat) : redessinée à chaque fois
   racine._cleDecor = cleDecor;
   racine._mobile = svg('g', {}, tourne);
+  racine._glisse = svg('g', {}, tourne); // repère tourné comme le plateau (pour placer le pion qui glisse)
   plateau = racine._mobile;
   dessinerPionsEtRepères();
 
@@ -1488,6 +1560,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
     const j = etat.joueurs[p.joueur];
     const jouable = !p.arrive && !!entree && p.joueur === etat.tour;
     const grp = svg('g', { class: jouable ? 'pion-jouable' : '' }, plateau);
+    if (jouable) svg('circle', { cx: p.cx, cy: p.cy, r: p.r + 12, fill: T.jouable, opacity: 0.28 }, grp);
     if (p.arrive) svg('circle', { cx: p.cx, cy: p.cy, r: p.r + 6, fill: T.arrive, stroke: T.arriveTrait, 'stroke-width': 2, ...avecLueur }, grp);
     svg('circle', { cx: p.cx, cy: p.cy, r: p.r, fill: j.couleur, stroke: jouable ? T.jouable : T.pionTrait, 'stroke-width': jouable ? 5 : 2.5, ...avecLueur }, grp);
     svg('circle', { cx: p.cx - p.r * 0.3, cy: p.cy - p.r * 0.3, r: p.r * 0.3, fill: T.pionReflet, opacity: 0.35 }, grp);
@@ -1506,11 +1579,13 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
     liste.forEach((p, i) => {
       const cx = z.x + 8 + pas * (i % cote) + pas / 2;
       const cy = z.y + 8 + pas * Math.floor(i / cote) + pas / 2;
+      if (racine.id === 'plateau' && session && session.masques && session.masques.has(`${p.joueur}:${p.pion}`)) return;
       const j = etat.joueurs[p.joueur];
       const jouable = jouables.has(`${p.joueur}:${p.pion}`);
       const bouge = racine.id === 'plateau' && session && session.enMouvement &&
         session.enMouvement.joueur === p.joueur && session.enMouvement.pion === p.pion;
       const grp = svg('g', { class: jouable ? 'pion-jouable' : bouge ? 'pion-bouge' : '' }, plateau);
+      if (jouable) svg('circle', { cx, cy, r: rayon + 12, fill: T.jouable, opacity: 0.28 }, grp);
       svg('circle', { cx, cy, r: rayon, fill: j.couleur, stroke: jouable ? T.jouable : T.pionTrait, 'stroke-width': jouable ? 6 : 3, ...avecLueur }, grp);
       svg('circle', { cx: cx - rayon * 0.3, cy: cy - rayon * 0.3, r: rayon * 0.3, fill: T.pionReflet, opacity: 0.35 }, grp);
       if (jouable) {

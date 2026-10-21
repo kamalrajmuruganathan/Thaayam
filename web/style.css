@@ -90,7 +90,9 @@ input, select {
 
 .zone-plateau { background: var(--bois-fonce); padding: 8px; border-radius: 14px; }
 #plateau { display: block; width: 100%; height: auto; touch-action: manipulation; }
-.pion-jouable { cursor: pointer; animation: pulse 1s ease-in-out infinite; }
+/* Pas de clignotement (il obligeait à redessiner tout le plateau sans arrêt) : un halo fixe à la place */
+.pion-jouable { cursor: pointer; }
+html { touch-action: manipulation; }
 @keyframes pulse { 50% { opacity: 0.55; } }
 
 .zone-des { display: flex; flex-direction: column; gap: 10px; align-items: stretch; background: var(--surface); border: 1px solid var(--trait); border-radius: 14px; padding: 12px; }
@@ -527,3 +529,9 @@ button.raccrocher { background: #c62828 !important; color: #fff !important; bord
   content: ""; position: absolute; left: 6%; right: 6%; bottom: -18px; height: 16px; border-radius: 0 0 50% 50%; pointer-events: none;
   background: linear-gradient(rgba(95, 212, 255, 0.28), transparent); }
 :root[data-skin="nuit"] .zone-plateau::after { background: linear-gradient(rgba(255, 79, 216, 0.3), transparent); }
+
+/* Pion qui glisse d'une case à l'autre (au-dessus du plateau, déplacé par la carte graphique) */
+.zone-plateau { position: relative; }
+.pion-glisse { position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: none; will-change: transform; z-index: 2;
+  display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 0.8rem;
+  box-shadow: inset -3px -4px 0 rgba(0, 0, 0, 0.18), inset 3px 3px 0 rgba(255, 255, 255, 0.35), 0 4px 10px rgba(0, 0, 0, 0.35); }
