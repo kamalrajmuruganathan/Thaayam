@@ -26,11 +26,20 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
   const { width } = useWindowDimensions();
   const [voirRegles, setVoirRegles] = useState(false);
   const [voirTrajet, setVoirTrajet] = useState(false);
+  const [ivalChoisi, setIval] = useState(null);
   const largeur = Math.min(width - 32, 560);
   const g = geometrie(etat.regles, etat.joueurs.length);
   const actif = etat.joueurs[etat.tour];
   const peut = etat.phase !== 'fini' && !occupe && (moi === null ? !actif.ordi : etat.tour === moi);
-  const coups = peut ? coupsPossibles(etat) : [];
+  const tousCoups = peut ? coupsPossibles(etat) : [];
+  // Lancers cumulés : on joue une valeur à la fois (celle choisie, sinon la première utilisable)
+  const reserve = Array.isArray(etat.reserve) && etat.phase !== 'fini' ? etat.reserve : [];
+  const ival = tousCoups.some((x) => x.ival === ivalChoisi) ? ivalChoisi : (tousCoups[0] ? tousCoups[0].ival : null);
+  const coups = Array.isArray(etat.reserve) ? tousCoups.filter((x) => x.ival === ival) : tousCoups;
+  const jouerPion = (p) => {
+    const cp = coups.find((x) => x.pion === p && !x.groupe) || coups.find((x) => x.depuis === -1 && !x.groupe);
+    if (peut && cp) { setIval(null); surAction(jouer(etat, p, false, cp.ival)); }
+  };
   const entree = coups.find((x) => x.depuis === -1 && !x.groupe);
   const groupe = coups.find((x) => x.groupe);
 
@@ -40,10 +49,12 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
   else if (actif.ordi) consigne = t('reflechit', { nom: N(actif.nom) });
   else if (occupe) consigne = t('pionAvance');
   else if (etat.phase === 'lancer') consigne = moi === null ? t('aToiLocal', { nom: N(actif.nom) }) : t('aToi');
+  else if (new Set(tousCoups.map((x) => x.valeur)).size > 1) consigne = t('choisisValeur');
   else consigne = t('touchePionBlanc');
 
-  // Pendant que les dés roulent, on montre des faces au hasard
-  const l = desRoulent || etat.lancer || etat.dernierLancer;
+  // Pendant que les dés roulent, on montre des faces au hasard (lancers cumulés : toujours le dernier lancer)
+  const l = desRoulent || (Array.isArray(etat.reserve) ? etat.dernierLancer : etat.lancer) || etat.dernierLancer;
+  const voirReserve = reserve.length > 1 || (reserve.length > 0 && etat.phase === 'lancer');
   const conseil = guide ? conseilGuide(etat) : null;
 
   return (
@@ -69,7 +80,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
       </View>
 
       <View style={{ alignItems: 'center' }}>
-        <Plateau etat={etat} coups={coups} largeur={largeur} surPion={(p) => peut && surAction(jouer(etat, p))}
+        <Plateau etat={etat} coups={coups} largeur={largeur} surPion={jouerPion}
           enMouvement={enMouvement} eclat={eclat} vue={moi}
           trajetDe={voirTrajet ? (moi !== null ? moi : actif.ordi ? Math.max(0, etat.joueurs.findIndex((j) => !j.ordi)) : etat.tour) : null} />
       </View>
@@ -106,14 +117,32 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
             </>
           )}
         </View>
+        {voirReserve ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+            <Texte attenue style={{ width: '100%', textAlign: 'center', fontSize: 13 }}>{t(etat.phase === 'lancer' ? 'valeursGardees' : 'valeursAJouer')}</Texte>
+            {reserve.map((x, i) => {
+              const utilisable = etat.phase === 'deplacer' && tousCoups.some((cp) => cp.ival === i);
+              const choisie = utilisable && i === ival;
+              return (
+                <Pressable key={i} disabled={!utilisable} onPress={() => setIval(i)} accessibilityRole="button"
+                  accessibilityState={{ selected: choisie, disabled: !utilisable }}
+                  style={{ minWidth: 48, minHeight: 44, paddingHorizontal: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+                    borderWidth: 2, borderColor: choisie ? c.accent : c.trait, backgroundColor: choisie ? `${c.accent}33` : 'transparent',
+                    opacity: etat.phase === 'deplacer' && !utilisable ? 0.4 : 1 }}>
+                  <Texte style={{ fontSize: 20, fontWeight: '800' }}>{nomLancer(etat.regles, x)}</Texte>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
         <Texte style={{ textAlign: 'center', fontWeight: '700', color: etat.phase === 'fini' ? c.texte : actif.couleur }}>{consigne}</Texte>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {etat.phase !== 'fini' ? (
             <Bouton style={{ flex: 1 }} principal titre={t('lancer')} desactive={!(peut && etat.phase === 'lancer')}
               onPress={() => surAction(lancer(etat, Math.random, guide ? lancerGuide(etat) : null))} />
           ) : null}
-          {entree ? <Bouton style={{ flex: 1 }} titre={t('entrerPion')} onPress={() => surAction(jouer(etat, entree.pion))} /> : null}
-          {groupe ? <Bouton style={{ flex: 1 }} titre={t('entrerGroupe', { n: groupe.groupe.length })} onPress={() => surAction(jouer(etat, groupe.pion, true))} /> : null}
+          {entree ? <Bouton style={{ flex: 1 }} titre={t('entrerPion')} onPress={() => { setIval(null); surAction(jouer(etat, entree.pion, false, entree.ival)); }} /> : null}
+          {groupe ? <Bouton style={{ flex: 1 }} titre={t('entrerGroupe', { n: groupe.groupe.length })} onPress={() => { setIval(null); surAction(jouer(etat, groupe.pion, true, groupe.ival)); }} /> : null}
           {etat.phase === 'fini' && moi === null ? <Bouton style={{ flex: 1 }} principal titre={t('rejouer')} onPress={surRejouer} /> : null}
           {etat.phase === 'fini' && surRevoir && Array.isArray(etat.histo) ? (
             <Bouton style={{ flex: 1 }} titre={t('revoir')} onPress={surRevoir} />

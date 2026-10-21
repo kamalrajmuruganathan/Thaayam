@@ -18,7 +18,7 @@
   site : `data-skin` sur `<html>` + règles CSS `:root[data-skin="…"]` dans `web/style.css` ; appli : `ThemeContexte`,
   palettes et `couleursDes` dans `app/src/ui.js`, ambiance futuriste `app/src/Ambiance.js`.
 - Textes des nouveautés : `moteur/i18n-plus.js` (une ligne = les 5 langues côte à côte), fusionnés dans `i18n.js`.
-- Revoir une partie : `etat.histo` (« d1.0 », « c1010 », « p2 », « g2 ») + `revoirPartie()` (`moteur/partie.js`).
+- Revoir une partie : `etat.histo` (« d1.0 », « c1010 », « p2 », « g2 », « p2:1 » = valeur n° 1 de la réserve) + `revoirPartie()` (`moteur/partie.js`).
 - Partie guidée : `moteur/guide.js` (`conseilGuide`, `lancerGuide`). Classement : `moteur/classement.js`.
 - Amis / classement / notifications : RPC `thaayam_profil`, `thaayam_lier`, `thaayam_ajouter_ami`, `thaayam_retirer_ami`,
   `thaayam_inviter`, `thaayam_social`, `thaayam_abonner`, `thaayam_cle_notifs` ; déclencheurs `thaayam_tour` et
@@ -38,7 +38,10 @@
 - Règles validées par Kamal (par défaut) : croix 3 × 4, pions au départ dans le centre, sortie sur la case de sa
   colonne collée au centre → descente → tour anti-horaire → retour au bout du bras → remontée sur les 3 arcs du coin
   à gauche de son bras (positions non entières, `ARCS_RAYONS`) → centre (`cheminCroix`), 4 pions, dés longs 0-3, 0 + 0 = Kaapal (on passe les dés),
-  entrée avec 1 (sortie obligatoire tant qu'il reste des pions au centre, `sortieObligatoire`), relance avec 1, 5, 6, 2 + 2 et après capture, capture obligatoire, empilement (groupe mangé en
+  premier pion sorti avec 1 seulement ; ensuite 1, 5, 6, 2 + 2 font sortir un pion sur la première case (`sortieAvecRejoue`,
+  obligatoire tant qu'il reste des pions au centre, `sortieObligatoire`) ; lancers cumulés (`cumulLancers`) : on relance avec
+  1, 5, 6, 2 + 2 en gardant les valeurs (`etat.reserve`), puis on les joue dans l'ordre voulu (`jouer(etat, pion, groupe, ival)`,
+  historique « p2:1 ») ; Kaapal pendant les relances = tout est perdu ; pas de relance après capture ; capture obligatoire, empilement (groupe mangé en
   entier, groupe mangé qui rentre ensemble avec une valeur de relance). Page `web/regles.html` + écran `ReglesJeu`.
 
 ## Règles absolues

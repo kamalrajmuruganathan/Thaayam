@@ -1050,6 +1050,8 @@ export function traduireJournal(ligne, t) {
     [/^(.+) capture (\d+) pions? de (.+) !$/, (m) => t('jCapture', { nom: N(m[1]), n: Number(m[2]), qui: m[3].split(' et ').map(N).join(t('et')) })],
     [/^(.+) a gagné la partie !$/, (m) => t('jGagnePartie', { nom: N(m[1]) })],
     [/^(.+) rejoue\.$/, (m) => t('jRejoue', { nom: N(m[1]) })],
+    [/^(.+) ne peut pas utiliser ses lancers\.$/, (m) => t('jLancersPerdus', { nom: N(m[1]) })],
+    [/^(.+) ne peut pas utiliser ses autres lancers\.$/, (m) => t('jAutresPerdus', { nom: N(m[1]) })],
   ];
   for (const [re, f] of regles) {
     const m = re.exec(ligne);
@@ -1126,6 +1128,8 @@ export function resumeReglesTraduit(r, t) {
         : '') +
       (r.rejouerApresCapture ? t('rApresCapture') : '')
   );
+  if (r.cumulLancers) lignes.push(t('rCumul'));
+  if (r.sortieAvecRejoue) lignes.push(t('rSortieRejoue'));
   lignes.push(r.unPionParCase ? t('rUnPion') : t('rEmpiler'));
   if (!r.unPionParCase && r.groupeRentreEnsemble) lignes.push(t('rGroupe'));
   if (r.captureAvantInterieur) lignes.push(t('rCapture'));

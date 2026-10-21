@@ -33,7 +33,9 @@ export const REGLES_PAR_DEFAUT = {
   valeursEntree: [1], // « thaayam » : lancer qui fait entrer un pion
   valeursRejouer: [1, 5, 6],
   doublesRejouer: [2], // dés longs : rejouer quand tous les dés montrent cette face (2 + 2)
-  rejouerApresCapture: true,
+  rejouerApresCapture: false, // manger un pion ne fait pas rejouer
+  cumulLancers: true, // on relance tant qu'on fait 1, 5, 6 ou 2 + 2, puis on joue toutes les valeurs, dans l'ordre voulu
+  sortieAvecRejoue: true, // dès qu'un pion est sorti, 5, 6 et 2 + 2 font aussi sortir un pion (le premier : seulement 1)
   groupeRentreEnsemble: true, // un groupe mangé d'un coup peut rentrer d'un coup avec une valeur qui fait rejouer
   captureAvantInterieur: true, // il faut avoir « coupé » un pion pour entrer à l'intérieur
   arriveeExacte: true,
@@ -53,7 +55,9 @@ export const REGLES_PAR_DEFAUT = {
  */
 export const REGLES_FIXES = {
   forme: 'croix', // plateau en croix (thaayam kattai) : le plateau carré n'est plus proposé
-  rejouerApresCapture: true, // on rejoue aussi après une capture
+  rejouerApresCapture: false, // manger un pion ne fait pas rejouer
+  cumulLancers: true, // relances cumulées, puis on joue toutes les valeurs
+  sortieAvecRejoue: true, // 5, 6, 2 + 2 font aussi sortir un pion quand un pion est déjà dehors
   captureAvantInterieur: true, // il faut avoir capturé un pion pour monter au centre
   arriveeExacte: true, // il faut tomber pile sur le centre
   sortieObligatoire: true, // avec un 1, tant qu'il reste des pions au centre, on doit en faire sortir un
@@ -169,7 +173,9 @@ export function normaliserRegles(source) {
     doublesRejouer: Array.isArray(s.doublesRejouer)
       ? [...new Set(s.doublesRejouer.filter((v) => Number.isInteger(v) && v >= 0))]
       : [...d0.doublesRejouer],
-    rejouerApresCapture: s.rejouerApresCapture !== false,
+    rejouerApresCapture: s.rejouerApresCapture === true,
+    cumulLancers: s.cumulLancers !== false,
+    sortieAvecRejoue: s.sortieAvecRejoue !== false,
     groupeRentreEnsemble: s.groupeRentreEnsemble !== false,
     captureAvantInterieur: s.captureAvantInterieur !== false,
     arriveeExacte: s.arriveeExacte !== false,
@@ -235,6 +241,8 @@ export function resumeRegles(r) {
         : '') +
       (r.rejouerApresCapture ? ', et après une capture' : '')
   );
+  if (r.cumulLancers) lignes.push('On relance avec 1, 5, 6 et 2 + 2, puis on joue toutes les valeurs, dans l’ordre voulu ; Kaapal fait tout perdre');
+  if (r.sortieAvecRejoue) lignes.push('Le premier pion sort avec 1 ; ensuite 1, 5, 6 et 2 + 2 font sortir un pion (obligatoire tant qu’il en reste au centre)');
   lignes.push(r.unPionParCase
     ? 'Un seul pion par case, sauf sur les refuges'
     : 'On peut empiler ses pions ; un adversaire qui tombe sur le groupe le mange en entier');

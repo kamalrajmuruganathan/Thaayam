@@ -10,6 +10,36 @@ export const PLUS = {
   temple: ['Temple', 'Temple', 'கோயில்', 'मंदिर', 'කෝවිල'],
   nuit: ['Nuit', 'Night', 'இரவு', 'रात', 'රාත්‍රිය'],
 
+  // ------------------------------------------------------------- cumul des lancers
+  jLancersPerdus: ['{nom} ne peut pas utiliser ses lancers.', '{nom} cannot use their throws.', '{nom} தன் வீச்சுகளைப் பயன்படுத்த முடியாது.',
+    '{nom} अपने पासों का उपयोग नहीं कर सकते।', '{nom}ට තම දැමීම් භාවිත කළ නොහැක.'],
+  jAutresPerdus: ['{nom} ne peut pas utiliser ses autres lancers.', '{nom} cannot use their other throws.', '{nom} மற்ற வீச்சுகளைப் பயன்படுத்த முடியாது.',
+    '{nom} अपने बाकी पासों का उपयोग नहीं कर सकते।', '{nom}ට අනෙක් දැමීම් භාවිත කළ නොහැක.'],
+  valeursAJouer: ['Valeurs à jouer :', 'Values to play:', 'ஆட வேண்டிய எண்கள்:', 'चलने वाले अंक:', 'ක්‍රීඩා කළ යුතු අගයන්:'],
+  valeursGardees: ['Valeurs gardées :', 'Values kept:', 'சேர்த்த எண்கள்:', 'रखे गए अंक:', 'රැස් කළ අගයන්:'],
+  choisisValeur: [
+    'Choisis une valeur, puis touche un pion entouré de blanc.',
+    'Choose a value, then tap a piece circled in white.',
+    'ஒரு எண்ணைத் தேர்ந்தெடுத்து, வெள்ளை வட்டமிட்ட காயைத் தொடுங்கள்.',
+    'एक अंक चुनें, फिर सफ़ेद घेरे वाली गोटी छुएँ।',
+    'අගයක් තෝරා, සුදු රවුමක් ඇති ඉත්තෙකු ස්පර්ශ කරන්න.',
+  ],
+  relance: ['Relance !', 'Throw again!', 'மீண்டும் போடுங்கள்!', 'फिर फेंकें!', 'නැවත දමන්න!'],
+  rCumul: [
+    'On relance avec 1, 5, 6 et 2 + 2, puis on joue toutes les valeurs, dans l’ordre voulu ; Kaapal fait tout perdre',
+    'Throw again on 1, 5, 6 and 2 + 2, then play all the values in any order; Kaapal loses them all',
+    '1, 5, 6, 2 + 2 விழுந்தால் மீண்டும் போட்டு, பிறகு எல்லா எண்களையும் விரும்பிய வரிசையில் ஆடலாம்; Kaapal விழுந்தால் எல்லாம் போய்விடும்',
+    '1, 5, 6 और 2 + 2 पर फिर फेंकें, फिर सारे अंक मनचाहे क्रम में चलें; Kaapal पर सब चला जाता है',
+    '1, 5, 6 සහ 2 + 2 වැටුණු විට නැවත දමා, පසුව සියලු අගයන් කැමති පිළිවෙළට ක්‍රීඩා කරන්න; Kaapal වැටුණොත් සියල්ල නැති වේ',
+  ],
+  rSortieRejoue: [
+    'Le premier pion sort avec 1 ; ensuite 1, 5, 6 et 2 + 2 font sortir un pion (obligatoire tant qu’il en reste au centre)',
+    'The first piece comes out with 1; after that 1, 5, 6 and 2 + 2 bring a piece out (compulsory while pieces remain in the centre)',
+    'முதல் காய் 1 விழுந்தால் வெளியே வரும்; பிறகு 1, 5, 6, 2 + 2 விழுந்தால் ஒரு காய் வெளியே வர வேண்டும் (நடுவில் காய் இருக்கும் வரை கட்டாயம்)',
+    'पहली गोटी 1 से निकलती है; उसके बाद 1, 5, 6 और 2 + 2 से एक गोटी निकालनी होती है (जब तक केंद्र में गोटियाँ हैं)',
+    'පළමු ඉත්තා 1න් එළියට එයි; ඉන්පසු 1, 5, 6 සහ 2 + 2න් ඉත්තෙකු එළියට ගත යුතුය (මැද ඉත්තන් සිටින තාක්)',
+  ],
+
   // ------------------------------------------------------------- dé classique
   de6: ['🎲 Dé classique (1 à 6)', '🎲 Standard die (1 to 6)', '🎲 சாதாரண பகடை (1 முதல் 6)', '🎲 साधारण पासा (1 से 6)', '🎲 සාමාන්‍ය දාදුව (1 සිට 6)'],
   rDe6: ['Un dé classique (faces 1 à 6)', 'One standard die (faces 1 to 6)', 'ஒரு சாதாரண பகடை (1 முதல் 6 வரை)',

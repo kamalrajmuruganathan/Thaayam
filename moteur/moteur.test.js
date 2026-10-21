@@ -5,7 +5,10 @@ import { normaliserRegles, valeursPossibles, copieRegles, faitRejouer, nomLancer
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, tirerDes } from './partie.js';
 
 const t = (valeur) => ({ valeur, detail: [] });
-const CAURIS5 = normaliserRegles({ forme: 'carre', taille: 5, nbPions: 4, des: { type: 'cauris', nbCauris: 4, valeurZero: 8 }, valeursEntree: [1], valeursRejouer: [1, 4, 8], sensInterieurs: 'alterne' }).regles;
+const CAURIS5 = normaliserRegles({ forme: 'carre', taille: 5, nbPions: 4, des: { type: 'cauris', nbCauris: 4, valeurZero: 8 }, valeursEntree: [1], valeursRejouer: [1, 4, 8], sensInterieurs: 'alterne',
+  cumulLancers: false, sortieAvecRejoue: false, rejouerApresCapture: true }).regles;
+// Règles d'avant le cumul des lancers (toujours utilisées par les parties commencées avant ce changement)
+const ANCIEN = { ...REGLES_PAR_DEFAUT, cumulLancers: false, sortieAvecRejoue: false, rejouerApresCapture: true };
 const voisins = ([a, b], [c, d]) => Math.max(Math.abs(a - c), Math.abs(b - d)) === 1;
 
 test('chaque chemin passe une fois par chaque case et finit au centre', () => {
@@ -131,7 +134,7 @@ test('on rejoue avec 1, 5, 6 et avec 2 sur chaque dé (pas 1 + 3)', () => {
   for (const [a, b] of [[0, 0], [0, 2], [1, 2], [0, 3]]) assert.ok(!faitRejouer(R, d(a, b)), `${a}+${b}`);
   assert.deepEqual(normaliserRegles({}).regles.doublesRejouer, [2]);
 
-  let e = nouvellePartie(R, [{ nom: 'A' }, { nom: 'B' }]);
+  let e = nouvellePartie(ANCIEN, [{ nom: 'A' }, { nom: 'B' }]);
   e.joueurs[0].pions[0] = 0;
   e = jouer(lancer(e, undefined, d(2, 2)), 0);
   assert.equal(e.tour, 0); // 2 + 2 : A rejoue
@@ -171,7 +174,7 @@ test('par défaut : 4 pions, on empile, et le groupe est mangé en entier', () =
 
 test('un groupe mangé d’un coup rentre d’un coup avec une valeur qui fait rejouer', () => {
   const d = (a, b) => ({ valeur: a + b, detail: [a, b] });
-  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  let e = nouvellePartie(ANCIEN, [{ nom: 'A' }, { nom: 'B' }]);
   const g = geometrie(e.regles, 2);
   // Deux pions de A empilés, B tombe dessus et mange le groupe.
   e.joueurs[0].pions[0] = 4;
@@ -210,7 +213,7 @@ test('un groupe mangé d’un coup rentre d’un coup avec une valeur qui fait r
   assert.match(tous.journal.at(-2), /fait entrer 2 pions d'un coup/);
 
   // Règle décochée : pas d'entrée en groupe.
-  const r = copieRegles();
+  const r = copieRegles(ANCIEN);
   r.groupeRentreEnsemble = false;
   x = lancer({ ...e, regles: r }, undefined, d(0, 1));
   assert.ok(!coupsPossibles(x).some((c) => c.groupe));
@@ -357,7 +360,7 @@ test("l'ordinateur « fort » bat l'ordinateur « normal »", async () => {
     let n = 0;
     while (e.phase !== 'fini' && n++ < 100000) {
       if (e.phase === 'lancer') e = lancer(e, rng);
-      else { const c = choisirCoup(e, rng); e = jouer(e, c.pion, !!c.groupe); }
+      else { const c = choisirCoup(e, rng); e = jouer(e, c.pion, !!c.groupe, c.ival); }
     }
     assert.equal(e.phase, 'fini');
     if (niv[e.gagnant] === 'fort') victoires++;
@@ -411,7 +414,7 @@ test('traductions : 5 langues complètes, journal, règles et statistiques', asy
   const lignes = new Set();
   for (let i = 0; i < 4000 && e.phase !== 'fini'; i++) {
     if (e.phase === 'lancer') e = lancer(e, rng);
-    else { const c = coupsPossibles(e)[0]; e = jouer(e, c.pion, !!c.groupe); }
+    else { const c = coupsPossibles(e)[0]; e = jouer(e, c.pion, !!c.groupe, c.ival); }
     e.journal.forEach((l) => lignes.add(l));
   }
   for (const l of lignes) {
@@ -446,7 +449,7 @@ test('revoir une partie : l’historique rejoue exactement la partie (dés longs
     let e = nouvellePartie(regles, [{ nom: 'A', ordi: 'normal' }, { nom: 'B', ordi: 'facile' }, { nom: 'C', ordi: 'normal' }]);
     for (let i = 0; i < 6000 && e.phase !== 'fini'; i++) {
       if (e.phase === 'lancer') e = lancer(e, rng);
-      else { const c = choisirCoup(e, rng); e = jouer(e, c.pion, !!c.groupe); }
+      else { const c = choisirCoup(e, rng); e = jouer(e, c.pion, !!c.groupe, c.ival); }
     }
     assert.equal(e.phase, 'fini');
     const etats = revoirPartie(e);
@@ -470,14 +473,16 @@ test('partie guidée : premiers lancers imposés et conseils traduits', async ()
   assert.equal(e.joueurs[1].ordi, 'facile');
   assert.equal(conseilGuide(e).cle, 'gPremier');
   e = lancer(e, Math.random, lancerGuide(e));
-  assert.equal(e.lancer.valeur, 1);
-  assert.equal(conseilGuide(e).cle, 'gEntrer');
-  e = jouer(e, 0);
+  assert.equal(e.phase, 'lancer'); // le 1 fait relancer
   assert.equal(conseilGuide(e).cle, 'gRejoue');
   e = lancer(e, Math.random, lancerGuide(e));
-  assert.equal(e.lancer.valeur, 3);
+  assert.deepEqual(e.reserve.map((x) => x.valeur), [1, 3]);
+  assert.equal(conseilGuide(e).cle, 'gEntrer');
+  e = jouer(e, 0, false, coupsPossibles(e).find((c) => c.depuis === -1).ival);
   assert.equal(conseilGuide(e).cle, 'gAvancer');
-  assert.equal(lancerGuide(jouer(e, 0)), null);
+  e = jouer(e, 0, false, 0);
+  assert.equal(e.tour, 1);
+  assert.equal(lancerGuide(e), null);
   // Une partie entière : chaque conseil existe dans les 5 langues
   let graine = 5;
   const rng = () => ((graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648);
@@ -486,7 +491,7 @@ test('partie guidée : premiers lancers imposés et conseils traduits', async ()
   for (let i = 0; i < 6000 && e.phase !== 'fini'; i++) {
     vus.add(conseilGuide(e).cle);
     if (e.phase === 'lancer') e = lancer(e, rng, lancerGuide(e));
-    else { const c = choisirCoup(e, rng, e.tour === 0 ? 'normal' : 'facile'); e = jouer(e, c.pion, !!c.groupe); }
+    else { const c = choisirCoup(e, rng, e.tour === 0 ? 'normal' : 'facile'); e = jouer(e, c.pion, !!c.groupe, c.ival); }
   }
   vus.add(conseilGuide(e).cle);
   for (const cle of vus) for (const l of Object.keys(TEXTES)) assert.ok(TEXTES[l][cle], `${cle} manque en ${l}`);
@@ -538,26 +543,26 @@ test('règles de déplacement fixes (plus de choix dans les réglages)', async (
 });
 
 test('sortie obligatoire : avec un 1 et des pions au centre, on doit en faire sortir un', () => {
-  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  let e = nouvellePartie(ANCIEN, [{ nom: 'A' }, { nom: 'B' }]);
   e.joueurs[0].pions = [5, -1, -1, -1];
   e = lancer(e, Math.random, { valeur: 1, detail: [1, 0] });
   const coups = coupsPossibles(e);
   assert.ok(coups.length > 0 && coups.every((c) => c.depuis === -1), JSON.stringify(coups));
   assert.throws(() => jouer(e, 0));
   // Plus aucun pion au centre : le 1 fait avancer
-  let f = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  let f = nouvellePartie(ANCIEN, [{ nom: 'A' }, { nom: 'B' }]);
   f.joueurs[0].pions = [5, 7, 9, 11];
   f = lancer(f, Math.random, { valeur: 1, detail: [1, 0] });
   assert.equal(coupsPossibles(f).length, 4);
   // Règle désactivée (ancienne partie) : on peut choisir
-  let g = nouvellePartie({ ...REGLES_PAR_DEFAUT, sortieObligatoire: false }, [{ nom: 'A' }, { nom: 'B' }]);
+  let g = nouvellePartie({ ...ANCIEN, sortieObligatoire: false }, [{ nom: 'A' }, { nom: 'B' }]);
   g.joueurs[0].pions = [5, -1, -1, -1];
   g = lancer(g, Math.random, { valeur: 1, detail: [1, 0] });
   assert.ok(coupsPossibles(g).some((c) => c.depuis === 5));
 });
 
 test('sortie obligatoire : rentrer un groupe avec un 5 reste un choix', () => {
-  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'A' }, { nom: 'B' }]);
+  let e = nouvellePartie(ANCIEN, [{ nom: 'A' }, { nom: 'B' }]);
   e.joueurs[0].pions = [5, -1, -1, 9];
   e.joueurs[0].groupes = [[1, 2]];
   e = lancer(e, Math.random, { valeur: 5, detail: [3, 2] });
@@ -581,7 +586,7 @@ test('dé classique de 1 à 6 : on rejoue avec 1, 5 et 6, le 1 fait entrer', asy
   let e = nouvellePartie(r.regles, [{ nom: 'A', ordi: 'normal' }, { nom: 'B', ordi: 'fort' }]);
   for (let i = 0; i < 8000 && e.phase !== 'fini'; i++) {
     if (e.phase === 'lancer') e = lancer(e);
-    else { const c = choisirCoup(e); e = jouer(e, c.pion, !!c.groupe); }
+    else { const c = choisirCoup(e); e = jouer(e, c.pion, !!c.groupe, c.ival); }
   }
   assert.equal(e.phase, 'fini');
   assert.deepEqual(revoirPartie(e).at(-1), e);
@@ -613,7 +618,7 @@ test('revoir une ancienne partie (avant la sortie obligatoire)', async () => {
   delete e.regles.sortieObligatoire; // comme les parties enregistrées avant cette règle
   for (let i = 0; i < 8000 && e.phase !== 'fini'; i++) {
     if (e.phase === 'lancer') e = lancer(e);
-    else { const c = choisirCoup(e); e = jouer(e, c.pion, !!c.groupe); }
+    else { const c = choisirCoup(e); e = jouer(e, c.pion, !!c.groupe, c.ival); }
   }
   const etats = revoirPartie(e);
   assert.ok(etats, 'la partie peut être revue');

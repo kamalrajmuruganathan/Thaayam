@@ -535,3 +535,12 @@ button.raccrocher { background: #c62828 !important; color: #fff !important; bord
 .pion-glisse { position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: none; will-change: transform; z-index: 2;
   display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 0.8rem;
   box-shadow: inset -3px -4px 0 rgba(0, 0, 0, 0.18), inset 3px 3px 0 rgba(255, 255, 255, 0.35), 0 4px 10px rgba(0, 0, 0, 0.35); }
+
+/* Lancers cumulés : valeurs gardées, puis valeur choisie pour le prochain pion */
+.reserve { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 4px 0; }
+.reserve .titre-reserve { flex-basis: 100%; text-align: center; font-size: 0.85rem; opacity: 0.8; }
+.reserve .valeur-reserve { min-width: 48px; min-height: 44px; padding: 4px 12px; font-size: 1.3rem; font-weight: 800;
+  border-radius: 12px; border: 2px solid var(--trait, #8884); background: transparent; color: inherit; }
+.reserve .valeur-reserve.choisie { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.reserve .valeur-reserve:disabled { opacity: 0.4; }
+.reserve span.valeur-reserve { display: inline-flex; align-items: center; justify-content: center; }

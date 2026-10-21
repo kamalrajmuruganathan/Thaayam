@@ -1001,7 +1001,7 @@ function faireJouerOrdi() {
       appliquer(lancer(e, tirageAleatoire()));
     } else {
       const coup = choisirCoup(e);
-      if (coup) appliquer(jouer(e, coup.pion, !!coup.groupe));
+      if (coup) appliquer(jouer(e, coup.pion, !!coup.groupe, coup.ival));
     }
   }, e.phase === 'lancer' ? 450 : 550);
 }
@@ -1195,12 +1195,12 @@ $('btn-lancer').addEventListener('click', () => {
   appliquer(lancer(session.etat, tirageAleatoire(), session.guide ? lancerGuide(session.etat) : null));
 });
 $('btn-entrer').addEventListener('click', () => {
-  const coup = coupsPossibles(session.etat).find((c) => c.depuis === -1 && !c.groupe);
-  if (coup && jePeuxJouer()) appliquer(jouer(session.etat, coup.pion));
+  const coup = coupsPossibles(session.etat).find((c) => c.depuis === -1 && !c.groupe && (c.ival == null || c.ival === session.ival));
+  if (coup && jePeuxJouer()) appliquer(jouer(session.etat, coup.pion, false, coup.ival));
 });
 $('btn-entrer-groupe').addEventListener('click', () => {
-  const coup = coupsPossibles(session.etat).find((c) => c.groupe);
-  if (coup && jePeuxJouer()) appliquer(jouer(session.etat, coup.pion, true));
+  const coup = coupsPossibles(session.etat).find((c) => c.groupe && (c.ival == null || c.ival === session.ival));
+  if (coup && jePeuxJouer()) appliquer(jouer(session.etat, coup.pion, true, coup.ival));
 });
 $('btn-quitter').addEventListener('click', () => {
   arreterSuivi();
@@ -1237,9 +1237,30 @@ function majBoutonSon() { $('btn-son').textContent = sonActif() ? t('son') : t('
 majBoutonSon();
 majBoutonTrajet();
 
+/** Lancers cumulés : valeurs gardées (pendant les relances) puis valeurs à jouer (à choisir). */
+function dessinerReserve(etat, coups) {
+  const zone = $('reserve');
+  const r = Array.isArray(etat.reserve) && etat.phase !== 'fini' ? etat.reserve : [];
+  const cleR = `${t.langue}|${etat.numero}|${etat.phase}|${JSON.stringify(r.map((x) => x.valeur))}|${session.ival}|${coups.length}`;
+  if (zone.dataset.cle === cleR) return;
+  zone.dataset.cle = cleR;
+  zone.hidden = !(r.length > 1 || (r.length && etat.phase === 'lancer'));
+  if (zone.hidden) return;
+  zone.replaceChildren(el('span', { class: 'titre-reserve' }, t(etat.phase === 'lancer' ? 'valeursGardees' : 'valeursAJouer')));
+  r.forEach((x, i) => {
+    const nom = nomLancer(etat.regles, x);
+    if (etat.phase !== 'deplacer' || !coups.length) { zone.append(el('span', { class: 'valeur-reserve' }, nom)); return; }
+    const b = el('button', { class: `valeur-reserve${i === session.ival ? ' choisie' : ''}`, 'aria-pressed': String(i === session.ival) }, nom);
+    b.disabled = !coups.some((c) => c.ival === i);
+    b.addEventListener('click', () => { session.ival = i; dessinerJeu(); });
+    zone.append(b);
+  });
+}
+
 function dessinerDes(etat, zone = $('des')) {
   zone.innerHTML = '';
-  const l = etat.lancer || etat.dernierLancer;
+  // Lancers cumulés : les dés montrent toujours le dernier lancer
+  const l = (Array.isArray(etat.reserve) ? etat.dernierLancer : etat.lancer) || etat.dernierLancer;
   if (!l) {
     zone.append(el('span', { class: 'attenue' }, t('lanceLesDes')));
     return;
@@ -1309,7 +1330,14 @@ function dessinerJeu() {
   const moi = session.mode === 'ligne' ? session.place : null;
   const actif = etat.joueurs[etat.tour];
   const peut = jePeuxJouer();
-  const coups = peut ? coupsPossibles(etat) : [];
+  const tousCoups = peut ? coupsPossibles(etat) : [];
+  // Lancers cumulés : on joue une valeur à la fois (celle choisie, sinon la première utilisable)
+  let coups = tousCoups;
+  if (Array.isArray(etat.reserve) && tousCoups.length) {
+    if (!tousCoups.some((c) => c.ival === session.ival)) session.ival = tousCoups[0].ival;
+    coups = tousCoups.filter((c) => c.ival === session.ival);
+  }
+  dessinerReserve(etat, tousCoups);
 
   dessinerBandeau(etat, g, moi, $('jeu-joueurs'));
   dessinerPlateau(etat, g, coups);
@@ -1330,6 +1358,7 @@ function dessinerJeu() {
   else if (animation) consigne = t('pionAvance');
   else if (actif.ordi) consigne = t('reflechit', { nom: nomActif });
   else if (etat.phase === 'lancer') consigne = session.mode === 'local' ? t('aToiLocal', { nom: nomActif }) : t('aToi');
+  else if (new Set(tousCoups.map((c) => c.valeur)).size > 1) consigne = t('choisisValeur');
   else consigne = t('touchePionBlanc');
   $('jeu-consigne').textContent = consigne;
   $('jeu-consigne').style.color = etat.phase === 'fini' ? '' : actif.couleur;
@@ -1568,7 +1597,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
     if (jouable) {
       const cible = svg('circle', { cx: p.cx, cy: p.cy, r: Math.max(p.r, 40), fill: 'transparent' }, grp);
       cible.style.cursor = 'pointer';
-      grp.addEventListener('click', () => { if (jePeuxJouer()) appliquer(jouer(session.etat, entree.pion)); });
+      grp.addEventListener('click', () => { if (jePeuxJouer()) appliquer(jouer(session.etat, entree.pion, false, entree.ival)); });
     }
   });
   pionsParCase(etat).forEach((liste, k) => {
@@ -1594,7 +1623,8 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
         const cible = svg('circle', { cx, cy, r: Math.max(rayon, 60), fill: 'transparent' }, grp);
         cible.style.cursor = 'pointer';
         grp.addEventListener('click', () => {
-          if (jePeuxJouer()) appliquer(jouer(session.etat, p.pion));
+          const c = coups.find((x) => x.pion === p.pion && !x.groupe);
+          if (jePeuxJouer() && c) appliquer(jouer(session.etat, p.pion, false, c.ival));
         });
       }
     });

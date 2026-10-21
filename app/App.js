@@ -114,7 +114,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
       if (e.phase === 'lancer') agir(lancer(e));
       else {
         const coup = choisirCoup(e);
-        if (coup) agir(jouer(e, coup.pion, !!coup.groupe));
+        if (coup) agir(jouer(e, coup.pion, !!coup.groupe, coup.ival));
       }
     }, e.phase === 'lancer' ? 450 : 550);
     return () => clearTimeout(m);

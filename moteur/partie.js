@@ -118,11 +118,17 @@ export function revoirPartie(etat) {
   if (!etat || !Array.isArray(etat.histo)) return null;
   try {
     // Règles telles qu'elles étaient pendant la partie (une partie d'avant la « sortie obligatoire » ne l'avait pas)
-    const regles = { ...etat.regles, sortieObligatoire: etat.regles.sortieObligatoire === true };
+    // (règles ajoutées plus tard : absentes = désactivées)
+    const regles = { ...etat.regles, sortieObligatoire: etat.regles.sortieObligatoire === true,
+      cumulLancers: etat.regles.cumulLancers === true, sortieAvecRejoue: etat.regles.sortieAvecRejoue === true };
     let e = nouvellePartie(regles, etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
     const etats = [e];
     for (const a of etat.histo) {
-      e = a[0] === 'd' || a[0] === 'c' ? lancer(e, undefined, lireLancer(e.regles, a)) : jouer(e, Number(a.slice(1)), a[0] === 'g');
+      if (a[0] === 'd' || a[0] === 'c') e = lancer(e, undefined, lireLancer(e.regles, a));
+    else {
+      const [pion, ival] = a.slice(1).split(':');
+      e = jouer(e, Number(pion), a[0] === 'g', ival === undefined ? null : Number(ival));
+    }
       etats.push(e);
     }
     // Historique incomplet (un joueur avait une ancienne version du jeu) : on ne peut pas revoir la partie
@@ -133,11 +139,11 @@ export function revoirPartie(etat) {
 }
 
 /** Destination d'un pion pour une valeur donnée, ou null si le coup est interdit. */
-export function destination(etat, joueur, pion, valeur) {
+export function destination(etat, joueur, pion, valeur, tirage = { valeur, detail: [] }) {
   const g = geometrie(etat.regles, etat.joueurs.length);
   const j = etat.joueurs[joueur];
   const p = j.pions[pion];
-  if (p === -1) return etat.regles.valeursEntree.includes(valeur) ? 0 : null;
+  if (p === -1) return entreeAutorisee(etat, joueur, tirage) ? 0 : null;
   if (p === g.arrivee || valeur <= 0) return null;
   let t = p + valeur;
   if (etat.regles.captureAvantInterieur && j.captures === 0 && p < g.longueurExterieur && t >= g.longueurExterieur) {
@@ -154,6 +160,17 @@ export function destination(etat, joueur, pion, valeur) {
     j.pions.some((q, i) => i !== pion && q === t)
   ) return null;
   return t;
+}
+
+/**
+ * Ce lancer fait-il sortir un pion du centre ? Toujours avec une valeur d'entrée (1) ; et, quand la règle
+ * « sortieAvecRejoue » est active, aussi avec une valeur qui fait rejouer (5, 6, 2 + 2) dès que le joueur
+ * a déjà au moins un pion sorti.
+ */
+export function entreeAutorisee(etat, joueur, tirage) {
+  const r = etat.regles;
+  if (r.valeursEntree.includes(tirage.valeur)) return true;
+  return !!r.sortieAvecRejoue && faitRejouer(r, tirage) && etat.joueurs[joueur].pions.some((p) => p !== -1);
 }
 
 /** Pions adverses capturés si `joueur` arrive à l'indice t de son chemin. */
@@ -173,7 +190,26 @@ function victimes(etat, joueur, t) {
 
 /** Coups possibles pour le joueur dont c'est le tour (après le lancer). */
 export function coupsPossibles(etat) {
-  if (etat.phase !== 'deplacer' || !etat.lancer) return [];
+  if (etat.phase !== 'deplacer') return [];
+  if (Array.isArray(etat.reserve)) {
+    // Cumul des lancers : chaque valeur mise de côté peut servir, dans l'ordre que le joueur veut.
+    // Deux lancers identiques donnent les mêmes coups : on ne garde que le premier.
+    const res = [];
+    const vus = new Set();
+    etat.reserve.forEach((t, ival) => {
+      const k = JSON.stringify(t);
+      if (vus.has(k)) return;
+      vus.add(k);
+      coupsPourTirage(etat, t).forEach((c) => res.push({ ...c, ival, valeur: t.valeur }));
+    });
+    return res;
+  }
+  if (!etat.lancer) return [];
+  return coupsPourTirage(etat, etat.lancer);
+}
+
+/** Coups possibles pour un lancer donné. */
+function coupsPourTirage(etat, tirage) {
   const j = etat.joueurs[etat.tour];
   const coups = [];
   let maisonVue = false;
@@ -182,19 +218,19 @@ export function coupsPossibles(etat) {
       if (maisonVue) return; // un seul coup « entrer un pion » suffit
       maisonVue = true;
     }
-    const vers = destination(etat, etat.tour, i, etat.lancer.valeur);
+    const vers = destination(etat, etat.tour, i, tirage.valeur, tirage);
     if (vers !== null) coups.push({ pion: i, depuis: p, vers, captures: victimes(etat, etat.tour, vers) });
   });
   // Un groupe mangé d'un coup rentre d'un coup avec une valeur qui fait rejouer.
   const r = etat.regles;
-  if (r.groupeRentreEnsemble && !r.unPionParCase && faitRejouer(r, etat.lancer)) {
+  if (r.groupeRentreEnsemble && !r.unPionParCase && faitRejouer(r, tirage)) {
     (j.groupes || []).forEach((gr) => {
       if (gr.length < 2 || !gr.every((i) => j.pions[i] === -1)) return;
       coups.push({ pion: gr[0], depuis: -1, vers: 0, captures: victimes(etat, etat.tour, 0), groupe: [...gr] });
     });
   }
-  // Sortie obligatoire : si un pion peut sortir du centre, on ne peut pas avancer un autre pion à la place.
-  // (Seulement avec une valeur d'entrée : rentrer un groupe mangé avec 5, 6 ou 2 + 2 reste un choix.)
+  // Sortie obligatoire : si ce lancer peut faire sortir un pion du centre, on ne peut pas avancer un autre pion à la place.
+  // (Sans règle « sortieAvecRejoue », rentrer un groupe mangé avec 5, 6 ou 2 + 2 reste un choix.)
   if (r.sortieObligatoire && coups.some((c) => c.depuis === -1 && !c.groupe)) return coups.filter((c) => c.depuis === -1);
   return coups;
 }
@@ -207,6 +243,7 @@ function joueurSuivant(etat) {
   etat.tour = (etat.tour + 1) % etat.joueurs.length;
   etat.phase = 'lancer';
   etat.lancer = null;
+  if (etat.regles.cumulLancers) etat.reserve = null;
 }
 
 /** Action « lancer les dés ». */
@@ -218,8 +255,30 @@ export function lancer(etat0, rng = Math.random, tirage = null) {
   const fait = nomLancer(etat.regles, t);
   etat.numero += 1;
   if (Array.isArray(etat.histo)) etat.histo.push(noterLancer(t));
-  etat.lancer = t;
   etat.dernierLancer = { ...t, joueur: etat.tour };
+  if (etat.regles.cumulLancers) {
+    // On relance tant que le lancer fait rejouer ; on garde toutes les valeurs, puis on les joue.
+    if (fait === 'Kaapal' || t.valeur <= 0) {
+      noter(etat, `${nom} fait Kaapal : les dés passent au joueur suivant.`); // les valeurs gardées sont perdues
+      joueurSuivant(etat);
+      return etat;
+    }
+    etat.reserve = [...(Array.isArray(etat.reserve) ? etat.reserve : []), t];
+    noter(etat, `${nom} fait ${fait}.`);
+    if (faitRejouer(etat.regles, t)) {
+      etat.lancer = null;
+      noter(etat, `${nom} rejoue.`);
+      return etat;
+    }
+    etat.phase = 'deplacer';
+    etat.lancer = t;
+    if (coupsPossibles(etat).length === 0) {
+      noter(etat, `${nom} ne peut pas utiliser ses lancers.`);
+      joueurSuivant(etat);
+    }
+    return etat;
+  }
+  etat.lancer = t;
   etat.phase = 'deplacer';
   if (coupsPossibles(etat).length === 0) {
     if (faitRejouer(etat.regles, t)) {
@@ -242,8 +301,9 @@ export function lancer(etat0, rng = Math.random, tirage = null) {
  * Action « déplacer le pion n° pion » avec le dernier lancer.
  * groupe = true : faire entrer d'un coup le groupe mangé dont fait partie ce pion.
  */
-export function jouer(etat0, pion, groupe = false) {
-  const coups = coupsPossibles(etat0).filter((c) => !!c.groupe === !!groupe);
+export function jouer(etat0, pion, groupe = false, ival = null) {
+  // ival : quelle valeur mise de côté utiliser (cumul des lancers) ; par défaut la première qui convient
+  const coups = coupsPossibles(etat0).filter((c) => !!c.groupe === !!groupe && (ival == null || c.ival === ival));
   const coup = coups.find((c) => c.pion === pion || (c.groupe || []).includes(pion)) ||
     (!groupe && etat0.joueurs[etat0.tour].pions[pion] === -1 && coups.find((c) => c.depuis === -1));
   if (!coup) throw new Error('Ce pion ne peut pas bouger.');
@@ -266,7 +326,7 @@ export function jouer(etat0, pion, groupe = false) {
   });
   j.captures += coup.captures.length;
   etat.numero += 1;
-  if (Array.isArray(etat.histo)) etat.histo.push(`${groupe ? 'g' : 'p'}${pion}`);
+  if (Array.isArray(etat.histo)) etat.histo.push(`${groupe ? 'g' : 'p'}${pion}${coup.ival != null ? `:${coup.ival}` : ''}`);
 
   if (coup.groupe) noter(etat, `${j.nom} fait entrer ${coup.groupe.length} pions d'un coup.`);
   else if (coup.depuis === -1) noter(etat, `${j.nom} fait entrer un pion.`);
@@ -281,7 +341,28 @@ export function jouer(etat0, pion, groupe = false) {
     etat.phase = 'fini';
     etat.gagnant = etat.tour;
     etat.lancer = null;
+    if (Array.isArray(etat.reserve)) etat.reserve = null;
     noter(etat, `${j.nom} a gagné la partie !`);
+    return etat;
+  }
+  if (Array.isArray(etat.reserve)) {
+    // Cumul des lancers : la valeur utilisée est retirée ; on continue avec les autres
+    etat.reserve.splice(coup.ival, 1);
+    if (coup.captures.length > 0 && etat.regles.rejouerApresCapture) etat.rejoueApres = true;
+    if (etat.reserve.length) {
+      etat.lancer = etat.reserve[0];
+      if (coupsPossibles(etat).length) return etat;
+      noter(etat, `${j.nom} ne peut pas utiliser ses autres lancers.`);
+    }
+    if (etat.rejoueApres) {
+      delete etat.rejoueApres;
+      etat.phase = 'lancer';
+      etat.lancer = null;
+      etat.reserve = null;
+      noter(etat, `${j.nom} rejoue.`);
+    } else {
+      joueurSuivant(etat);
+    }
     return etat;
   }
   const rejoue =

@@ -121,6 +121,15 @@ function evaluer(etat, moi, distribution) {
  */
 function esperance(etat, moi, distribution, prof) {
   if (etat.phase === 'fini' || prof === 0) return evaluer(etat, moi, distribution);
+  if (etat.phase === 'deplacer') {
+    // Cumul des lancers : il reste des valeurs à jouer ce tour-ci
+    const suite = coupsPossibles(etat).map((c) => {
+      const e = jouer(etat, c.pion, !!c.groupe, c.ival);
+      return (etat.reserve || []).length > 1 ? evaluer(e, moi, distribution) : esperance(e, moi, distribution, prof);
+    });
+    if (!suite.length) return evaluer(etat, moi, distribution);
+    return etat.tour === moi ? Math.max(...suite) : Math.min(...suite);
+  }
   const joueur = etat.tour;
   let total = 0;
   for (const { tirage, p } of distribution) {
@@ -128,7 +137,7 @@ function esperance(etat, moi, distribution, prof) {
     let v;
     if (e.phase !== 'deplacer') v = esperance(e, moi, distribution, prof - 1);
     else {
-      const valeurs = coupsPossibles(e).map((c) => evaluer(jouer(e, c.pion, !!c.groupe), moi, distribution));
+      const valeurs = coupsPossibles(e).map((c) => evaluer(jouer(e, c.pion, !!c.groupe, c.ival), moi, distribution));
       v = joueur === moi ? Math.max(...valeurs) : Math.min(...valeurs);
     }
     total += p * v;
@@ -148,7 +157,7 @@ export function choisirCoup(etat, rng = Math.random, niveau = etat.joueurs[etat.
     const distribution = distributionLancers(etat.regles);
     let meilleur = null;
     for (const c of coups) {
-      const s = esperance(jouer(etat, c.pion, !!c.groupe), etat.tour, distribution, W.prof) + rng() * 0.01;
+      const s = esperance(jouer(etat, c.pion, !!c.groupe, c.ival), etat.tour, distribution, W.prof) + rng() * 0.01;
       if (!meilleur || s > meilleur.s) meilleur = { c, s };
     }
     return meilleur.c;
