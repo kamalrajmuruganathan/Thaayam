@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import Svg, { Rect, Path, Circle, G, Ellipse, Line, Polyline, Defs, RadialGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { geometrie, pionsParCase, pionsAuCentre, zoneCase, arcsCroix, angleVue } from '../../moteur/partie.js';
@@ -75,6 +75,18 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouv
       fill="none" stroke={etat.joueurs[trajetDe].couleur} strokeWidth={8} strokeDasharray="4 14" strokeLinecap="round" opacity={0.85} />
   );
 
+  // Le décor (diagonales, arcs, cases, centre, trajet) ne change pas pendant la partie : React le garde tel quel,
+  // seuls les pions sont redessinés (plus fluide sur téléphone).
+  const cleDecor = JSON.stringify([nomTheme, g.forme, n, etat.joueurs.map((j) => j.couleur), trajetDe]);
+  const decor = useMemo(() => (
+    <G>
+      {croix ? diagonales(g, n, T) : null}
+      {cases}
+      {centre}
+      {trajet}
+    </G>
+  ), [cleDecor]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const cibles = coups.map((cp) => {
     const z = zone(cle(g.chemins[etat.tour][cp.vers]));
     return (
@@ -150,10 +162,7 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouv
         ) : null}
         {croix ? <Rect x={0} y={0} width={n * S} height={n * S} rx={24} fill={T.fondLueur ? 'url(#fondLueur)' : T.fond} /> : null}
         <G transform={`rotate(${angleVue(g, vue)} ${(n * S) / 2} ${(n * S) / 2})`}>
-        {croix ? diagonales(g, n, T) : null}
-        {cases}
-        {centre}
-        {trajet}
+        {decor}
         {dernier}
         {cibles}
         {pions}

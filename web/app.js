@@ -1346,16 +1346,32 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
   const n = g.n;
   const S = 100;
   const racine = plateau;
-  racine.innerHTML = '';
-  racine.setAttribute('viewBox', `0 0 ${n * S} ${n * S}`);
   const zone = zoneCase(g, S);
   const T = themePlateau(themeChoisi());
   const id = (nom) => `${racine.id}-${nom}`; // identifiants propres à ce dessin (plusieurs plateaux dans la page)
   // En ligne, chaque joueur voit son bras en bas, face à lui : on tourne tout le plateau
   const angle = racine.id === 'plateau' && session && session.mode === 'ligne' ? angleVue(g, session.place) : 0;
-  plateau = svg('g', angle ? { transform: `rotate(${angle} ${(n * S) / 2} ${(n * S) / 2})` } : {}, racine);
+  // Trajet d'aide : en ligne, son propre trajet ; en local, celui du joueur humain qui joue (ou du premier humain)
+  const premierHumain = Math.max(0, etat.joueurs.findIndex((j) => !j.ordi));
+  const qui = !(avecTrajet && session) ? null
+    : session.mode === 'ligne' ? session.place : (etat.joueurs[etat.tour].ordi ? premierHumain : etat.tour);
 
-  // Dégradés et halo lumineux du thème
+  const avecLueur = {};
+  // Pour la fluidité : le décor (fond, cases, arcs, trajet) n'est dessiné qu'une fois ;
+  // ensuite, seuls les pions et les repères sont redessinés.
+  const cleDecor = JSON.stringify([themeChoisi(), g.forme, n, angle, etat.joueurs.map((j) => j.couleur), qui]);
+  if (racine._cleDecor === cleDecor && racine._mobile) {
+    racine._mobile.innerHTML = '';
+    plateau = racine._mobile;
+    dessinerPionsEtRepères();
+    return;
+  }
+  racine.innerHTML = '';
+  racine.setAttribute('viewBox', `0 0 ${n * S} ${n * S}`);
+  const tourne = svg('g', angle ? { transform: `rotate(${angle} ${(n * S) / 2} ${(n * S) / 2})` } : {}, racine);
+  plateau = svg('g', {}, tourne);
+
+  // Dégradés du thème
   const defs = svg('defs', {}, plateau);
   if (T.fondLueur) {
     const rg = svg('radialGradient', { id: id('fond-lueur'), cx: '50%', cy: '50%', r: '60%' }, defs);
@@ -1365,14 +1381,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
     svg('stop', { offset: '0%', 'stop-color': '#ffffff', 'stop-opacity': 0.10 }, lg);
     svg('stop', { offset: '55%', 'stop-color': '#ffffff', 'stop-opacity': 0 }, lg);
   }
-  if (T.lueur) {
-    const f = svg('filter', { id: id('lueur'), x: '-50%', y: '-50%', width: '200%', height: '200%' }, defs);
-    svg('feGaussianBlur', { stdDeviation: 4, result: 'flou' }, f);
-    const m = svg('feMerge', {}, f);
-    svg('feMergeNode', { in: 'flou' }, m);
-    svg('feMergeNode', { in: 'SourceGraphic' }, m);
-  }
-  const avecLueur = T.lueur ? { filter: `url(#${id('lueur')})` } : {};
+  // (Plus de filtre de flou : il rendait le jeu lent sur téléphone. La lueur vient de traits doublés.)
 
   // Couleur de chaque joueur : sa case de départ, sa colonne d'arrivée (croix) et ses croix
   const teintes = new Map();
@@ -1388,12 +1397,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
       // Grille d'hologramme très fine, plus visible au centre
       const motif = svg('pattern', { id: id('holo'), width: S / 4, height: S / 4, patternUnits: 'userSpaceOnUse' }, defs);
       svg('path', { d: `M${S / 4} 0V${S / 4}M0 ${S / 4}H${S / 4}`, stroke: T.diagonaleLueur, 'stroke-width': 0.6, opacity: 0.35, fill: 'none' }, motif);
-      const masque = svg('radialGradient', { id: id('holo-masque'), cx: '50%', cy: '50%', r: '55%' }, defs);
-      svg('stop', { offset: '0%', 'stop-color': '#fff', 'stop-opacity': 0.9 }, masque);
-      svg('stop', { offset: '100%', 'stop-color': '#fff', 'stop-opacity': 0.08 }, masque);
-      const m = svg('mask', { id: id('holo-m') }, defs);
-      svg('rect', { x: 0, y: 0, width: n * S, height: n * S, fill: `url(#${id('holo-masque')})` }, m);
-      svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: `url(#${id('holo')})`, mask: `url(#${id('holo-m')})` }, plateau);
+      svg('rect', { x: 0, y: 0, width: n * S, height: n * S, rx: 24, fill: `url(#${id('holo')})`, opacity: 0.6 }, plateau);
     }
     // Diagonales : des coins du plateau jusqu'au centre, à travers les cases de coin
     const { r: r0, c: c0, taille: t } = g.centre;
@@ -1405,6 +1409,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
     // 3 arcs à chaque coin du centre : passage d'un bras au suivant
     arcsCroix(g, S).forEach((d) => {
       svg('path', { d, fill: 'none', stroke: T.arc, 'stroke-width': 7, 'stroke-linecap': 'round' }, plateau);
+      if (T.lueur) svg('path', { d, fill: 'none', stroke: T.arcLueur, 'stroke-width': 7, opacity: 0.18 }, plateau);
       svg('path', { d, fill: 'none', stroke: T.arcLueur, 'stroke-width': 2.5, opacity: 0.85, ...avecLueur }, plateau);
     });
     // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
@@ -1438,10 +1443,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
   fill: 'none', stroke: g.forme === 'croix' ? T.centreCroix : '#fff3da', 'stroke-width': g.forme === 'croix' ? 3 : 4, opacity: 0.8 }, plateau);
 
   // Trajet d'un joueur (aide) : ligne pointillée avec des flèches
-  if (avecTrajet && session) {
-    // En ligne : son propre trajet ; en local : celui du joueur humain qui joue (ou du premier humain)
-    const premierHumain = Math.max(0, etat.joueurs.findIndex((j) => !j.ordi));
-    const qui = session.mode === 'ligne' ? session.place : (etat.joueurs[etat.tour].ordi ? premierHumain : etat.tour);
+  if (qui !== null) {
     const centre = (p) => { const z = zone(cle(p)); return `${z.x + z.w / 2},${z.y + z.w / 2}`; };
     const ch = g.chemins[qui];
     const couleur = etat.joueurs[qui].couleur;
@@ -1455,6 +1457,13 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
     }
   }
 
+  // Couche mobile (pions, dernier coup, destinations, éclat) : redessinée à chaque fois
+  racine._cleDecor = cleDecor;
+  racine._mobile = svg('g', {}, tourne);
+  plateau = racine._mobile;
+  dessinerPionsEtRepères();
+
+  function dessinerPionsEtRepères() {
   // Dernier coup joué
   if (etat.dernierCoup) {
     const z = zone(cle(g.chemins[etat.dernierCoup.joueur][etat.dernierCoup.vers]));
@@ -1520,6 +1529,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
     const z = zone(session.eclat.k);
     svg('circle', { cx: z.x + z.w / 2, cy: z.y + z.w / 2, r: z.w / 2, fill: 'none', stroke: session.eclat.couleur,
       'stroke-width': 10, class: 'eclat' }, plateau);
+  }
   }
 }
 

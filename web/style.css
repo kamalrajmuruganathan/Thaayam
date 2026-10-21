@@ -508,3 +508,22 @@ button.raccrocher { background: #c62828 !important; color: #fff !important; bord
 @keyframes sonne { from { box-shadow: 0 0 0 0 rgba(95, 212, 255, 0.5); } to { box-shadow: 0 0 0 10px rgba(95, 212, 255, 0); } }
 :root[data-skin="cristal"] .sonnerie { background: rgba(8, 16, 24, 0.96); }
 :root[data-skin="nuit"] .sonnerie { background: rgba(16, 6, 30, 0.96); }
+
+/* ===================================================================== */
+/* Fluidité sur téléphone : on coupe les effets les plus coûteux          */
+/* (flou des vitres, reflet du plateau, animations permanentes).         */
+/* ===================================================================== */
+:root[data-skin] .carte, :root[data-skin] .zone-des, :root[data-skin] .formulaire fieldset,
+:root[data-skin] .joueur, :root[data-skin] .liste-joueurs li { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+:root[data-skin="cristal"] { --surface: #0c1620; }
+:root[data-skin="nuit"] { --surface: #150a28; }
+:root[data-skin] .zone-plateau { -webkit-box-reflect: none !important; animation: none !important; }
+:root[data-skin] .carte::after, :root[data-skin] .zone-des::after { animation: none !important; display: none; }
+:root[data-skin] body { background-attachment: scroll !important; }
+:root[data-skin] body::after { transform: none !important; }
+/* Reflet du plateau sur le sol : simple dégradé fixe */
+:root[data-skin="cristal"] .zone-plateau, :root[data-skin="nuit"] .zone-plateau { position: relative; }
+:root[data-skin="cristal"] .zone-plateau::after, :root[data-skin="nuit"] .zone-plateau::after {
+  content: ""; position: absolute; left: 6%; right: 6%; bottom: -18px; height: 16px; border-radius: 0 0 50% 50%; pointer-events: none;
+  background: linear-gradient(rgba(95, 212, 255, 0.28), transparent); }
+:root[data-skin="nuit"] .zone-plateau::after { background: linear-gradient(rgba(255, 79, 216, 0.3), transparent); }

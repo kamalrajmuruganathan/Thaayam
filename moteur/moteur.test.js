@@ -604,3 +604,18 @@ test('vue du plateau : chaque joueur voit son bras en bas', async () => {
   }
   assert.equal(angleVue(geometrie(REGLES_PAR_DEFAUT, 2), null), 0);
 });
+
+test('revoir une ancienne partie (avant la sortie obligatoire)', async () => {
+  const { revoirPartie } = await import('./partie.js');
+  const { choisirCoup } = await import('./ia.js');
+  const anciennes = { ...REGLES_PAR_DEFAUT, sortieObligatoire: false };
+  let e = nouvellePartie(anciennes, [{ nom: 'A', ordi: 'normal' }, { nom: 'B', ordi: 'normal' }]);
+  delete e.regles.sortieObligatoire; // comme les parties enregistrées avant cette règle
+  for (let i = 0; i < 8000 && e.phase !== 'fini'; i++) {
+    if (e.phase === 'lancer') e = lancer(e);
+    else { const c = choisirCoup(e); e = jouer(e, c.pion, !!c.groupe); }
+  }
+  const etats = revoirPartie(e);
+  assert.ok(etats, 'la partie peut être revue');
+  assert.deepEqual(etats.at(-1).joueurs, e.joueurs);
+});

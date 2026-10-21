@@ -117,7 +117,9 @@ function lireLancer(regles, a) {
 export function revoirPartie(etat) {
   if (!etat || !Array.isArray(etat.histo)) return null;
   try {
-    let e = nouvellePartie(etat.regles, etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
+    // Règles telles qu'elles étaient pendant la partie (une partie d'avant la « sortie obligatoire » ne l'avait pas)
+    const regles = { ...etat.regles, sortieObligatoire: etat.regles.sortieObligatoire === true };
+    let e = nouvellePartie(regles, etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
     const etats = [e];
     for (const a of etat.histo) {
       e = a[0] === 'd' || a[0] === 'c' ? lancer(e, undefined, lireLancer(e.regles, a)) : jouer(e, Number(a.slice(1)), a[0] === 'g');
