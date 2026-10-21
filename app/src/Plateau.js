@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Rect, Path, Circle, G, Ellipse, Line, Polyline, Defs, RadialGradient, Stop, Text as SvgText } from 'react-native-svg';
-import { geometrie, pionsParCase, pionsAuCentre, zoneCase, arcsCroix } from '../../moteur/partie.js';
+import { geometrie, pionsParCase, pionsAuCentre, zoneCase, arcsCroix, angleVue } from '../../moteur/partie.js';
 import { cle } from '../../moteur/plateau.js';
 import { themePlateau } from '../../moteur/themes.js';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,7 +16,7 @@ const CADRES = { cristal: '#aab6c0', nuit: '#ff4fd8', temple: '#d9a520' };
  * Plateau (croix ou carré) ; `coups` = coups jouables, `surPion(pion)` quand on touche un pion jouable.
  * enMouvement : { joueur, pion } du pion qui avance (dessiné plus gros) ; eclat : { k, couleur } (case qui s'illumine).
  */
-export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouvement = null, eclat = null }) {
+export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouvement = null, eclat = null, vue = null }) {
   const nomTheme = useTheme();
   const T = themePlateau(nomTheme);
   const g = geometrie(etat.regles, etat.joueurs.length);
@@ -149,6 +149,7 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouv
           </Defs>
         ) : null}
         {croix ? <Rect x={0} y={0} width={n * S} height={n * S} rx={24} fill={T.fondLueur ? 'url(#fondLueur)' : T.fond} /> : null}
+        <G transform={`rotate(${angleVue(g, vue)} ${(n * S) / 2} ${(n * S) / 2})`}>
         {croix ? diagonales(g, n, T) : null}
         {cases}
         {centre}
@@ -157,6 +158,8 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouv
         {cibles}
         {pions}
         {halo}
+        </G>
+        {croix ? ecritures(n, T) : null}
       </Svg>
     </View>
     {/* Sol brillant : reflet lumineux sous le plateau */}
@@ -185,13 +188,16 @@ function diagonales(g, n, T) {
         <Path d={d} fill="none" stroke={T.arcLueur} strokeWidth={2.5} opacity={0.85} />
       </G>
     )),
-    // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
-    ...[['தாயம்', 2.4], ['விளையாட்டு', n - 2.4]].map(([texte, cx]) => (
-      <SvgText key={texte} x={cx * S} y={0.62 * S} textAnchor="middle" fontSize={0.48 * S} fontWeight="700" fill={T.ecriture} opacity={0.9}>
-        {texte}
-      </SvgText>
-    )),
   ];
+}
+
+/** Écriture tamoule dans les coins du haut (jamais tournée, toujours lisible). */
+function ecritures(n, T) {
+  return [['தாயம்', 2.4], ['விளையாட்டு', n - 2.4]].map(([texte, cx]) => (
+    <SvgText key={texte} x={cx * S} y={0.62 * S} textAnchor="middle" fontSize={0.48 * S} fontWeight="700" fill={T.ecriture} opacity={0.9}>
+      {texte}
+    </SvgText>
+  ));
 }
 
 export function Cauri({ ouvert }) {

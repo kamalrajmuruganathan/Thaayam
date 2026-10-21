@@ -70,7 +70,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
 
       <View style={{ alignItems: 'center' }}>
         <Plateau etat={etat} coups={coups} largeur={largeur} surPion={(p) => peut && surAction(jouer(etat, p))}
-          enMouvement={enMouvement} eclat={eclat}
+          enMouvement={enMouvement} eclat={eclat} vue={moi}
           trajetDe={voirTrajet ? (moi !== null ? moi : actif.ordi ? Math.max(0, etat.joueurs.findIndex((j) => !j.ordi)) : etat.tour) : null} />
       </View>
 

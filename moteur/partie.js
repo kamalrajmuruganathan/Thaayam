@@ -404,3 +404,17 @@ export function pionsParCase(etat) {
 }
 
 export { valeursPossibles };
+
+/**
+ * Pour l'affichage : angle (en degrés, multiple de 90) dont il faut tourner le plateau
+ * pour que le bras du joueur `place` soit en bas, face à lui.
+ */
+export function angleVue(g, place) {
+  if (place == null || !g.chemins[place]) return 0;
+  const [r, c] = g.chemins[place][0];
+  const { r: r0, c: c0, taille } = g.centre;
+  const dx = c + 0.5 - (c0 + taille / 2);
+  const dy = r + 0.5 - (r0 + taille / 2);
+  const a = (90 - (Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
+  return (Math.round(a / 90) * 90) % 360;
+}

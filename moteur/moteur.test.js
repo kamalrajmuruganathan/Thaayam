@@ -586,3 +586,21 @@ test('dé classique de 1 à 6 : on rejoue avec 1, 5 et 6, le 1 fait entrer', asy
   assert.equal(e.phase, 'fini');
   assert.deepEqual(revoirPartie(e).at(-1), e);
 });
+
+test('vue du plateau : chaque joueur voit son bras en bas', async () => {
+  const { angleVue } = await import('./partie.js');
+  for (const nb of [2, 3, 4]) {
+    const g = geometrie(REGLES_PAR_DEFAUT, nb);
+    assert.equal(angleVue(g, 0), 0, 'le joueur rouge est déjà en bas');
+    for (let p = 0; p < nb; p++) {
+      const a = (angleVue(g, p) * Math.PI) / 180;
+      const [r, c] = g.chemins[p][0];
+      const m = g.n / 2;
+      const x = c + 0.5 - m, y = r + 0.5 - m;
+      // Après rotation, la case d'entrée du joueur est sous le centre
+      const yTourne = x * Math.sin(a) + y * Math.cos(a);
+      assert.ok(yTourne > 0.5, `joueur ${p} sur ${nb} : ${yTourne}`);
+    }
+  }
+  assert.equal(angleVue(geometrie(REGLES_PAR_DEFAUT, 2), null), 0);
+});

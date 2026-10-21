@@ -2,7 +2,7 @@ import {
   REGLES_PAR_DEFAUT, PRESETS_DES, TAILLES, COULEURS,
   copieRegles, normaliserRegles, valeursPossibles, lireListe, resumeRegles, nomLancer, avecReglesFixes,
 } from './moteur/regles.js';
-import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, pionsAuCentre, zoneCase, etapesCoup, arcsCroix, revoirPartie } from './moteur/partie.js';
+import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, pionsAuCentre, zoneCase, etapesCoup, arcsCroix, revoirPartie, angleVue } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
 import { sons, sonActif, basculerSon, vibrationsActives, basculerVibrations, vibrer } from './sons.js';
@@ -1345,11 +1345,15 @@ function svg(tag, attrs, parent) {
 function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = voirTrajet) {
   const n = g.n;
   const S = 100;
-  plateau.innerHTML = '';
-  plateau.setAttribute('viewBox', `0 0 ${n * S} ${n * S}`);
+  const racine = plateau;
+  racine.innerHTML = '';
+  racine.setAttribute('viewBox', `0 0 ${n * S} ${n * S}`);
   const zone = zoneCase(g, S);
   const T = themePlateau(themeChoisi());
-  const id = (nom) => `${plateau.id}-${nom}`; // identifiants propres à ce dessin (plusieurs plateaux dans la page)
+  const id = (nom) => `${racine.id}-${nom}`; // identifiants propres à ce dessin (plusieurs plateaux dans la page)
+  // En ligne, chaque joueur voit son bras en bas, face à lui : on tourne tout le plateau
+  const angle = racine.id === 'plateau' && session && session.mode === 'ligne' ? angleVue(g, session.place) : 0;
+  plateau = svg('g', angle ? { transform: `rotate(${angle} ${(n * S) / 2} ${(n * S) / 2})` } : {}, racine);
 
   // Dégradés et halo lumineux du thème
   const defs = svg('defs', {}, plateau);
@@ -1406,7 +1410,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
     // Écriture tamoule dans les coins du haut, comme sur les plateaux du commerce
     [['தாயம்', 2.4], ['விளையாட்டு', n - 2.4]].forEach(([texte, cx]) => {
       const t = svg('text', { x: cx * S, y: 0.62 * S, 'text-anchor': 'middle', 'font-size': 0.48 * S, 'font-weight': 700,
-        fill: T.ecriture, opacity: 0.9, 'font-family': "'Noto Sans Tamil', 'Latha', sans-serif", ...avecLueur }, plateau);
+        fill: T.ecriture, opacity: 0.9, 'font-family': "'Noto Sans Tamil', 'Latha', sans-serif", ...avecLueur }, racine); // écriture jamais à l'envers
       t.textContent = texte;
     });
   }
@@ -1495,7 +1499,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
       const cy = z.y + 8 + pas * Math.floor(i / cote) + pas / 2;
       const j = etat.joueurs[p.joueur];
       const jouable = jouables.has(`${p.joueur}:${p.pion}`);
-      const bouge = plateau.id === 'plateau' && session && session.enMouvement &&
+      const bouge = racine.id === 'plateau' && session && session.enMouvement &&
         session.enMouvement.joueur === p.joueur && session.enMouvement.pion === p.pion;
       const grp = svg('g', { class: jouable ? 'pion-jouable' : bouge ? 'pion-bouge' : '' }, plateau);
       svg('circle', { cx, cy, r: rayon, fill: j.couleur, stroke: jouable ? T.jouable : T.pionTrait, 'stroke-width': jouable ? 6 : 3, ...avecLueur }, grp);
@@ -1512,7 +1516,7 @@ function dessinerPlateau(etat, g, coups, plateau = $('plateau'), avecTrajet = vo
   });
 
   // Éclat (pion mangé, pion arrivé)
-  if (plateau.id === 'plateau' && session && session.eclat) {
+  if (racine.id === 'plateau' && session && session.eclat) {
     const z = zone(session.eclat.k);
     svg('circle', { cx: z.x + z.w / 2, cy: z.y + z.w / 2, r: z.w / 2, fill: 'none', stroke: session.eclat.couleur,
       'stroke-width': 10, class: 'eclat' }, plateau);
