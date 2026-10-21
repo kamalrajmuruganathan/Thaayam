@@ -3,8 +3,8 @@
 // - Navigateurs : notifications web (Web Push, clés VAPID créées ici au premier appel et rangées
 //   dans la table privée thaayam_config).
 // - Appli Android / iPhone : service de notifications d'Expo.
-// - Appels audio / vidéo : identifiants du serveur relais TURN de Cloudflare, donnés seulement aux joueurs
-//   d'une partie (secrets CF_TURN_KEY_ID et CF_TURN_API_TOKEN, ou lignes cf_turn_key_id / cf_turn_api_token de thaayam_config).
+// - Appels audio / vidéo : identifiants des serveurs relais TURN (ExpressTURN, Metered et/ou Cloudflare),
+//   donnés seulement aux joueurs d'une partie (voir plus bas les secrets à régler).
 // À déployer une fois : Supabase → Edge Functions → Deploy a new function → Via Editor,
 // nom « thaayam-notifier », coller ce fichier, puis désactiver « Verify JWT » dans ses réglages.
 import webpush from 'npm:web-push@3.6.7';
@@ -69,22 +69,48 @@ Deno.serve(async (req) => {
     const { data: place } = await sb.from('thaayam_jetons').select('place')
       .eq('code', String(demande.code ?? '')).eq('jeton', String(demande.jeton ?? '')).maybeSingle();
     if (!place) return reponse({ erreur: 'Tu ne fais pas partie de cette partie' }, 403);
-    // Valeurs du relais : secrets de la fonction, ou sinon table privée thaayam_config (cf_turn_key_id, cf_turn_api_token)
-    const id = Deno.env.get('CF_TURN_KEY_ID') ?? await lireConfig('cf_turn_key_id');
-    const jeton = Deno.env.get('CF_TURN_API_TOKEN') ?? await lireConfig('cf_turn_api_token');
-    if (!id || !jeton) return reponse({ iceServers: [] }); // relais pas encore installé : connexion directe seulement
-    const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${id}/credentials/generate-ice-servers`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ttl: 6 * 3600 }), // valables 6 heures
-    });
-    if (!r.ok) return reponse({ iceServers: [], erreur: `TURN ${r.status}` });
-    const brut = await r.json();
-    const liste = Array.isArray(brut.iceServers) ? brut.iceServers : [brut.iceServers].filter(Boolean);
-    // Les navigateurs bloquent le port 53 : on le retire
-    const iceServers = liste.map((x: { urls: string | string[]; username?: string; credential?: string }) => ({
-      ...x, urls: (Array.isArray(x.urls) ? x.urls : [x.urls]).filter((u) => !/:53(\?|$)/.test(u)),
-    })).filter((x: { urls: string[] }) => x.urls.length);
+    // Relais possibles (tous facultatifs, ils s'additionnent) — secrets de la fonction ou table privée thaayam_config :
+    //  - ExpressTURN (gratuit 1000 Go/mois) : EXPRESSTURN_USER, EXPRESSTURN_PASS, EXPRESSTURN_HOST (défaut free.expressturn.com)
+    //  - Metered (gratuit 500 Mo/mois, port 443 chiffré) : METERED_API_KEY, METERED_APP (ex. « thaayam » pour thaayam.metered.live)
+    //  - Cloudflare (1000 Go/mois, demande une carte) : CF_TURN_KEY_ID, CF_TURN_API_TOKEN
+    const val = async (nom: string) => Deno.env.get(nom) ?? await lireConfig(nom.toLowerCase());
+    const iceServers: { urls: string[]; username?: string; credential?: string }[] = [];
+    const sans53 = (x: { urls: string | string[]; username?: string; credential?: string }) =>
+      ({ ...x, urls: (Array.isArray(x.urls) ? x.urls : [x.urls]).filter((u) => !/:53(\?|$)/.test(u)) });
+    const etat: string[] = [];
+
+    const [euser, epass, ehote] = [await val('EXPRESSTURN_USER'), await val('EXPRESSTURN_PASS'), await val('EXPRESSTURN_HOST')];
+    if (euser && epass) {
+      const h = ehote || 'free.expressturn.com';
+      iceServers.push({ urls: [`turn:${h}:3478?transport=udp`, `turn:${h}:3478?transport=tcp`], username: euser, credential: epass });
+      etat.push('expressturn');
+    }
+
+    const [mcle, mapp] = [await val('METERED_API_KEY'), await val('METERED_APP')];
+    if (mcle && mapp) {
+      try {
+        const r = await fetch(`https://${mapp}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(mcle)}`);
+        if (r.ok) { (await r.json()).forEach((x: { urls: string | string[] }) => iceServers.push(sans53(x))); etat.push('metered'); }
+        else etat.push(`metered ${r.status}`);
+      } catch { etat.push('metered injoignable'); }
+    }
+
+    const [id, jeton] = [await val('CF_TURN_KEY_ID'), await val('CF_TURN_API_TOKEN')];
+    if (id && jeton) {
+      try {
+        const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${id}/credentials/generate-ice-servers`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ttl: 6 * 3600 }), // valables 6 heures
+        });
+        if (r.ok) {
+          const brut = await r.json();
+          (Array.isArray(brut.iceServers) ? brut.iceServers : [brut.iceServers].filter(Boolean)).forEach((x: { urls: string | string[] }) => iceServers.push(sans53(x)));
+          etat.push('cloudflare');
+        } else etat.push(`cloudflare ${r.status}`);
+      } catch { etat.push('cloudflare injoignable'); }
+    }
+    if (demande.diagnostic) return reponse({ relais: etat, nombre: iceServers.length });
     return reponse({ iceServers });
   }
 
