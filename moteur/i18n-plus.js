@@ -12,10 +12,10 @@ export const PLUS = {
 
   // ------------------------------------------------------------- cumul des lancers
   jLancersPerdus: ['{nom} ne peut pas utiliser ses lancers.', '{nom} cannot use their throws.', '{nom} தன் வீச்சுகளைப் பயன்படுத்த முடியாது.',
-    '{nom} अपने पासों का उपयोग नहीं कर सकते।', '{nom}ට තම දැමීම් භාවිත කළ නොහැක.'],
+    '{nom} अपने फेंके गए अंकों का उपयोग नहीं कर सकते।', '{nom}ට තම දැමීම් භාවිත කළ නොහැක.'],
   jAutresPerdus: ['{nom} ne peut pas utiliser ses autres lancers.', '{nom} cannot use their other throws.', '{nom} மற்ற வீச்சுகளைப் பயன்படுத்த முடியாது.',
-    '{nom} अपने बाकी पासों का उपयोग नहीं कर सकते।', '{nom}ට අනෙක් දැමීම් භාවිත කළ නොහැක.'],
-  valeursAJouer: ['Valeurs à jouer :', 'Values to play:', 'ஆட வேண்டிய எண்கள்:', 'चलने वाले अंक:', 'ක්‍රීඩා කළ යුතු අගයන්:'],
+    '{nom} अपने बाक़ी फेंके गए अंकों का उपयोग नहीं कर सकते।', '{nom}ට අනෙක් දැමීම් භාවිත කළ නොහැක.'],
+  valeursAJouer: ['Valeurs à jouer :', 'Values to play:', 'ஆட வேண்டிய எண்கள்:', 'चलने के लिए अंक:', 'ක්‍රීඩා කළ යුතු අගයන්:'],
   valeursGardees: ['Valeurs gardées :', 'Values kept:', 'சேர்த்த எண்கள்:', 'रखे गए अंक:', 'රැස් කළ අගයන්:'],
   choisisValeur: [
     'Choisis une valeur, puis touche un pion entouré de blanc.',
@@ -29,7 +29,7 @@ export const PLUS = {
     'On relance avec 1, 5, 6 et 2 + 2, puis on joue toutes les valeurs, dans l’ordre voulu ; Kaapal fait tout perdre',
     'Throw again on 1, 5, 6 and 2 + 2, then play all the values in any order; Kaapal loses them all',
     '1, 5, 6, 2 + 2 விழுந்தால் மீண்டும் போட்டு, பிறகு எல்லா எண்களையும் விரும்பிய வரிசையில் ஆடலாம்; Kaapal விழுந்தால் எல்லாம் போய்விடும்',
-    '1, 5, 6 और 2 + 2 पर फिर फेंकें, फिर सारे अंक मनचाहे क्रम में चलें; Kaapal पर सब चला जाता है',
+    '1, 5, 6 और 2 + 2 पर फिर फेंकें, फिर सारे अंक मनचाहे क्रम में चलें; Kaapal आने पर सारे रखे गए अंक चले जाते हैं',
     '1, 5, 6 සහ 2 + 2 වැටුණු විට නැවත දමා, පසුව සියලු අගයන් කැමති පිළිවෙළට ක්‍රීඩා කරන්න; Kaapal වැටුණොත් සියල්ල නැති වේ',
   ],
   rSortieRejoue: [
@@ -95,7 +95,7 @@ export const PLUS = {
     'Tu as fait 1 (thaayam) ! Touche un de tes pions au centre (ou le bouton « Faire entrer un pion ») : il sort sur ta colonne. Tu rejoueras ensuite.',
     'You threw 1 (thaayam)! Tap one of your pieces in the centre (or the “Bring a piece in” button): it comes out on your column. Then you play again.',
     'நீங்கள் 1 (தாயம்) போட்டீர்கள்! நடுவில் உள்ள உங்கள் காய் ஒன்றைத் தொடுங்கள் (அல்லது «காயை உள்ளே கொண்டுவா» பொத்தான்): அது உங்கள் நெடுவரிசையில் இறங்கும். பிறகு மீண்டும் ஆடலாம்.',
-    'आपने 1 (थायम) फेंका! केंद्र में अपनी एक गोटी छुएँ (या «गोटी अंदर लाएँ» बटन): वह आपके कॉलम पर निकलेगी। फिर आप दोबारा खेलेंगे।',
+    'आपने 1 (थायम) फेंका! केंद्र में अपनी एक गोटी छुएँ (या «गोटी अंदर लाएँ» बटन): वह आपके स्तंभ पर निकलेगी। फिर आप दोबारा खेलेंगे।',
     'ඔබ 1 (තායම්) දැමුවා! මැද ඇති ඔබගේ ඉත්තෙකු ස්පර්ශ කරන්න (නැතහොත් «ඉත්තෙකු ඇතුළට ගන්න» බොත්තම): එය ඔබගේ තීරුවට එයි. ඉන්පසු නැවත ක්‍රීඩා කරන්න.',
   ],
   gEntrerOuAvancer: [
@@ -113,11 +113,11 @@ export const PLUS = {
     'ඔබ {v} දැමුවා: සුදු රවුමක් ඇති ඉත්තෙකු ස්පර්ශ කර කොටු {v}ක් ඉදිරියට ගෙන යන්න. තිත් රවුමෙන් එය නවතින තැන පෙන්වයි.',
   ],
   gManger: [
-    'Tu as fait {v} et un pion adverse est à portée : touche ton pion qui tombe sur lui pour le manger ! Il retournera au centre et tu rejoueras.',
-    'You threw {v} and an opponent’s piece is in reach: tap your piece that lands on it to capture it! It goes back to the centre and you play again.',
-    'நீங்கள் {v} போட்டீர்கள், எதிரியின் காய் எட்டும் தூரத்தில் உள்ளது: அதன் மேல் விழும் உங்கள் காயைத் தொட்டு வெட்டுங்கள்! அது நடுவுக்குத் திரும்பும், நீங்கள் மீண்டும் ஆடுவீர்கள்.',
-    'आपने {v} फेंका और विरोधी की गोटी पहुँच में है: उस पर पहुँचने वाली अपनी गोटी छूकर उसे काटें! वह केंद्र में लौटेगी और आप दोबारा खेलेंगे।',
-    'ඔබ {v} දැමුවා, ප්‍රතිවාදියාගේ ඉත්තෙක් ළඟ ඇත: ඒ මතට වැටෙන ඔබගේ ඉත්තා ස්පර්ශ කර එය කපන්න! එය මැදට යයි, ඔබ නැවත ක්‍රීඩා කරයි.',
+    'Tu as fait {v} et un pion adverse est à portée : touche ton pion qui tombe sur lui pour le manger ! Il retournera au centre.',
+    'You threw {v} and an opponent’s piece is in reach: tap your piece that lands on it to capture it! It goes back to the centre.',
+    'நீங்கள் {v} போட்டீர்கள், எதிரியின் காய் எட்டும் தூரத்தில் உள்ளது: அதன் மேல் விழும் உங்கள் காயைத் தொட்டு வெட்டுங்கள்! அது நடுவுக்குத் திரும்பும்.',
+    'आपने {v} फेंका और विरोधी की गोटी पहुँच में है: उस पर पहुँचने वाली अपनी गोटी छूकर उसे काटें! वह केंद्र में लौट जाएगी।',
+    'ඔබ {v} දැමුවා, ප්‍රතිවාදියාගේ ඉත්තෙක් ළඟ ඇත: ඒ මතට වැටෙන ඔබගේ ඉත්තා ස්පර්ශ කර එය කපන්න! එය මැදට යයි.',
   ],
   gGroupe: [
     'Tes pions mangés ensemble peuvent rentrer ensemble : touche le bouton « Faire entrer les pions mangés ».',
@@ -302,7 +302,7 @@ export const PLUS = {
     (p) => `Encore ${p.n} victoire${s(p.n)} pour le niveau suivant`,
     (p) => `${p.n} more win${p.n === 1 ? '' : 's'} to the next level`,
     'அடுத்த நிலைக்கு இன்னும் {n} வெற்றி',
-    'अगले स्तर के लिए {n} जीत और',
+    'अगले स्तर के लिए {n} और जीत',
     'ඊළඟ මට්ටමට තවත් ජය {n}',
   ],
   nvDebutant: ['Débutant', 'Beginner', 'தொடக்கநிலை', 'शुरुआती', 'ආරම්භක'],
