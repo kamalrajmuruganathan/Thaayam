@@ -71,7 +71,8 @@ Deno.serve(async (req) => {
     if (!place) return reponse({ erreur: 'Tu ne fais pas partie de cette partie' }, 403);
     // Relais possibles (tous facultatifs, ils s'additionnent) — secrets de la fonction ou table privée thaayam_config :
     //  - ExpressTURN (gratuit 1000 Go/mois) : EXPRESSTURN_USER, EXPRESSTURN_PASS, EXPRESSTURN_HOST (défaut free.expressturn.com)
-    //  - Metered (gratuit 500 Mo/mois, port 443 chiffré) : METERED_API_KEY, METERED_APP (ex. « thaayam » pour thaayam.metered.live)
+    //  - Metered (gratuit, port 443 chiffré) : METERED_USER + METERED_PASS (identifiant fixe),
+    //    ou METERED_API_KEY + METERED_APP (ex. « thaayam » pour thaayam.metered.live)
     //  - Cloudflare (1000 Go/mois, demande une carte) : CF_TURN_KEY_ID, CF_TURN_API_TOKEN
     const val = async (nom: string) => Deno.env.get(nom) ?? await lireConfig(nom.toLowerCase());
     const iceServers: { urls: string[]; username?: string; credential?: string }[] = [];
@@ -84,6 +85,15 @@ Deno.serve(async (req) => {
       const h = ehote || 'free.expressturn.com';
       iceServers.push({ urls: [`turn:${h}:3478?transport=udp`, `turn:${h}:3478?transport=tcp`], username: euser, credential: epass });
       etat.push('expressturn');
+    }
+
+    // Metered, identifiant fixe (tableau de bord → Credentials) : METERED_USER, METERED_PASS
+    const [muser, mpass] = [await val('METERED_USER'), await val('METERED_PASS')];
+    if (muser && mpass) {
+      const h = 'global.relay.metered.ca';
+      iceServers.push({ urls: [`turn:${h}:80`, `turn:${h}:80?transport=tcp`, `turn:${h}:443`, `turns:${h}:443?transport=tcp`],
+        username: muser, credential: mpass });
+      etat.push('metered');
     }
 
     const [mcle, mapp] = [await val('METERED_API_KEY'), await val('METERED_APP')];
