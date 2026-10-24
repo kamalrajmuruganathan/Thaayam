@@ -2,3 +2,7 @@ node_modules/
 web/moteur/
 .expo/
 dist/
+
+# Projet Android généré par « expo prebuild » (construit par .github/workflows/android.yml)
+app/android/
+app/ios/

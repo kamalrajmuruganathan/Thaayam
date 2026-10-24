@@ -1,0 +1,101 @@
+# Construit l'appli Android (APK) et la publie dans « Releases » :
+# lien de téléchargement fixe : https://github.com/kamalrajmuruganathan/Thaayam/releases/latest/download/thaayam.apk
+#
+# Signature : la clé de l'appli (android/thaayam.keystore.enc) est chiffrée avec le secret GitHub
+# ANDROID_MOT_DE_PASSE (Settings → Secrets and variables → Actions). Au premier lancement, la clé
+# est créée puis enregistrée chiffrée dans le dépôt. Il faut toujours la même clé : sinon les
+# téléphones refusent la mise à jour (il faudrait désinstaller l'appli).
+name: Appli Android
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MDP: ${{ secrets.ANDROID_MOT_DE_PASSE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier le mot de passe de signature
+        id: mdp
+        run: |
+          if [ ${#MDP} -ge 12 ]; then echo "ok=1" >> "$GITHUB_OUTPUT"
+          else echo "::warning::Pas de secret ANDROID_MOT_DE_PASSE (12 caractères au moins) : l'APK est construit mais ni signé ni publié."; fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Clé de signature (créée une seule fois, gardée chiffrée)
+        if: steps.mdp.outputs.ok == '1'
+        run: |
+          mkdir -p android
+          if [ -f android/thaayam.keystore.enc ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:MDP \
+              -in android/thaayam.keystore.enc -out "$RUNNER_TEMP/thaayam.keystore"
+          else
+            keytool -genkeypair -v -keystore "$RUNNER_TEMP/thaayam.keystore" -alias thaayam \
+              -keyalg RSA -keysize 4096 -validity 36500 \
+              -storepass "$MDP" -keypass "$MDP" -dname "CN=Thaayam, O=Kamal, C=FR"
+            openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:MDP \
+              -in "$RUNNER_TEMP/thaayam.keystore" -out android/thaayam.keystore.enc
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add android/thaayam.keystore.enc
+            git commit -m "Appli Android : clé de signature (chiffrée)"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Installer les dépendances
+        working-directory: app
+        run: npm ci
+
+      - name: Préparer le projet Android
+        working-directory: app
+        env:
+          CI: 1
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Numéro de version
+        working-directory: app/android
+        run: |
+          sed -i -E "s/versionCode [0-9]+/versionCode ${GITHUB_RUN_NUMBER}/" app/build.gradle
+          grep -n "versionCode\|versionName" app/build.gradle
+
+      - name: Construire l'APK
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Signer l'APK
+        if: steps.mdp.outputs.ok == '1'
+        run: |
+          OUTILS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$OUTILS/apksigner" sign --ks "$RUNNER_TEMP/thaayam.keystore" --ks-key-alias thaayam \
+            --ks-pass env:MDP --key-pass env:MDP --out thaayam.apk \
+            app/android/app/build/outputs/apk/release/app-release.apk
+          "$OUTILS/apksigner" verify --print-certs thaayam.apk | head -5
+          ls -lh thaayam.apk
+          rm -f "$RUNNER_TEMP/thaayam.keystore"
+
+      - name: Publier dans Releases
+        if: steps.mdp.outputs.ok == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "android-${GITHUB_RUN_NUMBER}" thaayam.apk \
+            --target "$GITHUB_SHA" --latest \
+            --title "Appli Android n° ${GITHUB_RUN_NUMBER}" \
+            --notes "Télécharge thaayam.apk sur ton téléphone Android et ouvre-le pour l'installer."
