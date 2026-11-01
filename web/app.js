@@ -1014,6 +1014,7 @@ function secouerDes() {
 
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const RYTHME_DES = [80, 90, 100, 115, 130, 150, 175, 205, 240];
 /** Les dés roulent un instant (faces au hasard) avant de montrer le vrai lancer. */
 async function roulerDes(etat) {
   const zone = $('des');
@@ -1021,12 +1022,13 @@ async function roulerDes(etat) {
   if (!l) return;
   const d = etat.regles.des;
   zone.classList.add('roule');
-  for (let k = 0; k < 5; k++) {
+  // Les faces changent de plus en plus lentement, comme de vrais dés qui s'arrêtent (≈ 1,2 s)
+  for (const ms of RYTHME_DES) {
     zone.innerHTML = '';
     if (d.type === 'cauris') l.detail.forEach(() => zone.append(cauri(Math.random() < 0.5)));
     else if (d.type === 'de6') l.detail.forEach(() => zone.append(deCube(1 + Math.floor(Math.random() * 6))));
     else l.detail.forEach(() => zone.append(deLong(d.faces[Math.floor(Math.random() * d.faces.length)])));
-    await pause(70);
+    await pause(ms);
   }
   zone.classList.remove('roule');
 }

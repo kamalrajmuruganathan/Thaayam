@@ -104,7 +104,7 @@ export default function Jeu({ etat, moi, occupe, message, surAction, surQuitter,
                 : l.detail.map((f, i) => (
                   <View key={i} accessibilityLabel={`dé long : ${f}`} style={{ width: 92, height: 30, borderRadius: 6, backgroundColor: D.fond, borderWidth: D.epais, borderColor: D.bord,
                     alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12,
-                    transform: desRoulent ? [{ rotate: `${(i % 2 ? 1 : -1) * 8}deg` }, { translateY: -4 }] : [],
+                    transform: desRoulent ? [{ rotate: `${(Math.random() < 0.5 ? 1 : -1) * (6 + Math.random() * 10)}deg` }, { translateY: -2 - Math.random() * 6 }] : [],
                     shadowColor: D.point, shadowOpacity: lumineux ? 0.5 : 0, shadowRadius: 8 }}>
                     {f > 3 ? <Texte style={{ color: D.point, fontWeight: '800' }}>{f}</Texte>
                       : Array.from({ length: f }, (_, k) => <View key={k} style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: D.point }} />)}

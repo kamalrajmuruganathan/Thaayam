@@ -359,8 +359,8 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
 .controles-revoir > #revoir-lecture { grid-column: 1 / -1; order: 5; }
 
 /* Dés qui roulent, pion qui sautille, éclat d'une capture */
-.des.roule .de-long, .des.roule svg { animation: roule 0.14s linear infinite; }
-@keyframes roule { 0% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-5px) rotate(8deg); } 100% { transform: translateY(0) rotate(-8deg); } }
+.des.roule .de-long, .des.roule svg { animation: roule 0.32s ease-in-out infinite; }
+@keyframes roule { 0% { transform: translateY(0) rotate(-12deg); } 50% { transform: translateY(-8px) rotate(12deg); } 100% { transform: translateY(0) rotate(-12deg); } }
 .pion-bouge { transform-box: fill-box; transform-origin: center; animation: sautille 0.14s ease-out; }
 @keyframes sautille { 0% { transform: scale(1); } 45% { transform: translateY(-10px) scale(1.18); } 100% { transform: scale(1); } }
 .eclat { transform-box: fill-box; transform-origin: center; animation: eclat 0.7s ease-out forwards; }
@@ -468,7 +468,7 @@ a.discret-lien { color: var(--accent); border: 1px solid var(--trait); }
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0, 0, 0, 0.25); }
 .de-cube span { border-radius: 50%; }
 .de-cube span.point { background: #2b1d10; width: 80%; height: 80%; justify-self: center; align-self: center; }
-.des.roule .de-cube { animation: roule 0.14s linear infinite; }
+.des.roule .de-cube { animation: roule 0.32s ease-in-out infinite; }
 :root[data-skin="cristal"] .de-cube { background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02)), #0d1a25;
   border: 1px solid rgba(95, 212, 255, 0.6); box-shadow: 0 0 12px rgba(95, 212, 255, 0.3); }
 :root[data-skin="cristal"] .de-cube span.point { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }

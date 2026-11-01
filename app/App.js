@@ -309,10 +309,11 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
       if (nouveauLancer && !coupJoue) {
         sons.des();
         const d = nouveau.regles.des;
-        for (let k = 0; k < 5; k++) {
+        // Les faces changent de plus en plus lentement, comme de vrais dés qui s'arrêtent (≈ 1,2 s)
+        for (const ms of [80, 90, 100, 115, 130, 150, 175, 205, 240]) {
           setDesRoulent({ joueur: nouveau.dernierLancer.joueur, valeur: nouveau.dernierLancer.valeur, detail: nouveau.dernierLancer.detail.map(() => (d.type === 'cauris'
             ? Math.random() < 0.5 : d.faces[Math.floor(Math.random() * d.faces.length)])) });
-          await attendre(70);
+          await attendre(ms);
         }
         setDesRoulent(null);
       }
