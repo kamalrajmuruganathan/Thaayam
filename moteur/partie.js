@@ -120,7 +120,8 @@ export function revoirPartie(etat) {
     // Règles telles qu'elles étaient pendant la partie (une partie d'avant la « sortie obligatoire » ne l'avait pas)
     // (règles ajoutées plus tard : absentes = désactivées)
     const regles = { ...etat.regles, sortieObligatoire: etat.regles.sortieObligatoire === true,
-      cumulLancers: etat.regles.cumulLancers === true, sortieAvecRejoue: etat.regles.sortieAvecRejoue === true };
+      cumulLancers: etat.regles.cumulLancers === true, sortieAvecRejoue: etat.regles.sortieAvecRejoue === true,
+      passageBloque: etat.regles.passageBloque === true };
     let e = nouvellePartie(regles, etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
     const etats = [e];
     for (const a of etat.histo) {
@@ -145,10 +146,18 @@ export function destination(etat, joueur, pion, valeur, tirage = { valeur, detai
   const p = j.pions[pion];
   if (p === -1) return entreeAutorisee(etat, joueur, tirage) ? 0 : null;
   if (p === g.arrivee || valeur <= 0) return null;
-  let t = p + valeur;
-  if (etat.regles.captureAvantInterieur && j.captures === 0 && p < g.longueurExterieur && t >= g.longueurExterieur) {
-    // Sans capture, le pion continue de tourner sur l'anneau extérieur.
-    t = g.debutBoucle + ((t - g.debutBoucle) % (g.longueurExterieur - g.debutBoucle));
+  // Sans capture, le pion continue de tourner sur l'anneau extérieur.
+  const tourne = etat.regles.captureAvantInterieur && j.captures === 0 && p < g.longueurExterieur;
+  const caseApres = (n) => (tourne && p + n >= g.longueurExterieur
+    ? g.debutBoucle + ((p + n - g.debutBoucle) % (g.longueurExterieur - g.debutBoucle)) : p + n);
+  let t = caseApres(valeur);
+  // Un pion adverse sur une case traversée bloque le passage (on peut seulement s'arrêter sur lui pour le couper).
+  if (etat.regles.passageBloque) {
+    for (let n = 1; n < valeur; n++) {
+      const c = caseApres(n);
+      if (c >= g.arrivee) break;
+      if (adversaireSur(etat, g, joueur, cle(g.chemins[joueur][c]))) return null;
+    }
   }
   if (t > g.arrivee) {
     if (etat.regles.arriveeExacte) return null;
@@ -160,6 +169,12 @@ export function destination(etat, joueur, pion, valeur, tirage = { valeur, detai
     j.pions.some((q, i) => i !== pion && q === t)
   ) return null;
   return t;
+}
+
+/** Un adversaire de `joueur` a-t-il un pion sur la case k (hors centre) ? */
+function adversaireSur(etat, g, joueur, k) {
+  return etat.joueurs.some((adv, a) => a !== joueur && adv.pions.some((q) =>
+    q >= 0 && q < g.arrivee && cle(g.chemins[a][q]) === k));
 }
 
 /**

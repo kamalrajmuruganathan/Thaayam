@@ -1130,6 +1130,7 @@ export function resumeReglesTraduit(r, t) {
   );
   if (r.cumulLancers) lignes.push(t('rCumul'));
   if (r.sortieAvecRejoue) lignes.push(t('rSortieRejoue'));
+  if (r.passageBloque) lignes.push(t('rPassageBloque'));
   lignes.push(r.unPionParCase ? t('rUnPion') : t('rEmpiler'));
   if (!r.unPionParCase && r.groupeRentreEnsemble) lignes.push(t('rGroupe'));
   if (r.captureAvantInterieur) lignes.push(t('rCapture'));

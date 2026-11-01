@@ -8,7 +8,7 @@ const t = (valeur) => ({ valeur, detail: [] });
 const CAURIS5 = normaliserRegles({ forme: 'carre', taille: 5, nbPions: 4, des: { type: 'cauris', nbCauris: 4, valeurZero: 8 }, valeursEntree: [1], valeursRejouer: [1, 4, 8], sensInterieurs: 'alterne',
   cumulLancers: false, sortieAvecRejoue: false, rejouerApresCapture: true }).regles;
 // Règles d'avant le cumul des lancers (toujours utilisées par les parties commencées avant ce changement)
-const ANCIEN = { ...REGLES_PAR_DEFAUT, cumulLancers: false, sortieAvecRejoue: false, rejouerApresCapture: true };
+const ANCIEN = { ...REGLES_PAR_DEFAUT, cumulLancers: false, sortieAvecRejoue: false, rejouerApresCapture: true, passageBloque: false };
 const voisins = ([a, b], [c, d]) => Math.max(Math.abs(a - c), Math.abs(b - d)) === 1;
 
 test('chaque chemin passe une fois par chaque case et finit au centre', () => {
@@ -623,4 +623,34 @@ test('revoir une ancienne partie (avant la sortie obligatoire)', async () => {
   const etats = revoirPartie(e);
   assert.ok(etats, 'la partie peut être revue');
   assert.deepEqual(etats.at(-1).joueurs, e.joueurs);
+});
+
+test('un pion adverse bloque le passage : on ne saute pas par-dessus (même sur une case protégée)', () => {
+  const { cle: k } = { cle };
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'Rouge' }, { nom: 'Vert' }]);
+  const g = geometrie(e.regles, 2);
+  // Rouge a un pion sur la case 3 ; Vert a un pion 2 cases plus loin sur le chemin de Rouge
+  const caseRouge = (n) => k(g.chemins[0][n]);
+  const posVert = g.chemins[1].findIndex((c, i) => i < g.arrivee && k(c) === caseRouge(5));
+  assert.ok(posVert >= 0);
+  e.joueurs[0].pions = [3, -1, -1, -1];
+  e.joueurs[1].pions = [posVert, -1, -1, -1];
+  const avec = (v) => ({ ...e, phase: 'deplacer', tour: 0, reserve: null, lancer: { valeur: v, detail: [v, 0] } });
+  // 3 : il faudrait passer par-dessus le pion vert → impossible
+  assert.equal(coupsPossibles(avec(3)).filter((c) => c.depuis === 3).length, 0);
+  // 2 : on s'arrête dessus et on le coupe
+  const c2 = coupsPossibles(avec(2)).find((c) => c.depuis === 3);
+  assert.ok(c2 && c2.captures.length === 1);
+  // Ses propres pions ne bloquent pas
+  e.joueurs[1].pions = [-1, -1, -1, -1];
+  e.joueurs[0].pions = [3, 5, -1, -1];
+  assert.ok(coupsPossibles(avec(3)).some((c) => c.depuis === 3 && c.vers === 6));
+  // Case protégée : le pion adverse bloque aussi
+  const ref = g.chemins[0].findIndex((c, i) => i > 1 && i < g.arrivee - 3 && g.refuges.has(k(c)));
+  const posV2 = ref > 0 ? g.chemins[1].findIndex((c, i) => i < g.arrivee && k(c) === caseRouge(ref)) : -1;
+  if (ref > 0 && posV2 >= 0) {
+    e.joueurs[0].pions = [ref - 1, -1, -1, -1];
+    e.joueurs[1].pions = [posV2, -1, -1, -1];
+    assert.equal(coupsPossibles(avec(2)).filter((c) => c.depuis === ref - 1).length, 0);
+  }
 });
