@@ -6,9 +6,9 @@ import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, tirerDes } fr
 
 const t = (valeur) => ({ valeur, detail: [] });
 const CAURIS5 = normaliserRegles({ forme: 'carre', taille: 5, nbPions: 4, des: { type: 'cauris', nbCauris: 4, valeurZero: 8 }, valeursEntree: [1], valeursRejouer: [1, 4, 8], sensInterieurs: 'alterne',
-  cumulLancers: false, sortieAvecRejoue: false, rejouerApresCapture: true }).regles;
+  cumulLancers: false, sortieAvecRejoue: false, rejouerApresCapture: true, bloqueSansCapture: false }).regles;
 // Règles d'avant le cumul des lancers (toujours utilisées par les parties commencées avant ce changement)
-const ANCIEN = { ...REGLES_PAR_DEFAUT, cumulLancers: false, sortieAvecRejoue: false, rejouerApresCapture: true, passageBloque: false };
+const ANCIEN = { ...REGLES_PAR_DEFAUT, cumulLancers: false, sortieAvecRejoue: false, rejouerApresCapture: true, passageBloque: false, bloqueSansCapture: false };
 const voisins = ([a, b], [c, d]) => Math.max(Math.abs(a - c), Math.abs(b - d)) === 1;
 
 test('chaque chemin passe une fois par chaque case et finit au centre', () => {
@@ -653,4 +653,19 @@ test('un pion adverse bloque le passage : on ne saute pas par-dessus (même sur 
     e.joueurs[1].pions = [posV2, -1, -1, -1];
     assert.equal(coupsPossibles(avec(2)).filter((c) => c.depuis === ref - 1).length, 0);
   }
+});
+
+test("sans capture, après un tour, le pion attend au bout de son bras (valeur exacte)", () => {
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'Rouge' }, { nom: 'Vert' }]);
+  const g = geometrie(e.regles, 2);
+  const bout = g.longueurExterieur; // case du bout du bras, juste avant les arcs
+  e.joueurs[1].pions = [-1, -1, -1, -1];
+  const avec = (v) => ({ ...e, phase: 'deplacer', tour: 0, reserve: null, lancer: { valeur: v, detail: [v, 0] } });
+  e.joueurs[0].pions = [bout - 2, -1, -1, -1];
+  assert.deepEqual(coupsPossibles(avec(2)).filter((c) => c.depuis === bout - 2).map((c) => c.vers), [bout]);
+  assert.equal(coupsPossibles(avec(3)).filter((c) => c.depuis === bout - 2).length, 0); // dépasse : ne bouge pas
+  e.joueurs[0].pions = [bout, -1, -1, -1];
+  assert.equal(coupsPossibles(avec(2)).filter((c) => c.depuis === bout).length, 0); // bloqué tant qu'il n'a pas coupé
+  e.joueurs[0].captures = 1;
+  assert.deepEqual(coupsPossibles(avec(2)).filter((c) => c.depuis === bout).map((c) => c.vers), [bout + 2]); // après une capture : il monte
 });

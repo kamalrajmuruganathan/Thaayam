@@ -121,7 +121,7 @@ export function revoirPartie(etat) {
     // (règles ajoutées plus tard : absentes = désactivées)
     const regles = { ...etat.regles, sortieObligatoire: etat.regles.sortieObligatoire === true,
       cumulLancers: etat.regles.cumulLancers === true, sortieAvecRejoue: etat.regles.sortieAvecRejoue === true,
-      passageBloque: etat.regles.passageBloque === true };
+      passageBloque: etat.regles.passageBloque === true, bloqueSansCapture: etat.regles.bloqueSansCapture === true };
     let e = nouvellePartie(regles, etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false })));
     const etats = [e];
     for (const a of etat.histo) {
@@ -146,8 +146,13 @@ export function destination(etat, joueur, pion, valeur, tirage = { valeur, detai
   const p = j.pions[pion];
   if (p === -1) return entreeAutorisee(etat, joueur, tirage) ? 0 : null;
   if (p === g.arrivee || valeur <= 0) return null;
-  // Sans capture, le pion continue de tourner sur l'anneau extérieur.
-  const tourne = etat.regles.captureAvantInterieur && j.captures === 0 && p < g.longueurExterieur;
+  // Sans capture, le pion n'entre pas à l'intérieur : il attend au bout de son bras (valeur exacte),
+  // ou, avec les anciennes règles, il refait un tour de l'anneau extérieur.
+  const sansCapture = etat.regles.captureAvantInterieur && j.captures === 0;
+  if (sansCapture && etat.regles.bloqueSansCapture) {
+    if (p >= g.longueurExterieur || p + valeur > g.longueurExterieur) return null;
+  }
+  const tourne = sansCapture && !etat.regles.bloqueSansCapture && p < g.longueurExterieur;
   const caseApres = (n) => (tourne && p + n >= g.longueurExterieur
     ? g.debutBoucle + ((p + n - g.debutBoucle) % (g.longueurExterieur - g.debutBoucle)) : p + n);
   let t = caseApres(valeur);

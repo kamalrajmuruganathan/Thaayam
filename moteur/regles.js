@@ -37,6 +37,7 @@ export const REGLES_PAR_DEFAUT = {
   cumulLancers: true, // on relance tant qu'on fait 1, 5, 6 ou 2 + 2, puis on joue toutes les valeurs, dans l'ordre voulu
   sortieAvecRejoue: true, // dès qu'un pion est sorti, 5, 6 et 2 + 2 font aussi sortir un pion (le premier : seulement 1)
   passageBloque: true, // un pion adverse sur le chemin bloque le passage (on peut s'arrêter dessus pour le couper, pas sauter par-dessus)
+  bloqueSansCapture: true, // sans capture, le pion s'arrête au bout de son bras après un tour (valeur exacte) au lieu de refaire un tour
   groupeRentreEnsemble: true, // un groupe mangé d'un coup peut rentrer d'un coup avec une valeur qui fait rejouer
   captureAvantInterieur: true, // il faut avoir « coupé » un pion pour entrer à l'intérieur
   arriveeExacte: true,
@@ -60,6 +61,7 @@ export const REGLES_FIXES = {
   cumulLancers: true, // relances cumulées, puis on joue toutes les valeurs
   sortieAvecRejoue: true, // 5, 6, 2 + 2 font aussi sortir un pion quand un pion est déjà dehors
   passageBloque: true, // on ne saute pas par-dessus un pion adverse (même sur une case protégée)
+  bloqueSansCapture: true, // sans capture, après un tour, le pion attend au bout de son bras
   captureAvantInterieur: true, // il faut avoir capturé un pion pour monter au centre
   arriveeExacte: true, // il faut tomber pile sur le centre
   sortieObligatoire: true, // avec un 1, tant qu'il reste des pions au centre, on doit en faire sortir un
@@ -179,6 +181,7 @@ export function normaliserRegles(source) {
     cumulLancers: s.cumulLancers !== false,
     sortieAvecRejoue: s.sortieAvecRejoue !== false,
     passageBloque: s.passageBloque !== false,
+    bloqueSansCapture: s.bloqueSansCapture !== false,
     groupeRentreEnsemble: s.groupeRentreEnsemble !== false,
     captureAvantInterieur: s.captureAvantInterieur !== false,
     arriveeExacte: s.arriveeExacte !== false,
@@ -246,6 +249,7 @@ export function resumeRegles(r) {
   );
   if (r.cumulLancers) lignes.push('On relance avec 1, 5, 6 et 2 + 2, puis on joue toutes les valeurs, dans l’ordre voulu ; Kaapal fait tout perdre');
   if (r.sortieAvecRejoue) lignes.push('Le premier pion sort avec 1 ; ensuite 1, 5, 6 et 2 + 2 font sortir un pion (obligatoire tant qu’il en reste au centre)');
+  if (r.captureAvantInterieur && r.bloqueSansCapture) lignes.push('Sans avoir coupé, le pion ne refait pas de tour : il attend au bout de son bras (valeur exacte)');
   if (r.passageBloque) lignes.push('On ne saute pas par-dessus un pion adverse : il bloque le passage (on peut s’arrêter dessus pour le couper)');
   lignes.push(r.unPionParCase
     ? 'Un seul pion par case, sauf sur les refuges'

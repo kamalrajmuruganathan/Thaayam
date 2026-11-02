@@ -33,6 +33,13 @@ export const PLUS = {
     '1, 5, 6 සහ 2 + 2 වැටුණු විට නැවත දමා, පසුව සියලු අගයන් කැමති පිළිවෙළට ක්‍රීඩා කරන්න; Kaapal වැටුණොත් සියල්ල නැති වේ',
   ],
   reprendrePartie: ['▶ Reprendre ma partie', '▶ Resume my game', '▶ என் ஆட்டத்தைத் தொடர்', '▶ अपना खेल जारी रखें', '▶ මගේ ක්‍රීඩාව නැවත අරඹන්න'],
+  rBloqueSansCapture: [
+    'Sans avoir coupé, le pion ne refait pas de tour : il attend au bout de son bras (valeur exacte)',
+    'Without a capture, a piece does not go round again: it waits at the end of its arm (exact value)',
+    'வெட்டாமல், காய் மீண்டும் சுற்றாது: தன் கையின் முனையில் காத்திருக்கும் (சரியான எண்)',
+    'बिना काटे गोटी दोबारा चक्कर नहीं लगाती: वह अपनी भुजा के छोर पर रुकती है (सटीक अंक)',
+    'කපා නැතිව, ඉත්තා නැවත වටයක් නොයයි: තම බාහුවේ කෙළවරේ රැඳී සිටී (නිවැරදි අගය)',
+  ],
   rPassageBloque: [
     'On ne saute pas par-dessus un pion adverse : il bloque le passage (on peut s’arrêter dessus pour le couper)',
     'You cannot jump over an opponent’s piece: it blocks the way (you can stop on it to capture it)',
@@ -142,11 +149,11 @@ export const PLUS = {
     'ඔබ {v} දැමුවා: ඔබගේ ඉත්තෙකුට මැදට පැමිණිය හැක. එය ස්පර්ශ කරන්න!',
   ],
   gPasCapture: [
-    'Attention : tant que tu n’as mangé aucun pion adverse, tes pions ne peuvent pas monter au centre. Ils refont un tour.',
-    'Careful: until you have captured an opponent’s piece, your pieces cannot climb to the centre. They go round again.',
-    'கவனம்: எதிராளியின் காயை ஒன்றாவது வெட்டும் வரை உங்கள் காய்கள் நடுவுக்கு ஏற முடியாது. அவை மீண்டும் ஒரு சுற்று சுற்றும்.',
-    'ध्यान दें: जब तक आप विरोधी की कोई गोटी नहीं काटते, आपकी गोटियाँ केंद्र की ओर नहीं चढ़ सकतीं। वे फिर से चक्कर लगाती हैं।',
-    'සැලකිලිමත් වන්න: ප්‍රතිවාදියාගේ ඉත්තෙකු කපන තුරු ඔබගේ ඉත්තන්ට මැදට නැඟිය නොහැක. ඔවුන් නැවත වටයක් යයි.',
+    'Attention : tant que tu n’as mangé aucun pion adverse, tes pions ne peuvent pas monter au centre. Ils attendent au bout de leur bras.',
+    'Careful: until you have captured an opponent’s piece, your pieces cannot climb to the centre. They wait at the end of their arm.',
+    'கவனம்: எதிராளியின் காயை ஒன்றாவது வெட்டும் வரை உங்கள் காய்கள் நடுவுக்கு ஏற முடியாது. அவை தம் கையின் முனையில் காத்திருக்கும்.',
+    'ध्यान दें: जब तक आप विरोधी की कोई गोटी नहीं काटते, आपकी गोटियाँ केंद्र की ओर नहीं चढ़ सकतीं। वे अपनी भुजा के छोर पर रुकती हैं।',
+    'සැලකිලිමත් වන්න: ප්‍රතිවාදියාගේ ඉත්තෙකු කපන තුරු ඔබගේ ඉත්තන්ට මැදට නැඟිය නොහැක. ඔවුන් තම බාහුවේ කෙළවරේ රැඳී සිටී.',
   ],
   gAttends: [
     'L’ordinateur joue. Regarde bien ce qu’il fait.',

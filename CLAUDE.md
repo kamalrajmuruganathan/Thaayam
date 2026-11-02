@@ -43,7 +43,7 @@
   premier pion sorti avec 1 seulement ; ensuite 1, 5, 6, 2 + 2 font sortir un pion sur la première case (`sortieAvecRejoue`,
   obligatoire tant qu'il reste des pions au centre, `sortieObligatoire`) ; lancers cumulés (`cumulLancers`) : on relance avec
   1, 5, 6, 2 + 2 en gardant les valeurs (`etat.reserve`), puis on les joue dans l'ordre voulu (`jouer(etat, pion, groupe, ival)`,
-  historique « p2:1 ») ; Kaapal pendant les relances = tout est perdu ; pas de relance après capture ; un pion adverse bloque le passage, même sur une case protégée (`passageBloque` : on s'arrête dessus pour le couper, on ne saute pas par-dessus ; ses propres pions ne bloquent pas) ; capture obligatoire, empilement (groupe mangé en
+  historique « p2:1 ») ; Kaapal pendant les relances = tout est perdu ; pas de relance après capture ; un pion adverse bloque le passage, même sur une case protégée (`passageBloque` : on s'arrête dessus pour le couper, on ne saute pas par-dessus ; ses propres pions ne bloquent pas) ; sans capture, après un tour, le pion s'arrête au bout de son bras (indice `longueurExterieur`, valeur exacte) et y attend (`bloqueSansCapture` ; anciennes parties : il refaisait un tour) ; capture obligatoire, empilement (groupe mangé en
   entier, groupe mangé qui rentre ensemble avec une valeur de relance). Page `web/regles.html` + écran `ReglesJeu`.
 
 ## Règles absolues
