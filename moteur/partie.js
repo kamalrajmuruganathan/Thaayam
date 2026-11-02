@@ -249,6 +249,19 @@ function coupsPourTirage(etat, tirage) {
       coups.push({ pion: gr[0], depuis: -1, vers: 0, captures: victimes(etat, etat.tour, 0), groupe: [...gr] });
     });
   }
+  // Sans capture, les pions qui attendent au bout du bras repartent pour un nouveau tour si aucun autre coup n'est possible.
+  if (!coups.length && r.captureAvantInterieur && r.bloqueSansCapture && j.captures === 0) {
+    const g = geometrie(r, etat.joueurs.length);
+    j.pions.forEach((p, i) => {
+      if (p !== g.longueurExterieur) return;
+      const vers = g.debutBoucle + tirage.valeur;
+      if (tirage.valeur <= 0 || vers >= g.longueurExterieur) return;
+      if (r.passageBloque) {
+        for (let c = g.debutBoucle + 1; c < vers; c++) if (adversaireSur(etat, g, etat.tour, cle(g.chemins[etat.tour][c]))) return;
+      }
+      coups.push({ pion: i, depuis: p, vers, captures: victimes(etat, etat.tour, vers), nouveauTour: true });
+    });
+  }
   // Sortie obligatoire : si ce lancer peut faire sortir un pion du centre, on ne peut pas avancer un autre pion à la place.
   // (Sans règle « sortieAvecRejoue », rentrer un groupe mangé avec 5, 6 ou 2 + 2 reste un choix.)
   if (r.sortieObligatoire && coups.some((c) => c.depuis === -1 && !c.groupe)) return coups.filter((c) => c.depuis === -1);
@@ -420,7 +433,8 @@ export function zoneCase(g, S) {
 export function etapesCoup(g, depuis, vers) {
   if (depuis < 0 || vers === depuis) return [vers];
   const res = [];
-  let p = depuis;
+  // Nouveau tour depuis le bout du bras (même case que debutBoucle)
+  let p = vers < depuis && depuis === g.longueurExterieur ? g.debutBoucle : depuis;
   for (let garde = 0; p !== vers && garde < 200; garde++) {
     p += 1;
     if (vers < depuis && p >= g.longueurExterieur) p = g.debutBoucle;

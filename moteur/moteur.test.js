@@ -664,8 +664,25 @@ test("sans capture, après un tour, le pion attend au bout de son bras (valeur e
   e.joueurs[0].pions = [bout - 2, -1, -1, -1];
   assert.deepEqual(coupsPossibles(avec(2)).filter((c) => c.depuis === bout - 2).map((c) => c.vers), [bout]);
   assert.equal(coupsPossibles(avec(3)).filter((c) => c.depuis === bout - 2).length, 0); // dépasse : ne bouge pas
-  e.joueurs[0].pions = [bout, -1, -1, -1];
+  e.joueurs[0].pions = [bout, 10, -1, -1];
   assert.equal(coupsPossibles(avec(2)).filter((c) => c.depuis === bout).length, 0); // bloqué tant qu'il n'a pas coupé
   e.joueurs[0].captures = 1;
   assert.deepEqual(coupsPossibles(avec(2)).filter((c) => c.depuis === bout).map((c) => c.vers), [bout + 2]); // après une capture : il monte
+});
+
+test('sans capture, si aucun autre coup n’est possible, un pion du bout du bras refait un tour', () => {
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'Rouge' }, { nom: 'Vert' }]);
+  const g = geometrie(e.regles, 2);
+  const bout = g.longueurExterieur;
+  e.joueurs[1].pions = [-1, -1, -1, -1];
+  const avec = (v) => ({ ...e, phase: 'deplacer', tour: 0, reserve: null, lancer: { valeur: v, detail: [v, 0] } });
+  // Les 4 pions attendent au bout du bras : avec 3, l'un d'eux repart
+  e.joueurs[0].pions = [bout, bout, bout, bout];
+  const cs = coupsPossibles(avec(3));
+  assert.ok(cs.length > 0 && cs.every((c) => c.vers === g.debutBoucle + 3));
+  const apres = jouer(avec(3), cs[0].pion);
+  assert.equal(apres.joueurs[0].pions[cs[0].pion], g.debutBoucle + 3);
+  // Un autre pion peut jouer normalement : pas de nouveau tour
+  e.joueurs[0].pions = [bout, 10, bout, bout];
+  assert.deepEqual(coupsPossibles(avec(3)).map((c) => c.depuis), [10]);
 });

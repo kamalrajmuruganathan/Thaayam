@@ -34,11 +34,11 @@ export const PLUS = {
   ],
   reprendrePartie: ['▶ Reprendre ma partie', '▶ Resume my game', '▶ என் ஆட்டத்தைத் தொடர்', '▶ अपना खेल जारी रखें', '▶ මගේ ක්‍රීඩාව නැවත අරඹන්න'],
   rBloqueSansCapture: [
-    'Sans avoir coupé, le pion ne refait pas de tour : il attend au bout de son bras (valeur exacte)',
-    'Without a capture, a piece does not go round again: it waits at the end of its arm (exact value)',
-    'வெட்டாமல், காய் மீண்டும் சுற்றாது: தன் கையின் முனையில் காத்திருக்கும் (சரியான எண்)',
-    'बिना काटे गोटी दोबारा चक्कर नहीं लगाती: वह अपनी भुजा के छोर पर रुकती है (सटीक अंक)',
-    'කපා නැතිව, ඉත්තා නැවත වටයක් නොයයි: තම බාහුවේ කෙළවරේ රැඳී සිටී (නිවැරදි අගය)',
+    'Sans avoir coupé, le pion attend au bout de son bras (valeur exacte) ; il ne refait un tour que si aucun autre coup n’est possible',
+    'Without a capture, a piece waits at the end of its arm (exact value); it goes round again only if no other move is possible',
+    'வெட்டாமல், காய் தன் கையின் முனையில் காத்திருக்கும் (சரியான எண்); வேறு நகர்வு இல்லாதபோது மட்டுமே மீண்டும் சுற்றும்',
+    'बिना काटे गोटी अपनी भुजा के छोर पर रुकती है (सटीक अंक); कोई और चाल न हो तभी वह फिर से चक्कर लगाती है',
+    'කපා නැතිව, ඉත්තා තම බාහුවේ කෙළවරේ රැඳී සිටී (නිවැරදි අගය); වෙනත් චලනයක් නොමැති විට පමණක් නැවත වටයක් යයි',
   ],
   rPassageBloque: [
     'On ne saute pas par-dessus un pion adverse : il bloque le passage (on peut s’arrêter dessus pour le couper)',

@@ -249,7 +249,7 @@ export function resumeRegles(r) {
   );
   if (r.cumulLancers) lignes.push('On relance avec 1, 5, 6 et 2 + 2, puis on joue toutes les valeurs, dans l’ordre voulu ; Kaapal fait tout perdre');
   if (r.sortieAvecRejoue) lignes.push('Le premier pion sort avec 1 ; ensuite 1, 5, 6 et 2 + 2 font sortir un pion (obligatoire tant qu’il en reste au centre)');
-  if (r.captureAvantInterieur && r.bloqueSansCapture) lignes.push('Sans avoir coupé, le pion ne refait pas de tour : il attend au bout de son bras (valeur exacte)');
+  if (r.captureAvantInterieur && r.bloqueSansCapture) lignes.push('Sans avoir coupé, le pion attend au bout de son bras (valeur exacte) ; il ne refait un tour que si aucun autre coup n’est possible');
   if (r.passageBloque) lignes.push('On ne saute pas par-dessus un pion adverse : il bloque le passage (on peut s’arrêter dessus pour le couper)');
   lignes.push(r.unPionParCase
     ? 'Un seul pion par case, sauf sur les refuges'
