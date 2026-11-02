@@ -544,3 +544,13 @@ button.raccrocher { background: #c62828 !important; color: #fff !important; bord
 .reserve .valeur-reserve.choisie { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .reserve .valeur-reserve:disabled { opacity: 0.4; }
 .reserve span.valeur-reserve { display: inline-flex; align-items: center; justify-content: center; }
+
+/* Analyse de la partie */
+.analyse-coup { margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; font-weight: 700; text-align: center; border: 2px solid var(--trait, #8884); }
+.analyse-coup.anMeilleur { border-color: #2ecc71; color: #2ecc71; }
+.analyse-coup.anBon { border-color: #7fdcff; }
+.analyse-coup.anImprecision { border-color: #f1c40f; color: #f1c40f; }
+.analyse-coup.anErreur { border-color: #e67e22; color: #e67e22; }
+.analyse-coup.anGaffe { border-color: #e74c3c; color: #e74c3c; }
+.resume-analyse { margin: 8px 0 0; padding-left: 18px; font-size: 0.95rem; }
+.resume-analyse li { margin: 4px 0; }

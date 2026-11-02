@@ -5,6 +5,7 @@ import {
 import { nouvellePartie, lancer, jouer, coupsPossibles, geometrie, pionsParCase, pionsAuCentre, zoneCase, etapesCoup, arcsCroix, revoirPartie, angleVue } from './moteur/partie.js';
 import { cle } from './moteur/plateau.js';
 import { choisirCoup } from './moteur/ia.js';
+import { analyserCoup, resumerAnalyse } from './moteur/analyse.js';
 import { sons, sonActif, basculerSon, vibrationsActives, basculerVibrations, vibrer } from './sons.js';
 import { creerAppel, appelsPossibles } from './appel.js';
 import { nouvellePartieGuidee, lancerGuide, conseilGuide } from './moteur/guide.js';
@@ -1683,7 +1684,11 @@ function ouvrirRevoir(etatFinal, retour) {
     return;
   }
   arreterLecture();
-  revoir = { etats, i: 0, retour, minuteur: null };
+  revoir = { etats, i: 0, retour, minuteur: null, analyses: null };
+  $('revoir-analyser').hidden = false;
+  $('revoir-analyser').disabled = false;
+  $('revoir-analyser').textContent = t('anAnalyser');
+  $('revoir-resume').hidden = true;
   $('revoir-curseur').max = etats.length - 1;
   aller('revoir');
   dessinerRevoir();
@@ -1705,7 +1710,114 @@ function dessinerRevoir() {
   $('revoir-debut').disabled = $('revoir-prec').disabled = revoir.i === 0;
   $('revoir-suiv').disabled = $('revoir-fin').disabled = fin;
   $('revoir-lecture').textContent = revoir.minuteur ? t('rPause') : t('rLecture');
+  dessinerAnalyse(e, g);
 }
+
+// ---------------------------------------------------------------- analyse de la partie (avec voix)
+const VOIX_LANGUES = { fr: 'fr-FR', en: 'en-GB', ta: 'ta-IN', hi: 'hi-IN', si: 'si-LK' };
+let voixActive = (() => { try { return localStorage.getItem('thaayam:voix') !== 'non'; } catch { return true; } })();
+function parler(texte) {
+  if (!voixActive || !texte || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texte.replace(/[🧠⏭!]/gu, ''));
+    u.lang = VOIX_LANGUES[t.langue] || 'fr-FR';
+    const voix = speechSynthesis.getVoices().find((v) => v.lang && v.lang.toLowerCase().startsWith(u.lang.slice(0, 2)));
+    if (voix) u.voice = voix;
+    u.rate = 0.95;
+    speechSynthesis.speak(u);
+  } catch { /* pas de voix sur cet appareil */ }
+}
+function majBoutonVoix() {
+  $('revoir-voix').textContent = voixActive ? t('anVoixOui') : t('anVoixNon');
+  $('revoir-voix').hidden = !revoir || !revoir.analyses || !('speechSynthesis' in window);
+}
+$('revoir-voix').addEventListener('click', () => {
+  voixActive = !voixActive;
+  try { localStorage.setItem('thaayam:voix', voixActive ? 'oui' : 'non'); } catch { /* ignoré */ }
+  if (!voixActive && 'speechSynthesis' in window) speechSynthesis.cancel();
+  majBoutonVoix();
+});
+
+/** Texte du commentaire d'un coup analysé. */
+function texteAnalyse(a, e) {
+  const nom = nomAffiche(e.joueurs[a.joueur].nom);
+  let txt = t(a.cle, { nom });
+  if (a.motif) txt += ` ${t(a.motif, { v: a.valeur })}`;
+  return txt;
+}
+
+function dessinerAnalyse(e, g) {
+  const zone = $('revoir-analyse');
+  const a = revoir.analyses && revoir.analyses[revoir.i];
+  majBoutonVoix();
+  $('revoir-erreur').hidden = !revoir.analyses;
+  zone.hidden = !a;
+  if (!a) return;
+  zone.textContent = texteAnalyse(a, e);
+  zone.className = `analyse-coup ${a.cle}`;
+  // Le meilleur coup en vert sur le plateau (pion de départ et case d'arrivée)
+  if (a.motif && a.meilleur) {
+    const S = 100;
+    const z = zoneCase(g, S);
+    const couche = $('plateau-revoir')._mobile || $('plateau-revoir');
+    const chemin = g.chemins[a.joueur];
+    const cercle = (pos, plein) => {
+      if (pos < 0) return;
+      const c = z(cle(chemin[pos]));
+      svg('circle', { cx: c.x + c.w / 2, cy: c.y + c.w / 2, r: c.w / 2 - 8, fill: plein ? 'rgba(46,204,113,0.18)' : 'none',
+        stroke: '#2ecc71', 'stroke-width': 7, 'stroke-dasharray': plein ? '' : '10 8' }, couche);
+    };
+    cercle(a.meilleur.depuis, true);
+    cercle(a.meilleur.vers, false);
+  }
+  if (revoir.parle !== revoir.i) { revoir.parle = revoir.i; parler(zone.textContent); }
+}
+
+$('revoir-analyser').addEventListener('click', async () => {
+  if (!revoir || revoir.analyses || revoir.enAnalyse) return;
+  arreterLecture();
+  const r = revoir;
+  r.enAnalyse = true;
+  const b = $('revoir-analyser');
+  b.disabled = true;
+  const humains = new Set(r.etats[0].joueurs.map((j, i) => (j.ordi ? -1 : i)).filter((i) => i >= 0));
+  const analyses = new Array(r.etats.length).fill(null);
+  for (let i = 1; i < r.etats.length; i++) {
+    const avant = r.etats[i - 1];
+    if (humains.has(avant.tour)) {
+      try { analyses[i] = analyserCoup(avant, r.etats[i]); } catch { analyses[i] = null; }
+    }
+    if (i % 4 === 0) {
+      b.textContent = t('anEnCours', { p: Math.round((100 * i) / r.etats.length) });
+      await pause(0); // laisse l'écran respirer
+      if (revoir !== r) return; // l'écran a été quitté
+    }
+  }
+  r.analyses = analyses;
+  r.enAnalyse = false;
+  b.hidden = true;
+  b.disabled = false;
+  b.textContent = t('anAnalyser');
+  const e0 = r.etats[0];
+  const lignes = resumerAnalyse(analyses, e0.joueurs.length).filter((x) => x.coups > 0)
+    .map((x) => t('anResume', { nom: nomAffiche(e0.joueurs[x.joueur].nom), p: x.precision, m: x.meilleurs, i: x.imprecisions, e: x.erreurs, g: x.gaffes }));
+  $('revoir-resume').replaceChildren(...lignes.map((l) => el('li', {}, l)));
+  $('revoir-resume').hidden = !lignes.length;
+  parler(lignes.join(' '));
+  r.parle = r.i;
+  dessinerRevoir();
+});
+
+$('revoir-erreur').addEventListener('click', () => {
+  if (!revoir || !revoir.analyses) return;
+  arreterLecture();
+  const mauvais = (a) => a && (a.cle === 'anErreur' || a.cle === 'anGaffe' || a.cle === 'anImprecision');
+  let j = revoir.analyses.findIndex((a, k) => k > revoir.i && mauvais(a));
+  if (j < 0) j = revoir.analyses.findIndex(mauvais);
+  if (j < 0) { $('revoir-analyse').hidden = false; $('revoir-analyse').textContent = t('anAucuneErreur'); parler(t('anAucuneErreur')); return; }
+  allerEtape(j);
+});
 
 function allerEtape(i) {
   if (!revoir) return;
@@ -1731,6 +1843,7 @@ $('revoir-lecture').addEventListener('click', () => {
 });
 $('btn-revoir-retour').addEventListener('click', () => {
   arreterLecture();
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
   const retour = revoir ? revoir.retour : 'accueil';
   revoir = null;
   if (retour === 'jeu' && session && session.etat) { aller('jeu'); dessinerJeu(); }

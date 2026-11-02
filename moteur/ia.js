@@ -146,6 +146,34 @@ function esperance(etat, moi, distribution, prof) {
 }
 
 /**
+ * Note de chaque coup possible (vue du joueur qui joue), comme le niveau « fort » :
+ * [{ coup, note }] (plus la note est haute, meilleur est le coup). Sert à l'analyse des parties.
+ */
+export function noterCoups(etat) {
+  const distribution = distributionLancers(etat.regles);
+  return coupsPossibles(etat).map((coup) => ({
+    coup, note: esperance(jouer(etat, coup.pion, !!coup.groupe, coup.ival), etat.tour, distribution, W.prof),
+  }));
+}
+
+/** Pions de `joueur` qu'un adversaire peut manger au prochain lancer (hors cases protégées) : probabilité max. */
+export function dangerMax(etat, joueur) {
+  const g = geometrie(etat.regles, etat.joueurs.length);
+  const distribution = distributionLancers(etat.regles);
+  let max = 0;
+  etat.joueurs.forEach((_, adv) => {
+    if (adv === joueur) return;
+    const r = risques(etat, adv, distribution);
+    etat.joueurs[joueur].pions.forEach((pos) => {
+      if (pos < g.debutBoucle || pos >= g.longueurExterieur) return;
+      const kc = cle(g.chemins[joueur][pos]);
+      if (!g.refuges.has(kc)) max = Math.max(max, r.get(kc) || 0);
+    });
+  });
+  return max;
+}
+
+/**
  * niveau : 'facile' (joue au hasard), 'normal' ou 'fort'. Par défaut, le niveau
  * enregistré pour le joueur (joueur.ordi = 'facile' | 'normal' | true).
  */

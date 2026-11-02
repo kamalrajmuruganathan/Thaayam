@@ -686,3 +686,25 @@ test('sans capture, si aucun autre coup n’est possible, un pion du bout du bra
   e.joueurs[0].pions = [bout, 10, bout, bout];
   assert.deepEqual(coupsPossibles(avec(3)).map((c) => c.depuis), [10]);
 });
+
+test('analyse de partie : chaque coup humain est jugé, le meilleur coup a une perte nulle', async () => {
+  const { analyserCoup, resumerAnalyse } = await import('./analyse.js');
+  const { choisirCoup } = await import('./ia.js');
+  const { revoirPartie } = await import('./partie.js');
+  let graine = 21;
+  const rng = () => ((graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648);
+  let e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'Moi' }, { nom: 'Ordi', ordi: 'normal' }]);
+  for (let i = 0; i < 300 && e.phase !== 'fini'; i++) {
+    if (e.phase === 'lancer') e = lancer(e, rng);
+    else { const c = choisirCoup(e, rng, e.tour === 0 ? 'fort' : 'facile'); e = jouer(e, c.pion, !!c.groupe, c.ival); }
+  }
+  const etats = revoirPartie(e);
+  const analyses = etats.map((x, i) => (i && etats[i - 1].tour === 0 ? analyserCoup(etats[i - 1], x) : null));
+  const jugés = analyses.filter(Boolean);
+  assert.ok(jugés.length > 5);
+  // Le joueur 0 joue comme le niveau « fort » : ses coups sont tous les meilleurs (ou forcés)
+  assert.ok(jugés.every((a) => a.cle === 'anMeilleur' || a.cle === 'anForce'), jugés.map((a) => a.cle).join(','));
+  const r = resumerAnalyse(analyses, 2);
+  assert.equal(r[0].precision, 100);
+  assert.equal(r[1].coups, 0);
+});

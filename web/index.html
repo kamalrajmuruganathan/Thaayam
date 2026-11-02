@@ -215,6 +215,7 @@
       <div class="zone-des">
         <div id="des-revoir" class="des"></div>
         <p id="revoir-ligne" class="consigne"></p>
+        <p id="revoir-analyse" class="analyse-coup" hidden></p>
         <input id="revoir-curseur" type="range" min="0" max="0" value="0" aria-label="Étape" />
         <p id="revoir-etape" class="attenue petit centre"></p>
         <div class="ligne controles-revoir">
@@ -224,6 +225,12 @@
           <button id="revoir-suiv" data-i18n="rSuiv">▶</button>
           <button id="revoir-fin" data-i18n="rFin">⏭</button>
         </div>
+        <div class="ligne controles-revoir">
+          <button id="revoir-analyser" class="principal" data-i18n="anAnalyser">🧠 Analyser la partie</button>
+          <button id="revoir-voix" hidden></button>
+          <button id="revoir-erreur" hidden data-i18n="anErreurSuivante">⏭ Erreur suivante</button>
+        </div>
+        <ul id="revoir-resume" class="resume-analyse" hidden></ul>
       </div>
     </section>
   </main>
