@@ -32,6 +32,7 @@ export const PLUS = {
     '1, 5, 6 और 2 + 2 पर फिर फेंकें, फिर सारे अंक मनचाहे क्रम में चलें; Kaapal आने पर सारे रखे गए अंक चले जाते हैं',
     '1, 5, 6 සහ 2 + 2 වැටුණු විට නැවත දමා, පසුව සියලු අගයන් කැමති පිළිවෙළට ක්‍රීඩා කරන්න; Kaapal වැටුණොත් සියල්ල නැති වේ',
   ],
+  reprendrePartie: ['▶ Reprendre ma partie', '▶ Resume my game', '▶ என் ஆட்டத்தைத் தொடர்', '▶ अपना खेल जारी रखें', '▶ මගේ ක්‍රීඩාව නැවත අරඹන්න'],
   rPassageBloque: [
     'On ne saute pas par-dessus un pion adverse : il bloque le passage (on peut s’arrêter dessus pour le couper)',
     'You cannot jump over an opponent’s piece: it blocks the way (you can stop on it to capture it)',

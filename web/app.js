@@ -144,6 +144,7 @@ function afficherAccueil() {
   if (params.get('code')) $('code-rejoindre').value = params.get('code').toUpperCase();
   $('hors-ligne').hidden = navigator.onLine !== false;
   afficherMesParties();
+  $('btn-reprendre').hidden = !partieLocaleGardee();
   afficherStats();
   afficherReplays();
   afficherSocial();
@@ -468,6 +469,25 @@ $('btn-rejoindre').addEventListener('click', () => {
   if (!pseudo()) return message('message-accueil', t('errPseudo'), true);
   if (code.length !== 5) return message('message-accueil', t('errCode'), true);
   rejoindrePartie(code);
+});
+// Partie sur cet appareil gardée en mémoire : on peut la reprendre après être allé voir les règles (ou après avoir fermé la page)
+function partieLocaleGardee() {
+  try {
+    const g = JSON.parse(memoire.lire('thaayam:partieLocale') || 'null');
+    return g && g.etat && g.etat.phase !== 'fini' && Array.isArray(g.etat.joueurs) ? g : null;
+  } catch { return null; }
+}
+function garderPartieLocale() {
+  if (!session || session.mode !== 'local' || !session.etat) return;
+  const e = session.etat;
+  memoire.ecrire('thaayam:partieLocale', e.phase === 'fini' ? '' : JSON.stringify({ guide: !!session.guide, etat: e }));
+}
+$('btn-reprendre').addEventListener('click', () => {
+  const g = partieLocaleGardee();
+  if (!g) { $('btn-reprendre').hidden = true; return; }
+  session = { mode: 'local', guide: g.guide, etat: g.etat };
+  aller('jeu');
+  dessinerJeu();
 });
 $('btn-guide').addEventListener('click', () => {
   session = { mode: 'local', guide: true, etat: nouvellePartieGuidee(pseudo()) };
@@ -1393,6 +1413,7 @@ function dessinerJeu() {
     $('jeu-regles').dataset.cle = cleRegles;
     $('jeu-regles').replaceChildren(...resumeReglesTraduit(etat.regles, t).map((l) => el('li', {}, l)));
   }
+  garderPartieLocale();
   faireJouerOrdi();
 }
 
