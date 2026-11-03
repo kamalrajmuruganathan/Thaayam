@@ -19,9 +19,9 @@
   palettes et `couleursDes` dans `app/src/ui.js`, ambiance futuriste `app/src/Ambiance.js`.
 - Textes des nouveautés : `moteur/i18n-plus.js` (une ligne = les 5 langues côte à côte), fusionnés dans `i18n.js`.
 - Revoir une partie : `etat.histo` (« d1.0 », « c1010 », « p2 », « g2 », « p2:1 » = valeur n° 1 de la réserve) + `revoirPartie()` (`moteur/partie.js`).
-- Analyse de partie (site, écran « Revoir ») : `moteur/analyse.js` (`analyserCoup` compare chaque coup humain au meilleur
+- Analyse de partie (site et appli, écran « Revoir ») : `moteur/analyse.js` (`analyserCoup` compare chaque coup humain au meilleur
   coup noté par `noterCoups` de `ia.js`, seuils `SEUILS`, motifs couper / sortir / arriver / danger ; `resumerAnalyse`),
-  meilleur coup en vert sur le plateau, voix avec `speechSynthesis` (bouton 🔊, `thaayam:voix`).
+  meilleur coup en vert sur le plateau, voix avec `speechSynthesis` sur le site (bouton 🔊, `thaayam:voix`) et `expo-speech` dans l'appli (`app/src/ecrans/Revoir.js`, prop `conseil` de `Plateau`).
 - Partie guidée : `moteur/guide.js` (`conseilGuide`, `lancerGuide`). Classement : `moteur/classement.js`.
 - Amis / classement / notifications : RPC `thaayam_profil`, `thaayam_lier`, `thaayam_ajouter_ami`, `thaayam_retirer_ami`,
   `thaayam_inviter`, `thaayam_social`, `thaayam_abonner`, `thaayam_cle_notifs` ; déclencheurs `thaayam_tour` et

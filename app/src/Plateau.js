@@ -16,7 +16,7 @@ const CADRES = { cristal: '#aab6c0', nuit: '#ff4fd8', temple: '#d9a520' };
  * Plateau (croix ou carré) ; `coups` = coups jouables, `surPion(pion)` quand on touche un pion jouable.
  * enMouvement : { joueur, pion } du pion qui avance (dessiné plus gros) ; eclat : { k, couleur } (case qui s'illumine).
  */
-export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouvement = null, eclat = null, vue = null }) {
+export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouvement = null, eclat = null, vue = null, conseil = null }) {
   const nomTheme = useTheme();
   const T = themePlateau(nomTheme);
   const g = geometrie(etat.regles, etat.joueurs.length);
@@ -165,6 +165,15 @@ export function Plateau({ etat, coups, surPion, largeur, trajetDe = null, enMouv
         {decor}
         {dernier}
         {cibles}
+        {conseil ? [conseil.depuis, conseil.vers].map((pos, k) => {
+          // Analyse de partie : le meilleur coup en vert (case de départ pleine, arrivée en pointillés)
+          if (pos == null || pos < 0) return null;
+          const z = zone(cle(g.chemins[conseil.joueur][pos]));
+          return (
+            <Circle key={`cs${k}`} cx={z.x + z.w / 2} cy={z.y + z.w / 2} r={z.w / 2 - 8} fill={k === 0 ? 'rgba(46,204,113,0.18)' : 'none'}
+              stroke="#2ecc71" strokeWidth={7} strokeDasharray={k === 0 ? undefined : '10 8'} />
+          );
+        }) : null}
         {pions}
         {halo}
         </G>
