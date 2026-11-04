@@ -6,6 +6,8 @@ import { revoirPartie, geometrie } from '../../../moteur/partie.js';
 import { nomLancer } from '../../../moteur/regles.js';
 import { traduireJournal, traduireNom } from '../../../moteur/i18n.js';
 import { analyserCoup, resumerAnalyse } from '../../../moteur/analyse.js';
+import { noterAnalyse } from '../../../moteur/progression.js';
+import { stockage } from '../enLigne';
 import * as Speech from 'expo-speech';
 
 const VOIX_LANGUES = { fr: 'fr-FR', en: 'en-GB', ta: 'ta-IN', hi: 'hi-IN', si: 'si-LK' };
@@ -69,6 +71,15 @@ export default function Revoir({ etatFinal, surRetour }) {
     const e0 = etats[0];
     const lignes = resumerAnalyse(res, e0.joueurs.length).filter((x) => x.coups > 0)
       .map((x) => t('anResume', { nom: N(e0.joueurs[x.joueur].nom), p: x.precision, m: x.meilleurs, i: x.imprecisions, e: x.erreurs, g: x.gaffes }));
+    // Progression : défi « Analyse une partie », trophée de précision (un seul joueur humain analysé)
+    const juges = resumerAnalyse(res, e0.joueurs.length).filter((x) => x.coups > 0);
+    try {
+      const avant = JSON.parse((await stockage.lire('thaayam:progression')) || 'null');
+      const a = noterAnalyse(avant, juges.length === 1 ? juges[0].precision : null);
+      await stockage.ecrire('thaayam:progression', JSON.stringify(a.progression));
+      lignes.push(...a.gain.defis.map((d) => t('gainDefi', { nom: t(d) })), ...a.gain.trophees.map((x) => t('gainTrophee', { nom: t(x) })));
+    } catch { /* stockage indisponible */ }
+    if (!vivant.current) return;
     setResume(lignes);
     setAnalyses(res);
     setProgression(null);

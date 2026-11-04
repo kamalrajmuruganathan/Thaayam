@@ -22,7 +22,15 @@
 - Analyse de partie (site et appli, écran « Revoir ») : `moteur/analyse.js` (`analyserCoup` compare chaque coup humain au meilleur
   coup noté par `noterCoups` de `ia.js`, seuils `SEUILS`, motifs couper / sortir / arriver / danger ; `resumerAnalyse`),
   meilleur coup en vert sur le plateau, voix avec `speechSynthesis` sur le site (bouton 🔊, `thaayam:voix`) et `expo-speech` dans l'appli (`app/src/ecrans/Revoir.js`, prop `conseil` de `Plateau`).
-- Partie guidée : `moteur/guide.js` (`conseilGuide`, `lancerGuide`). Classement : `moteur/classement.js`.
+- Partie guidée : `moteur/guide.js` (`conseilGuide`, `lancerGuide`). Classement : `moteur/classement.js`
+  (tri par cote en ligne si le serveur la donne, puis victoires).
+- Progression (toutes les parties, sur l'appareil) : `moteur/progression.js` (`noterPartie`, `noterAnalyse`, XP et niveaux
+  `niveauDe`, cote Elo `variationCote` contre l'ordinateur à cote fixe `COTE_ORDI`, rangs `RANGS` Bronze → Maître,
+  `TROPHEES` (15), 3 défis par semaine `defisDeLaSemaine` (les mêmes pour tous, +100 XP), historique pour la courbe),
+  stockage `thaayam:progression`. Site : carte d'accueil + écran `ecran-progression` + bandeau `#gain-partie` ; appli :
+  `app/src/ecrans/Progression.js` (`ResumeProgression`, `GainPartie`). Cote en ligne (classement entre amis) :
+  colonnes `cote` / `parties_cote` de `thaayam_joueurs`, calculée par `thaayam_coter` à la fin de `thaayam_jouer`
+  (appliqué sur Supabase le 04/11/2026).
 - Amis / classement / notifications : RPC `thaayam_profil`, `thaayam_lier`, `thaayam_ajouter_ami`, `thaayam_retirer_ami`,
   `thaayam_inviter`, `thaayam_social`, `thaayam_abonner`, `thaayam_cle_notifs` ; déclencheurs `thaayam_tour` et
   `thaayam_invitation` → `pg_net` → fonction Edge `supabase/functions/thaayam-notifier` (Web Push + Expo).

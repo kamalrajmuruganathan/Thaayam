@@ -12,6 +12,9 @@ import { nouvellePartieGuidee, lancerGuide, conseilGuide } from './moteur/guide.
 import { niveauJoueur, trierClassement } from './moteur/classement.js';
 import { creerEnLigne, REACTIONS } from './moteur/en-ligne.js';
 import { noterFin, resumeStats, normaliserStats, statsVides } from './moteur/stats.js';
+import {
+  noterPartie, noterAnalyse, normaliserProgression, niveauDe, rangDe, etatDefis, TROPHEES,
+} from './moteur/progression.js';
 import { themePlateau, themeValide, THEMES } from './moteur/themes.js';
 import {
   LANGUES, traducteur, traduireJournal, traduireErreur, traduireNom, traduireReaction,
@@ -145,6 +148,7 @@ function afficherAccueil() {
   if (params.get('code')) $('code-rejoindre').value = params.get('code').toUpperCase();
   $('hors-ligne').hidden = navigator.onLine !== false;
   afficherMesParties();
+  afficherProgressionAccueil();
   $('btn-reprendre').hidden = !partieLocaleGardee();
   afficherStats();
   afficherReplays();
@@ -174,10 +178,93 @@ function noterStats(etat) {
   if (!session || etat.phase !== 'fini' || session.statsNotees === etat) return;
   session.statsNotees = etat;
   garderReplay(etat);
-  const s = noterFin(lireStats(), etat, session.mode === 'ligne'
-    ? { mode: 'ligne', place: session.place, code: session.partie.code } : { mode: 'local' });
+  const infos = session.mode === 'ligne'
+    ? { mode: 'ligne', place: session.place, code: session.partie.code } : { mode: 'local' };
+  const s = noterFin(lireStats(), etat, infos);
   memoire.ecrire('thaayam:stats', JSON.stringify(s));
+  // Progression : XP, cote, trophées, défis
+  const r = noterPartie(lireProgression(), etat, infos);
+  memoire.ecrire('thaayam:progression', JSON.stringify(r.progression));
+  montrerGain(r.gain);
 }
+
+// ---------------------------------------------------------------- progression (XP, niveaux, cote, trophées, défis)
+function lireProgression() {
+  try { return normaliserProgression(JSON.parse(memoire.lire('thaayam:progression') || 'null')); } catch { return normaliserProgression(null); }
+}
+
+/** Bandeau de fin de partie : XP gagnés, nouvelle cote, niveau, trophées et défis. */
+function montrerGain(gain) {
+  const zone = $('gain-partie');
+  if (!gain) { zone.hidden = true; return; }
+  const d = gain.variation > 0 ? `+${gain.variation}` : String(gain.variation);
+  const lignes = [t('gainPartie', { xp: gain.xp, c: gain.cote, d })];
+  if (gain.niveauApres > gain.niveauAvant) lignes.push(t('gainNiveau', { n: gain.niveauApres }));
+  gain.defis.forEach((x) => lignes.push(t('gainDefi', { nom: t(x) })));
+  gain.trophees.forEach((x) => lignes.push(t('gainTrophee', { nom: t(x) })));
+  zone.replaceChildren(...lignes.map((l, i) => el('div', { class: i ? 'gain-plus' : 'gain-xp' }, l)));
+  zone.hidden = false;
+}
+
+/** Niveau, barre d'XP, rang et cote (accueil et écran « Ma progression »). */
+function enteteProgression(p) {
+  const nv = niveauDe(p.xp);
+  const rg = rangDe(p.cote);
+  const barre = el('div', { class: 'barre-xp' }, el('span', { style: `width:${Math.round((100 * nv.xpDansNiveau) / nv.xpPourSuivant)}%` }));
+  return [
+    el('div', { class: 'prog-ligne' },
+      el('span', { class: 'prog-niveau' }, t('progNiveau', { n: nv.niveau })),
+      el('span', { class: 'prog-rang' }, `${rg.icone} ${t(rg.cle)} · ${t('progCote', { c: p.cote })}`)),
+    barre,
+    el('div', { class: 'attenue petit prog-ligne' },
+      el('span', {}, t('progXp', { x: nv.xpDansNiveau, y: nv.xpPourSuivant })),
+      rg.suivant ? el('span', {}, t('progRangSuivant', { n: rg.manque, rang: t(rg.suivant.cle) })) : ''),
+  ];
+}
+
+function afficherProgressionAccueil() {
+  const p = lireProgression();
+  const zone = $('resume-progression');
+  if (!p.parties) zone.replaceChildren(el('p', { class: 'attenue petit' }, t('progAucune')));
+  else zone.replaceChildren(...enteteProgression(p));
+}
+
+/** Courbe de la cote (SVG), partie après partie. */
+function courbeCote(historique) {
+  const pts = [{ c: 1000 }, ...historique].map((h) => h.c);
+  const L = 320; const H = 140; const m = 28;
+  const min = Math.min(...pts) - 20; const max = Math.max(...pts) + 20;
+  const x = (i) => m + ((L - m - 6) * i) / Math.max(1, pts.length - 1);
+  const y = (c) => 8 + ((H - 24) * (max - c)) / (max - min);
+  const s = document.createElementNS(SVGNS, 'svg');
+  s.setAttribute('viewBox', `0 0 ${L} ${H}`);
+  s.setAttribute('role', 'img');
+  s.setAttribute('aria-label', t('progCourbe'));
+  const ajouter = (tag, attrs, texte) => { const e = svg(tag, attrs, s); if (texte != null) e.textContent = texte; return e; };
+  [max - 20, Math.round((max + min) / 2), min + 20].forEach((c) => {
+    ajouter('line', { x1: m, x2: L - 4, y1: y(c), y2: y(c), class: 'grille' });
+    ajouter('text', { x: 2, y: y(c) + 4, class: 'etiquette' }, String(Math.round(c)));
+  });
+  ajouter('polyline', { points: pts.map((c, i) => `${x(i)},${y(c)}`).join(' '), class: 'trace' });
+  pts.forEach((c, i) => { if (i === pts.length - 1) ajouter('circle', { cx: x(i), cy: y(c), r: 4, class: 'point' }); });
+  return s;
+}
+
+function dessinerProgression() {
+  const p = lireProgression();
+  $('prog-entete').replaceChildren(...(p.parties ? enteteProgression(p) : [el('p', { class: 'attenue' }, t('progAucune'))]));
+  $('prog-bilan').textContent = p.parties ? t('progBilan', { p: p.parties, v: p.victoires, s: p.meilleureSerie }) : '';
+  $('prog-courbe').replaceChildren(p.historique.length ? courbeCote(p.historique) : el('p', { class: 'attenue petit' }, t('progAucune')));
+  $('prog-defis').replaceChildren(...etatDefis(p).map((d) => el('div', { class: `defi${d.fait ? ' fait' : ''}` },
+    el('div', { class: 'prog-ligne' }, el('span', {}, t(d.cle)), el('span', { class: 'attenue petit' }, d.fait ? t('progDefiFini') : `${d.valeur} / ${d.but}`)),
+    el('div', { class: 'barre-xp' }, el('span', { style: `width:${Math.round((100 * d.valeur) / d.but)}%` })))));
+  const obtenus = TROPHEES.filter((x) => p.trophees[x.cle]).length;
+  $('prog-trophees-titre').textContent = t('progTrophees', { n: obtenus, t: TROPHEES.length });
+  $('prog-trophees').replaceChildren(...TROPHEES.map((x) => el('div', { class: `trophee${p.trophees[x.cle] ? '' : ' verrouille'}`, title: t(x.cle) },
+    el('span', { class: 'icone' }, p.trophees[x.cle] ? x.icone : '🔒'), el('span', { class: 'petit' }, t(x.cle)))));
+}
+$('btn-progression').addEventListener('click', () => { aller('progression'); dessinerProgression(); });
+$('btn-progression-retour').addEventListener('click', () => { aller('accueil'); afficherAccueil(); });
 
 /** Parties en ligne de cet appareil, pour les reprendre en un clic. */
 async function afficherMesParties() {
@@ -298,12 +385,15 @@ function dessinerSocial() {
   if (!lignes.some((x) => x.parties)) ol.append(el('li', { class: 'attenue petit' }, t('classementVide')));
   lignes.forEach((x) => {
     const nv = niveauJoueur(x.victoires);
+    // Avec la cote en ligne (serveur) : rang et cote ; sinon l'ancien niveau selon les victoires
+    const rg = x.cote != null ? rangDe(x.cote) : null;
+    const titre = rg ? `${rg.icone} ${t(rg.cle)} · ${t('coteEnLigne', { c: x.cote })}` : `${nv.icone} ${t(nv.cle)}`;
     ol.append(el('li', { class: x.moi ? 'moi' : '' },
       el('span', { class: 'rang' }, ['🥇', '🥈', '🥉'][x.rang - 1] || `${x.rang}.`),
       el('div', { class: 'qui' },
         el('div', { class: 'nom' }, x.pseudo + (x.moi ? t('toi') : '')),
-        el('div', { class: 'attenue petit' }, `${nv.icone} ${t(nv.cle)} · ${t('classementLigne', { v: x.victoires, p: x.parties })}`),
-        x.moi && nv.prochain ? el('div', { class: 'attenue petit' }, t('prochainNiveau', { n: nv.prochain })) : '')));
+        el('div', { class: 'attenue petit' }, `${titre} · ${t('classementLigne', { v: x.victoires, p: x.parties })}`),
+        x.moi && !rg && nv.prochain ? el('div', { class: 'attenue petit' }, t('prochainNiveau', { n: nv.prochain })) : '')));
   });
 }
 
@@ -1389,6 +1479,7 @@ function dessinerJeu() {
   $('btn-lancer').disabled = !(peut && etat.phase === 'lancer');
   $('btn-lancer').hidden = etat.phase === 'fini';
   $('btn-rejouer').hidden = !(etat.phase === 'fini' && session.mode === 'local');
+  if (etat.phase !== 'fini') $('gain-partie').hidden = true;
   $('btn-revoir').hidden = !(etat.phase === 'fini' && Array.isArray(etat.histo));
   const enLigneFinie = etat.phase === 'fini' && session.mode === 'ligne';
   $('btn-revanche').hidden = !enLigneFinie;
@@ -1804,6 +1895,13 @@ $('revoir-analyser').addEventListener('click', async () => {
     .map((x) => t('anResume', { nom: nomAffiche(e0.joueurs[x.joueur].nom), p: x.precision, m: x.meilleurs, i: x.imprecisions, e: x.erreurs, g: x.gaffes }));
   $('revoir-resume').replaceChildren(...lignes.map((l) => el('li', {}, l)));
   $('revoir-resume').hidden = !lignes.length;
+  // Progression : défi « Analyse une partie », trophée de précision (un seul joueur humain analysé)
+  const jugés = resumerAnalyse(analyses, e0.joueurs.length).filter((x) => x.coups > 0);
+  const a = noterAnalyse(lireProgression(), jugés.length === 1 ? jugés[0].precision : null);
+  memoire.ecrire('thaayam:progression', JSON.stringify(a.progression));
+  const bravo = [...a.gain.defis.map((d) => t('gainDefi', { nom: t(d) })), ...a.gain.trophees.map((x) => t('gainTrophee', { nom: t(x) }))];
+  if (bravo.length) lignes.push(...bravo);
+  if (bravo.length) $('revoir-resume').append(...bravo.map((l) => el('li', {}, l)));
   parler(lignes.join(' '));
   r.parle = r.i;
   dessinerRevoir();

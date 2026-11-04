@@ -554,3 +554,27 @@ button.raccrocher { background: #c62828 !important; color: #fff !important; bord
 .analyse-coup.anGaffe { border-color: #e74c3c; color: #e74c3c; }
 .resume-analyse { margin: 8px 0 0; padding-left: 18px; font-size: 0.95rem; }
 .resume-analyse li { margin: 4px 0; }
+
+/* Progression : niveau, XP, rang, courbe, défis, trophées */
+.resume-progression { display: flex; flex-direction: column; gap: 6px; }
+.prog-ligne { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.prog-niveau { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
+.prog-rang { font-weight: 700; }
+.barre-xp { height: 10px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 15%, transparent); overflow: hidden; }
+.barre-xp > span { display: block; height: 100%; border-radius: 6px; background: var(--accent); min-width: 2px; transition: width 0.4s; }
+.prog-courbe svg { width: 100%; height: auto; display: block; }
+.prog-courbe .grille { stroke: currentColor; opacity: 0.15; stroke-width: 1; }
+.prog-courbe .etiquette { fill: currentColor; opacity: 0.6; font-size: 10px; }
+.prog-courbe .trace { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.prog-courbe .point { fill: var(--accent); }
+.prog-defis { display: flex; flex-direction: column; gap: 10px; }
+.defi.fait .barre-xp > span { background: #2ecc71; }
+.prog-trophees { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.trophee { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 8px 4px;
+  border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.trophee .icone { font-size: 1.8rem; }
+.trophee.verrouille { opacity: 0.45; }
+.gain-partie { margin-top: 10px; padding: 10px 12px; border-radius: 12px; text-align: center;
+  border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.gain-partie .gain-xp { font-weight: 800; font-size: 1.1rem; }
+.gain-partie .gain-plus { font-weight: 700; margin-top: 4px; }

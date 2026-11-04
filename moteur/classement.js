@@ -21,16 +21,18 @@ export function niveauJoueur(victoires) {
 }
 
 /**
- * Trie le classement : plus de victoires d'abord, puis meilleur pourcentage, puis pseudo.
- * Entrée : [{ pseudo, victoires, parties, moi }] ; sortie : la même liste avec `rang` (ex æquo partagés).
+ * Trie le classement : meilleure cote en ligne d'abord (si le serveur la donne), puis plus de victoires,
+ * meilleur pourcentage, pseudo. Entrée : [{ pseudo, victoires, parties, cote?, moi }] ;
+ * sortie : la même liste avec `rang` (ex æquo partagés).
  */
 export function trierClassement(liste) {
   const pct = (x) => (x.parties ? x.victoires / x.parties : 0);
-  const tries = [...(liste || [])].map((x) => ({ ...x, victoires: Number(x.victoires) || 0, parties: Number(x.parties) || 0 }))
-    .sort((a, b) => b.victoires - a.victoires || pct(b) - pct(a) || String(a.pseudo).localeCompare(String(b.pseudo)));
+  const tries = [...(liste || [])].map((x) => ({ ...x, victoires: Number(x.victoires) || 0, parties: Number(x.parties) || 0,
+    cote: Number.isFinite(Number(x.cote)) && x.cote !== null && x.cote !== undefined ? Number(x.cote) : null }))
+    .sort((a, b) => (b.cote ?? 0) - (a.cote ?? 0) || b.victoires - a.victoires || pct(b) - pct(a) || String(a.pseudo).localeCompare(String(b.pseudo)));
   tries.forEach((x, i) => {
     const prec = tries[i - 1];
-    x.rang = prec && prec.victoires === x.victoires && pct(prec) === pct(x) ? prec.rang : i + 1;
+    x.rang = prec && prec.cote === x.cote && prec.victoires === x.victoires && pct(prec) === pct(x) ? prec.rang : i + 1;
   });
   return tries;
 }

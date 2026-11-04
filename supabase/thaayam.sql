@@ -40,6 +40,9 @@ create table if not exists public.thaayam_joueurs (
   vu_le    timestamptz not null default now()
 );
 alter table public.thaayam_jetons add column if not exists joueur uuid references public.thaayam_joueurs(id) on delete set null;
+-- Cote en ligne (comme aux échecs), mise à jour à la fin de chaque partie en ligne (thaayam_coter)
+alter table public.thaayam_joueurs add column if not exists cote integer not null default 1000;
+alter table public.thaayam_joueurs add column if not exists parties_cote integer not null default 0;
 
 create table if not exists public.thaayam_amis (
   joueur uuid not null references public.thaayam_joueurs(id) on delete cascade,
@@ -237,9 +240,45 @@ begin
       select p_code, j.joueur, j.place = (p_etat ->> 'gagnant')::int
         from thaayam_jetons j where j.code = p_code and j.joueur is not null
       on conflict do nothing;
+    perform thaayam_coter(p_code, (p_etat ->> 'gagnant')::int);
   end if;
   return v_partie.version + 1;
 end $$;
+
+-- ---------------------------------------------------------------------
+-- Cote en ligne (Elo) : le gagnant bat chacun des autres joueurs qui ont un profil (gain partagé entre eux),
+-- chaque perdant perd contre le gagnant. K = 40 pendant les 10 premières parties, puis 24.
+-- ---------------------------------------------------------------------
+create or replace function public.thaayam_coter(p_code text, p_gagnant integer)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_g    uuid;
+  v_cg   integer;
+  v_kg   integer;
+  v_n    integer;
+  v_gain numeric := 0;
+  v_e    numeric;
+  r      record;
+begin
+  select joueur into v_g from thaayam_jetons where code = p_code and place = p_gagnant;
+  select count(distinct joueur) into v_n from thaayam_jetons where code = p_code and joueur is not null;
+  if v_g is null or v_n < 2 then return; end if;
+  select cote, case when parties_cote < 10 then 40 else 24 end into v_cg, v_kg from thaayam_joueurs where id = v_g;
+  for r in select distinct j.id, j.cote, j.parties_cote
+             from thaayam_jetons t join thaayam_joueurs j on j.id = t.joueur
+            where t.code = p_code and t.joueur <> v_g loop
+    v_e := 1 / (1 + power(10, (v_cg - r.cote) / 400.0)); -- chance de victoire attendue du perdant
+    update thaayam_joueurs
+       set cote = greatest(100, cote - round((case when r.parties_cote < 10 then 40 else 24 end) * v_e)::int),
+           parties_cote = parties_cote + 1
+     where id = r.id;
+    v_gain := v_gain + (v_kg::numeric / (v_n - 1)) * v_e;
+  end loop;
+  update thaayam_joueurs set cote = cote + round(v_gain)::int, parties_cote = parties_cote + 1 where id = v_g;
+end $$;
+revoke all on function public.thaayam_coter(text, integer) from public;
 
 -- ---------------------------------------------------------------------
 -- Revanche : à la fin d'une partie, n'importe quel joueur crée une
@@ -429,12 +468,12 @@ begin
        where i.pour = p_joueur and p.statut = 'attente'), '[]'::jsonb),
     'classement', coalesce((
       select jsonb_agg(jsonb_build_object(
-               'id', x.id, 'pseudo', x.pseudo, 'moi', x.id = p_joueur,
+               'id', x.id, 'pseudo', x.pseudo, 'moi', x.id = p_joueur, 'cote', x.cote,
                'parties', (select count(*) from thaayam_resultats r where r.joueur = x.id),
                'victoires', (select count(*) from thaayam_resultats r where r.joueur = x.id and r.gagne)))
-        from (select id, pseudo from thaayam_joueurs where id = p_joueur
+        from (select id, pseudo, cote from thaayam_joueurs where id = p_joueur
               union
-              select j.id, j.pseudo from thaayam_amis a join thaayam_joueurs j on j.id = a.ami where a.joueur = p_joueur) x
+              select j.id, j.pseudo, j.cote from thaayam_amis a join thaayam_joueurs j on j.id = a.ami where a.joueur = p_joueur) x
     ), '[]'::jsonb)
   );
 end $$;

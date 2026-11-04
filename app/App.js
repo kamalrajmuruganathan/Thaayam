@@ -21,6 +21,8 @@ import { COULEURS, copieRegles, normaliserRegles, resumeRegles } from '../moteur
 import { nouvellePartie, lancer, jouer, geometrie, etapesCoup } from '../moteur/partie.js';
 import { choisirCoup } from '../moteur/ia.js';
 import { noterFin, resumeStats, normaliserStats, statsVides } from '../moteur/stats.js';
+import { noterPartie, normaliserProgression } from '../moteur/progression.js';
+import Progression, { ResumeProgression, GainPartie } from './src/ecrans/Progression';
 
 export default function App() {
   return (
@@ -129,8 +131,11 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
     enLigne.mesParties().then((l) => actif && setMesParties(l)).catch(() => actif && setMesParties([]));
     stockage.lire('thaayam:replays').then((x) => { try { if (actif) setReplays(JSON.parse(x || '[]')); } catch { /* abîmé */ } }).catch(() => {});
     stockage.lire('thaayam:stats').then((t) => actif && setStats(normaliserStats(JSON.parse(t || 'null')))).catch(() => {});
+    stockage.lire('thaayam:progression').then((x) => actif && setProgression(normaliserProgression(JSON.parse(x || 'null')))).catch(() => {});
     return () => { actif = false; };
   }, [ecran]);
+  const [progression, setProgression] = useState(normaliserProgression(null));
+  const [gain, setGain] = useState(null);
 
   // Compte chaque partie terminée une seule fois
   const statsNoteesRef = useRef(null);
@@ -142,6 +147,15 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
     stockage.lire('thaayam:stats')
       .then((t) => stockage.ecrire('thaayam:stats', JSON.stringify(noterFin(normaliserStats(JSON.parse(t || 'null')), e, infos))))
       .catch(() => {});
+    // Progression : XP, cote, trophées, défis
+    stockage.lire('thaayam:progression').then((x) => {
+      let avant = null;
+      try { avant = JSON.parse(x || 'null'); } catch { /* abîmé */ }
+      const r = noterPartie(avant, e, infos);
+      setGain(r.gain);
+      setProgression(r.progression);
+      return stockage.ecrire('thaayam:progression', JSON.stringify(r.progression));
+    }).catch(() => {});
     // Garder les 5 dernières parties pour les revoir
     if (Array.isArray(e.histo) && e.histo.length) {
       stockage.lire('thaayam:replays').then((x) => {
@@ -392,7 +406,9 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
   }
 
   let contenu;
-  if (ecran === 'revoir' && aRevoir) {
+  if (ecran === 'progression') {
+    contenu = <Progression progression={progression} surRetour={() => setEcran('accueil')} />;
+  } else if (ecran === 'revoir' && aRevoir) {
     contenu = <Revoir etatFinal={aRevoir} surRetour={() => setEcran(retourRevoir === 'jeu' && sessionRef.current ? 'jeu' : 'accueil')} />;
   } else if (ecran === 'regles') {
     contenu = (
@@ -456,6 +472,7 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
           etat: s.guide ? nouvellePartieGuidee(pseudo.trim())
             : nouvellePartie(s.etat.regles, s.etat.joueurs.map((j) => ({ nom: j.nom, ordi: j.ordi || false }))),
         }))} />
+      {session.etat.phase === 'fini' ? <GainPartie gain={gain} /> : null}
       {session.mode === 'ligne' ? discussion(session) : null}
       </>
     );
@@ -472,6 +489,10 @@ function Ecrans({ theme, choisirTheme, langue, choisirLangue, t }) {
         </Carte>
         <Carte titre={t('apparence')}>
           <Choix options={THEMES.map(({ code: c2, icone }) => [c2, `${icone} ${t(c2)}`])} valeur={theme} onChange={choisirTheme} />
+        </Carte>
+        <Carte titre={t('progTitre')}>
+          <ResumeProgression progression={progression} />
+          <Bouton titre={t('progVoir')} onPress={() => setEcran('progression')} />
         </Carte>
         {resumeStatsTraduit(stats, t).length ? (
           <Carte titre={t('mesStats')}>

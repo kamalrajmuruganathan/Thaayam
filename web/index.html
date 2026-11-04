@@ -46,6 +46,12 @@
         <div id="liste-invitations" class="liste-parties"></div>
       </div>
 
+      <div id="carte-progression" class="carte">
+        <h2 data-i18n="progTitre">📈 Ma progression</h2>
+        <div id="resume-progression" class="resume-progression"></div>
+        <button id="btn-progression" data-i18n="progVoir">Voir ma progression</button>
+      </div>
+
       <div id="mes-stats" class="carte" hidden>
         <h2 data-i18n="mesStats">Mes statistiques</h2>
         <ul id="liste-stats" class="liste-stats"></ul>
@@ -156,6 +162,7 @@
           <button id="btn-revanche" class="principal" hidden>Revanche !</button>
           <button id="btn-revoir" hidden data-i18n="revoir">🎬 Revoir la partie</button>
         </div>
+        <div id="gain-partie" class="gain-partie" role="status" aria-live="polite" hidden></div>
       </div>
       <div id="reactions" class="reactions" hidden></div>
       <div id="bulle-reaction" class="bulle-reaction" role="status" aria-live="polite" hidden></div>
@@ -207,6 +214,28 @@
     </section>
 
     <!-- Revoir une partie -->
+    <section id="ecran-progression" class="ecran" hidden>
+      <button id="btn-progression-retour" class="retour" data-i18n="retour">← Retour</button>
+      <h2 data-i18n="progTitre">📈 Ma progression</h2>
+      <div class="carte">
+        <div id="prog-entete" class="resume-progression"></div>
+        <p id="prog-bilan" class="attenue petit"></p>
+      </div>
+      <div class="carte">
+        <h2 data-i18n="progCourbe">Évolution de ta cote</h2>
+        <div id="prog-courbe" class="prog-courbe"></div>
+      </div>
+      <div class="carte">
+        <h2 data-i18n="progDefis">🎯 Défis de la semaine</h2>
+        <div id="prog-defis" class="prog-defis"></div>
+      </div>
+      <div class="carte">
+        <h2 id="prog-trophees-titre"></h2>
+        <div id="prog-trophees" class="prog-trophees"></div>
+      </div>
+      <p class="attenue petit" data-i18n="progClassementInfo"></p>
+    </section>
+
     <section id="ecran-revoir" class="ecran large" hidden>
       <button id="btn-revoir-retour" class="retour" data-i18n="retour">← Retour</button>
       <h2 data-i18n="revoir">🎬 Revoir la partie</h2>

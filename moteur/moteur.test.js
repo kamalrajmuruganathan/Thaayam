@@ -708,3 +708,49 @@ test('analyse de partie : chaque coup humain est jugé, le meilleur coup a une p
   assert.equal(r[0].precision, 100);
   assert.equal(r[1].coups, 0);
 });
+
+test('progression : XP, niveaux, cote, trophées et défis de la semaine', async () => {
+  const P = await import('./progression.js');
+  assert.deepEqual(P.niveauDe(0), { niveau: 1, xpDansNiveau: 0, xpPourSuivant: 100 });
+  assert.deepEqual(P.niveauDe(260), { niveau: 3, xpDansNiveau: 10, xpPourSuivant: 200 });
+  assert.equal(P.rangDe(1000).cle, 'rgBronze');
+  assert.equal(P.rangDe(1260).cle, 'rgOr');
+  assert.equal(P.rangDe(1000).manque, 100);
+  // Cote : battre un plus fort rapporte plus
+  assert.ok(P.variationCote(1000, [1250], true, 1000) > P.variationCote(1000, [850], true, 1000));
+  assert.ok(P.variationCote(1000, [850], false, 850) < 0);
+  // Une partie gagnée contre l'ordinateur fort
+  const fin = (gagnant, ordi = 'fort') => {
+    const e = nouvellePartie(REGLES_PAR_DEFAUT, [{ nom: 'Moi' }, { nom: 'Ordi', ordi }]);
+    const g = geometrie(e.regles, 2);
+    e.phase = 'fini'; e.gagnant = gagnant;
+    e.joueurs[0].pions = [g.arrivee, g.arrivee, g.arrivee, g.arrivee]; e.joueurs[0].captures = 3;
+    return e;
+  };
+  const lundi = new Date(2026, 10, 2, 12);
+  let r = P.noterPartie(null, fin(0), { mode: 'local', maintenant: lundi });
+  assert.equal(r.gain.xp, Math.round(70 * 1.5) + 15 + 20 + (r.gain.defis.length * 100));
+  assert.ok(r.gain.variation > 0);
+  assert.ok(['tVictoire1', 'tCapture1', 'tCapture3', 'tFort'].every((t) => r.gain.trophees.includes(t)), r.gain.trophees.join());
+  assert.equal(r.progression.historique.length, 1);
+  // Une défaite fait baisser la cote et casse la série
+  const r2 = P.noterPartie(r.progression, fin(1, 'facile'), { mode: 'local', maintenant: lundi });
+  assert.ok(r2.gain.variation < 0);
+  assert.equal(r2.progression.serie, 0);
+  // En ligne : comptée une seule fois
+  const r3 = P.noterPartie(r2.progression, fin(0), { mode: 'ligne', place: 0, code: 'ABCDE', maintenant: lundi });
+  assert.ok(r3.gain);
+  assert.equal(P.noterPartie(r3.progression, fin(0), { mode: 'ligne', place: 0, code: 'ABCDE', maintenant: lundi }).gain, null);
+  // Défis : 3 par semaine, les mêmes pour tous, remis à zéro la semaine suivante
+  const d = P.etatDefis(r3.progression, lundi);
+  assert.equal(d.length, 3);
+  assert.equal(new Set(d.map((x) => x.cle)).size, 3);
+  assert.deepEqual(P.defisDeLaSemaine('2026-W45'), P.defisDeLaSemaine('2026-W45'));
+  assert.ok(P.etatDefis(r3.progression, new Date(2026, 10, 12)).every((x) => x.valeur === 0));
+  assert.equal(P.semaineDe(new Date(2026, 0, 1)), '2026-W01');
+  // Analyse : défi + trophée de précision
+  const a = P.noterAnalyse(r3.progression, 93, lundi);
+  assert.ok(a.gain.trophees.includes('tAnalyse'));
+  // Relecture d'un état abîmé
+  assert.equal(P.normaliserProgression({ cote: 'x', xp: -5, historique: 3 }).cote, 1000);
+});

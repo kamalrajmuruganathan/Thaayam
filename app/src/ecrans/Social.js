@@ -4,6 +4,7 @@ import { Bouton, Carte, Champ, Texte, useCouleurs, useT } from '../ui';
 import { enLigne } from '../enLigne';
 import { traduireErreur } from '../../../moteur/i18n.js';
 import { niveauJoueur, trierClassement } from '../../../moteur/classement.js';
+import { rangDe } from '../../../moteur/progression.js';
 import { notifsPossibles, notifsActives, activerNotifs, couperNotifs } from '../notifs';
 
 /**
@@ -139,14 +140,17 @@ export default function Social({ pseudo, surRejoindre }) {
           {!avecParties ? <Texte attenue>{t('classementVide')}</Texte> : null}
           {classement.map((x) => {
             const nv = niveauJoueur(x.victoires);
+            // Avec la cote en ligne (serveur) : rang et cote ; sinon l'ancien niveau selon les victoires
+            const rg = x.cote != null ? rangDe(x.cote) : null;
+            const titre = rg ? `${rg.icone} ${t(rg.cle)} · ${t('coteEnLigne', { c: x.cote })}` : `${nv.icone} ${t(nv.cle)}`;
             return (
               <View key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: 10, borderWidth: 1,
                 borderColor: x.moi ? c.accent : c.trait }}>
                 <Texte style={{ fontSize: 22, minWidth: 30, textAlign: 'center', fontWeight: '800' }}>{['🥇', '🥈', '🥉'][x.rang - 1] || `${x.rang}.`}</Texte>
                 <View style={{ flex: 1 }}>
                   <Texte style={{ fontWeight: '700' }}>{x.pseudo}{x.moi ? t('toi') : ''}</Texte>
-                  <Texte attenue style={{ fontSize: 13 }}>{nv.icone} {t(nv.cle)} · {t('classementLigne', { v: x.victoires, p: x.parties })}</Texte>
-                  {x.moi && nv.prochain ? <Texte attenue style={{ fontSize: 13 }}>{t('prochainNiveau', { n: nv.prochain })}</Texte> : null}
+                  <Texte attenue style={{ fontSize: 13 }}>{titre} · {t('classementLigne', { v: x.victoires, p: x.parties })}</Texte>
+                  {x.moi && !rg && nv.prochain ? <Texte attenue style={{ fontSize: 13 }}>{t('prochainNiveau', { n: nv.prochain })}</Texte> : null}
                 </View>
               </View>
             );
