@@ -4,6 +4,7 @@ import { Bouton, Carte, Texte, useCouleurs, useT } from '../ui';
 import { enLigne } from '../enLigne';
 import { COULEURS } from '../../../moteur/regles.js';
 import { traduireErreur } from '../../../moteur/i18n.js';
+import Appel from './Appel';
 
 const EMOJIS = ['😀', '😂', '😍', '😎', '😮', '😢', '😡', '👍', '👏', '🔥', '🎉', '🙏', '💪', '❤️'];
 // Message fait seulement d'un emoji (court, sans lettre ni chiffre, avec un caractère emoji)
@@ -107,9 +108,7 @@ export default function Discussion({ code, jeton, place, nomDe, surEmoji }) {
         </View>
         {erreur ? <Texte erreur>{erreur}</Texte> : null}
       </Carte>
-      <Carte titre={t('appelTitre')}>
-        <Texte attenue>{t('appelAppli')}</Texte>
-      </Carte>
+      <Appel code={code} jeton={jeton} place={place} nomDe={nomDe} />
     </>
   );
 }

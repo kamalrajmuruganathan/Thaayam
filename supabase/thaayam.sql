@@ -68,12 +68,15 @@ create table if not exists public.thaayam_resultats (
 create table if not exists public.thaayam_notifs (
   joueur     uuid not null references public.thaayam_joueurs(id) on delete cascade,
   appareil   text not null,
-  type       text not null check (type in ('web', 'expo')),
+  type       text not null check (type in ('web', 'expo', 'fcm')),
   abonnement jsonb not null,
   langue     text not null default 'fr',
   maj_le     timestamptz not null default now(),
   primary key (joueur, appareil)
 );
+-- Notifications Android directes par Firebase (jeton FCM de l'appareil)
+alter table public.thaayam_notifs drop constraint if exists thaayam_notifs_type_check;
+alter table public.thaayam_notifs add constraint thaayam_notifs_type_check check (type in ('web', 'expo', 'fcm'));
 -- Réglages privés (adresse et secret du notificateur, clés des notifications web)
 create table if not exists public.thaayam_config (
   cle    text primary key,
@@ -490,7 +493,7 @@ begin
     delete from thaayam_notifs where joueur = p_joueur and appareil = p_appareil;
     return;
   end if;
-  if p_type not in ('web', 'expo') or pg_column_size(p_abonnement) > 4000 or length(coalesce(p_appareil, '')) not between 1 and 64 then
+  if p_type not in ('web', 'expo', 'fcm') or pg_column_size(p_abonnement) > 4000 or length(coalesce(p_appareil, '')) not between 1 and 64 then
     raise exception 'Abonnement invalide';
   end if;
   insert into thaayam_notifs (joueur, appareil, type, abonnement, langue)

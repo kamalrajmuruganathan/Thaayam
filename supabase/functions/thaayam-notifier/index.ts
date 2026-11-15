@@ -2,7 +2,8 @@
 // - « C'est ton tour » et « X t'invite », demandées par la base (déclencheurs de supabase/thaayam.sql).
 // - Navigateurs : notifications web (Web Push, clés VAPID créées ici au premier appel et rangées
 //   dans la table privée thaayam_config).
-// - Appli Android / iPhone : service de notifications d'Expo.
+// - Appli Android : Firebase Cloud Messaging en direct (type « fcm », secret FCM_COMPTE_SERVICE) ;
+//   appli construite avec EAS : service de notifications d'Expo (type « expo »).
 // - Appels audio / vidéo : identifiants des serveurs relais TURN (ExpressTURN, Metered et/ou Cloudflare),
 //   donnés seulement aux joueurs d'une partie (voir plus bas les secrets à régler).
 // À déployer une fois : Supabase → Edge Functions → Deploy a new function → Via Editor,
@@ -23,6 +24,53 @@ const TEXTES: Record<string, { tour: string; invitation: string }> = {
 function texte(langue: string, type: 'tour' | 'invitation', params: Record<string, string>) {
   const modele = (TEXTES[langue] || TEXTES.fr)[type];
   return modele.replace(/\{(\w+)\}/g, (m, k) => params[k] ?? m);
+}
+
+// ---------------------------------------------------------------- Firebase (notifications Android directes)
+// Compte de service Firebase (fichier JSON de la console : Paramètres du projet → Comptes de service → Générer
+// une nouvelle clé privée), dans le secret FCM_COMPTE_SERVICE ou la table privée thaayam_config (fcm_compte_service).
+type CompteService = { project_id: string; client_email: string; private_key: string };
+let jetonFcmCache: { jeton: string; expire: number } | null = null;
+const b64url = (octets: Uint8Array) => btoa(String.fromCharCode(...octets)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+const b64json = (o: unknown) => b64url(new TextEncoder().encode(JSON.stringify(o)));
+
+/** Jeton d'accès Google (OAuth) pour l'API Firebase Cloud Messaging, gardé une heure. */
+async function jetonFcm(compte: CompteService) {
+  if (jetonFcmCache && jetonFcmCache.expire > Date.now() + 60_000) return jetonFcmCache.jeton;
+  const maintenant = Math.floor(Date.now() / 1000);
+  const aSigner = `${b64json({ alg: 'RS256', typ: 'JWT' })}.${b64json({
+    iss: compte.client_email, scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token', iat: maintenant, exp: maintenant + 3600,
+  })}`;
+  const pem = compte.private_key.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  const cle = await crypto.subtle.importKey('pkcs8', Uint8Array.from(atob(pem), (c) => c.charCodeAt(0)),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const signature = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cle, new TextEncoder().encode(aSigner)));
+  const r = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${aSigner}.${b64url(signature)}` }),
+  });
+  const d = await r.json();
+  if (!d.access_token) throw new Error('Jeton Firebase refusé');
+  jetonFcmCache = { jeton: d.access_token, expire: Date.now() + (d.expires_in || 3600) * 1000 };
+  return d.access_token as string;
+}
+
+/** Envoie une notification Firebase à un téléphone Android ; lève { statusCode: 410 } si le jeton n'existe plus. */
+async function envoyerFcm(compte: CompteService, jeton: string, titre: string, corps: string, data: Record<string, string>) {
+  const r = await fetch(`https://fcm.googleapis.com/v1/projects/${compte.project_id}/messages:send`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${await jetonFcm(compte)}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: {
+      token: jeton, notification: { title: titre, body: corps }, data,
+      android: { priority: 'HIGH', notification: { channel_id: 'default', sound: 'default' } },
+    } }),
+  });
+  if (r.ok) return;
+  const texteErreur = await r.text();
+  if (r.status === 404 || /UNREGISTERED|registration-token-not-registered/.test(texteErreur)) throw { statusCode: 410 };
+  throw new Error(`Firebase ${r.status}`);
 }
 
 const CORS = {
@@ -139,11 +187,19 @@ Deno.serve(async (req) => {
   const { data: abonnements } = await sb.from('thaayam_notifs').select('*').eq('joueur', joueur);
   const url = `${SITE}/?code=${code}`;
   let envoyes = 0;
+  let compteFcm: CompteService | null | undefined;
   for (const a of abonnements ?? []) {
     const corps = texte(a.langue, type, { code, de: nomDe });
     try {
       if (a.type === 'web') {
         await webpush.sendNotification(a.abonnement, JSON.stringify({ titre: 'Thaayam', corps, url, type, code }), { TTL: 3600 });
+      } else if (a.type === 'fcm') {
+        if (compteFcm === undefined) {
+          const brut = Deno.env.get('FCM_COMPTE_SERVICE') ?? await lireConfig('fcm_compte_service');
+          try { compteFcm = brut ? JSON.parse(brut) : null; } catch { compteFcm = null; }
+        }
+        if (!compteFcm) continue; // Firebase pas encore réglé
+        await envoyerFcm(compteFcm, String(a.abonnement), 'Thaayam', corps, { type, code });
       } else {
         const r = await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',

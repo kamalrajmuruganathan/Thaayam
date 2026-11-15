@@ -48,17 +48,25 @@ export async function activerNotifs(pseudo, langue) {
   if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
   if (status !== 'granted') return 'refusees';
   const projectId = projetEas();
-  if (!projectId) return 'pasPretes';
-  const jeton = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+  let type = 'expo';
+  let jeton;
+  if (projectId) jeton = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+  else if (Platform.OS === 'android') {
+    // Sans compte Expo : jeton Firebase (FCM) de l'appareil, envoyé directement par la fonction thaayam-notifier
+    try { jeton = (await Notifications.getDevicePushTokenAsync()).data; } catch { return 'pasPretes'; }
+    type = 'fcm';
+  } else return 'pasPretes';
+  if (!jeton) return 'pasPretes';
   if (!(await enLigne.profilLocal())) await enLigne.profil(pseudo);
-  await enLigne.abonner(await appareilId(), 'expo', jeton, langue);
+  await enLigne.abonner(await appareilId(), type, jeton, langue);
+  await stockage.ecrire('thaayam:notifs-type', type);
   await stockage.ecrire('thaayam:notifs', 'oui');
   return 'ok';
 }
 
 export async function couperNotifs(langue) {
   await stockage.ecrire('thaayam:notifs', 'non');
-  try { await enLigne.abonner(await appareilId(), 'expo', null, langue); } catch { /* hors ligne */ }
+  try { await enLigne.abonner(await appareilId(), (await stockage.lire('thaayam:notifs-type')) || 'expo', null, langue); } catch { /* hors ligne */ }
 }
 
 /** Quand on touche une notification : surCode(code de la partie). Renvoie une fonction d'arrêt. */

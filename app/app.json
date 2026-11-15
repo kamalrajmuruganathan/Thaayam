@@ -20,7 +20,11 @@
     "plugins": [
       "expo-status-bar",
       "expo-audio",
-      ["expo-notifications", { "color": "#5fd4ff" }]
+      ["expo-notifications", { "color": "#5fd4ff" }],
+      ["@config-plugins/react-native-webrtc", {
+        "cameraPermission": "Thaayam utilise la caméra seulement pendant un appel vidéo que tu acceptes.",
+        "microphonePermission": "Thaayam utilise le micro seulement pendant un appel que tu acceptes."
+      }]
     ],
     "icon": "./assets/icon.png",
     "web": {
